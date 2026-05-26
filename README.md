@@ -1,647 +1,915 @@
-DigitalTwin — AI Powered Life Intelligence Platform
-🚀 Overview
+Personal Digital Twin — Complete Project README
+Project Name
+Personal Digital Twin
 
-DigitalTwin is an AI-powered behavioral intelligence platform designed to optimize a user’s life holistically across:
+An AI-powered intelligent life management platform that creates a digital representation of a user using:
 
-Health
-Career
-Finance
-Productivity
-Wellness
-Lifestyle Habits
+Health data
+Financial behavior
+Career growth
+Daily habits
+Goals
+Behavioral patterns
 
-Unlike traditional apps that track only one domain, DigitalTwin creates:
+The platform continuously:
 
-a unified adaptive Digital Twin that understands how behaviors across domains affect one another.
+tracks,
+learns,
+predicts,
+adapts,
+and guides users across multiple life domains.
+Project Vision
 
-The platform combines:
+Traditional apps track isolated information:
 
-onboarding intelligence
-adaptive dashboards
-AI-generated analytics
-behavioral prediction
-real-world integrations
-cross-domain intelligence
-simulations
-recommendation systems
+fitness apps track workouts,
+finance apps track money,
+learning apps track education.
 
-to create a personalized life optimization ecosystem.
+But real life is interconnected.
 
-🌟 Core Vision
+This platform creates a unified AI-powered Digital Twin that understands how:
 
-Most modern applications analyze:
+health affects career,
+stress affects spending,
+productivity affects lifestyle,
+habits affect long-term outcomes.
 
-health separately
-finance separately
-productivity separately
-coding activity separately
+The system behaves like a personalized AI life assistant.
 
-DigitalTwin connects them all together and analyzes:
+Core Objectives
 
-how sleep affects productivity
-how stress impacts coding consistency
-how financial pressure affects wellness
-how exercise improves focus
-how smoking impacts recovery
-how burnout affects career growth
+The project aims to:
 
-The goal is to create:
+Consolidate fragmented personal data
+Provide AI-powered recommendations
+Detect unhealthy behavior patterns
+Predict future outcomes
+Simulate “What-If” scenarios
+Build adaptive intelligence
+Create cross-domain insights
+Help users achieve long-term goals
+Main Features
+1. Authentication System
 
-a real-time AI-powered Digital Twin for holistic life optimization.
+Secure authentication system for all users.
 
-🧠 Core Features
-🔐 Authentication & Security
 Features
+User Signup
+User Login
 JWT Authentication
-Password Hashing using bcryptjs
+Session Management
+Password Encryption using bcrypt
 Protected Routes
-Secure Backend APIs
-User-specific Data Isolation
-Environment Variable Protection
-Secure AI-engine communication
-Protected Dashboard Access
-Security Philosophy
+Flow
+New User
+Signup → Onboarding → Dashboard
+Existing User
+Login → Dashboard
+2. Onboarding System
+
+The onboarding system initializes the user’s Digital Twin.
+
+This is the foundation of:
+
+AI recommendations,
+dashboard generation,
+predictions,
+simulations,
+adaptive AI learning.
+Information Collected
+Personal Information
+Name
+Age
+Gender
+Height
+Weight
+Health Information
+Sleep habits
+Stress level
+Water intake
+Smoking habits
+Finance Information
+Monthly income
+Savings goals
+Spending habits
+Investment preference
+Career Information
+Career goal
+Skills
+Study hours
+Current role
+Dynamic Female Personalization
+
+If:
+
+Gender = Female
+
+Then the system enables:
 
-DigitalTwin follows:
-
-privacy-first behavioral intelligence architecture.
-
-Sensitive behavioral data:
-
-sleep patterns
-stress indicators
-financial wellness
-smoking habits
-recovery analytics
-lifestyle habits
-
-are securely stored and protected.
-
-🧬 AI-Powered Digital Twin
-
-DigitalTwin creates:
-
-behavioral profiles
-adaptive life models
-dynamic intelligence systems
-
-for every user.
-
-The AI continuously analyzes:
-
-wellness
-finance
-productivity
-coding activity
-career growth
-lifestyle habits
-recovery patterns
-
-to generate:
-
-predictions
-insights
-recommendations
-warnings
-simulations
-📊 Adaptive Dashboard System
-
-The dashboard is:
-
-personalized
-behavior-aware
-AI-driven
-adaptive
-emotionally intelligent
-
-Every user sees:
-
-different analytics
-different recommendations
-different graphs
-different AI feeds
-different warnings
-
-based on:
-
-onboarding inputs
-integrations
-behavioral thresholds
-AI predictions
-real-world activity
-🔥 Burnout Intelligence System
-
-The platform predicts:
-
-burnout risk
-wellness instability
-productivity decline
-recovery imbalance
-mental overload
-
-using:
-
-sleep patterns
-study/work hours
-stress levels
-exercise frequency
-coding consistency
-recovery patterns
-
-Example:
-
-“Late-night coding sessions are increasing burnout risk.”
-
-💰 Financial Intelligence System
-
-DigitalTwin analyzes:
-
-income vs expenditure
-savings buffer
-spending behavior
-financial stress
-financial stability trajectory
-savings consistency
-
-The platform generates:
-
-financial health scores
-financial trajectory graphs
-adaptive financial recommendations
-spending risk analysis
-savings projections
-
-Examples:
-
-“Savings rate is below healthy threshold.”
-“Financial stress is affecting recovery quality.”
-💻 Career & Productivity Intelligence
-
-Tracks:
-
-GitHub activity
-LeetCode consistency
-coding rhythm
-focus sessions
-productivity streaks
-learning momentum
-professional growth
-
-Features:
-
-coding analytics
-productivity heatmaps
-burnout vs productivity analysis
-career momentum graphs
-deep work analysis
-🧠 Cross-Domain Intelligence
-
-This is the core innovation of DigitalTwin.
-
-The platform correlates:
-
-Health ↔ Productivity
-Finance ↔ Wellness
-Stress ↔ Career
-Sleep ↔ Coding
-Exercise ↔ Focus
-Recovery ↔ Learning Efficiency
-
-Examples:
-
-“Low sleep consistency is reducing coding productivity.”
-“Financial stress is affecting wellness balance.”
-“Exercise consistency is improving focus stability.”
-“Smoking habit is increasing recovery friction.”
-🔮 Simulation & What-If Intelligence
-
-DigitalTwin includes:
-
-behavioral simulations
-predictive forecasting
-adaptive future projections
-
-Users can simulate:
-
-increased sleep
-reduced stress
-improved savings
-reduced smoking
-increased exercise
-reduced screen time
-
-and see:
-
-predicted burnout reduction
-productivity improvement
-wellness stabilization
-financial recovery
-focus improvement
-
-Example:
-
-“Improving sleep by 2 hours may reduce burnout risk by 18%.”
-
-🤖 AI Recommendation Engine
-
-The system generates:
-
-adaptive recommendations
-wellness guidance
-productivity improvements
-financial suggestions
-recovery actions
-
-Recommendations dynamically change based on:
-
-onboarding behavior
-AI predictions
-dashboard analytics
-thresholds
-integrations
-user routines
-
-Examples:
-
-Sleep 1 hour earlier tonight
-Reduce discretionary spending
-Schedule recovery breaks
-Maintain coding consistency
-Increase hydration and activity
-Reduce smoking frequency
-📈 Adaptive Threshold Intelligence
-
-Every metric is categorized using:
-
-🟢 Healthy
-🟠 Warning
-🔴 Critical
-
-Examples:
-
-Sleep
-7–9 hrs → Green
-5–6 hrs → Orange
-Below 5 hrs → Red
-Savings Rate
-High → Green
-Moderate → Orange
-Low → Red
-Burnout Risk
-Low → Green
-Moderate → Orange
-High → Red
-
-The UI dynamically adapts using:
-
-graph colors
-adaptive cards
-severity indicators
-warning states
-colored insights
-🌐 Real-World Integrations
-
-DigitalTwin integrates with:
-
-GitHub
-LeetCode
-LinkedIn
-Fitbit (planned)
-Banking APIs (planned)
-Wearables (future)
-🐙 GitHub Integration
-
-Tracks:
-
-coding activity
-repositories
-languages
-consistency
-contribution signals
-
-Insights:
-
-“GitHub activity increasing.”
-“Coding consistency improving.”
-🧩 LeetCode Integration
-
-Tracks:
-
-solved problems
-DSA consistency
-rankings
-activity streaks
-
-Insights:
-
-“Problem-solving momentum stable.”
-“DSA activity decreasing this week.”
-💼 LinkedIn Integration
-
-Tracks:
-
-professional growth
-career momentum
-networking consistency
-skill growth
-
-Insights:
-
-“Professional growth trajectory improving.”
-🏥 Health Intelligence Page
-
-Includes:
-
-Sleep Analytics
-Stress Tracking
-Recovery Analysis
-Smoking Impact
-Exercise Tracking
 Period Tracking
-Burnout Indicators
-Wellness Balance
+Pregnancy Insights
+Female-specific AI health recommendations
+Backend Purpose
 
-Visualizations:
+The onboarding data is stored securely in the database and used for:
 
-sleep graphs
-recovery rings
-stress charts
-activity heatmaps
-wellness indicators
+AI personalization,
+initial scoring,
+recommendation generation,
+trajectory prediction.
+3. Dashboard System
 
-Cross-domain insights:
+The Dashboard is the central overview page of the Digital Twin.
 
-“Reduced sleep consistency is affecting productivity.”
+It summarizes:
 
-💰 Finance Intelligence Page
+health,
+finance,
+career,
+AI observations,
+streaks,
+recommendations,
+future predictions.
+Dashboard Layout
+Sidebar Navigation
 
-Includes:
+Contains:
 
-Income vs Expense Analytics
-Savings Trajectory
-Financial Health Score
-Spending Breakdown
-Financial Stress Indicators
-Savings Buffer Analysis
-Future Stability Projection
+Dashboard
+Health
+Finance
+Career
+Goals
+AI Intelligence
+AI Simulation
+Daily Updates
+Twin AI Chatbot
+Settings
+Main Dashboard Components
+Health Card
 
-Visualizations:
+Displays:
 
-spending graphs
-financial trajectory charts
-savings analytics
-financial warning indicators
+sleep score,
+pulse,
+hydration,
+stress,
+steps.
 
-Cross-domain insights:
+Clicking opens the Health Page.
 
-“Financial stress is affecting wellness stability.”
+Finance Card
 
-💻 Career Intelligence Page
+Displays:
 
-Includes:
+savings consistency,
+financial stability,
+expense balance.
 
-GitHub Analytics
-LeetCode Tracking
-Productivity Heatmaps
-Coding Consistency
-Learning Momentum
-Career Growth Analysis
-Burnout vs Productivity Correlation
+Clicking opens the Finance Page.
 
-Visualizations:
+Career Card
 
-coding graphs
-productivity curves
-heatmaps
-focus analytics
-consistency indicators
+Displays:
 
-Cross-domain insights:
+productivity,
+burnout risk,
+roadmap progress.
 
-“Late-night coding patterns are increasing burnout risk.”
+Clicking opens the Career Page.
 
-🧠 Cross Intelligence / Simulation Page
+Streak Card
 
-Acts as:
+Tracks:
 
-the AI brain of DigitalTwin.
+workout streak,
+learning streak,
+saving streak,
+daily consistency.
+AI Insight Section
 
-Features:
+Shows:
 
-behavioral correlations
-predictive simulations
-adaptive future projections
-cross-domain analysis
-AI-generated observations
+observations,
+anomalies,
+behavioral analysis,
+cross-domain intelligence.
 
-Includes:
+Example:
 
-What-if simulations
-Habit impact chains
-Behavioral forecasting
-Wellness prediction
-Life balance projections
-🎯 Goal & Streak System
+Stress increased due to poor sleep this week.
+AI Recommendation Section
 
-DigitalTwin uses:
+Provides:
 
-action-based streak tracking.
+personalized improvements,
+habit suggestions,
+optimization advice.
 
-Streaks are NOT fake.
+Initially generated from onboarding data, later powered by Adaptive AI.
 
-Users earn streaks by:
+4. Health Module
 
-completing goals
-maintaining routines
-following recommendations
-tracking behaviors consistently
+Tracks physical and mental wellness.
+
+Health Features
+Sleep Tracking
+
+Tracks:
+
+sleep duration,
+sleep quality,
+recovery analysis.
+Pulse Monitoring
+
+Tracks:
+
+heart rate,
+abnormalities.
+Hydration Tracking
+
+Tracks:
+
+water intake,
+dehydration warnings.
+Steps Tracking
+
+Tracks:
+
+movement,
+fitness activity.
+Stress Monitoring
+
+Tracks:
+
+stress levels,
+burnout indicators.
+Female Health System
+
+Visible only for female users.
+
+Period Tracking Card
+
+Tracks:
+
+cycle dates,
+symptoms,
+blood flow intensity.
+
+Provides:
+
+nutrition recommendations,
+iron intake advice,
+hydration suggestions.
+Pregnancy Intelligence Card
+
+Tracks:
+
+fetus growth,
+pregnancy stages,
+maternal wellness.
+
+Provides:
+
+foods to avoid,
+nutritional guidance,
+health precautions.
+Smoking Reduction System
+
+Helps users gradually quit smoking.
+
+Features
+smoking frequency tracking,
+reduction planning,
+recovery tracking,
+motivational streaks.
+AI Observation Card
+
+Analyzes previous health data and generates observations.
+
+Example:
+
+Hydration improved but sleep quality declined.
+Cross Intelligence Card
+
+Relates:
+
+health ↔ finance,
+health ↔ career.
+
+Example:
+
+Poor sleep reduced productivity and increased stress spending.
+Future Recovery Trajectory Graph
+
+Visualizes:
+
+current health path,
+future predicted recovery.
+5. Finance Module
+
+Tracks financial behavior and intelligence.
+
+Finance Features
+Savings Consistency
+
+Measures:
+
+regular saving habits.
+Financial Stability
+
+Evaluates:
+
+financial safety,
+emergency readiness.
+Spending Balance
+
+Analyzes:
+
+needs vs wants,
+spending categories.
+Stress Spending Analysis
+
+Detects emotional spending behavior.
+
+Example:
+
+Impulse spending increased during high stress periods.
+Unusual Spending Spike Detector
+
+Anomaly detection for:
+
+overspending,
+abnormal transactions,
+risky financial patterns.
+Finance Observation & Suggestions
+
+Provides:
+
+budgeting advice,
+expense optimization,
+saving recommendations.
+Cross Intelligence Card
+
+Correlates:
+
+stress ↔ spending,
+sleep ↔ impulse buying,
+productivity ↔ expenses.
+Macro Market Analysis
+
+Analyzes:
+
+inflation,
+war,
+political changes,
+economic shifts,
+market conditions.
+
+Provides:
+
+investment suggestions,
+financial precautions,
+risk warnings.
+Future Financial Trajectory Graph
+
+Predicts:
+
+future savings,
+expense growth,
+investment trends.
+6. Career Module
+
+Tracks career growth and productivity.
+
+Career Features
+Career Stability
+
+Measures:
+
+consistency,
+future growth probability.
+Productivity Balance
+
+Tracks:
+
+productive hours,
+work/study efficiency.
+Burnout Risk Detection
+
+Detects:
+
+overwork,
+mental fatigue,
+burnout probability.
+Roadmap Progress
+
+Tracks:
+
+skill development,
+milestone completion,
+roadmap advancement.
+AI Learning Roadmap
+
+Generates personalized learning paths.
+
+Example:
+
+Goal: Become Frontend Developer
+
+Roadmap:
+
+HTML
+CSS
+JavaScript
+React
+Projects
+DSA Basics
+
+with estimated timelines.
+
+Burnout Warning Card
+
+Example:
+
+You studied continuously for 10 hours/day for 5 days.
+AI Observation & Suggestion Card
+
+Provides:
+
+productivity analysis,
+learning optimization,
+skill recommendations.
+Cross Intelligence Card
+
+Relates:
+
+career ↔ health,
+career ↔ finance.
+Future Career Trajectory Graph
+
+Predicts:
+
+future growth,
+learning completion,
+career progression.
+7. Goals Module
+
+Manages personal goals across all domains.
+
+Goal Types
 
 Examples:
 
-sleep streak
-coding streak
-workout streak
-focus streak
-🎨 UI/UX Philosophy
+Become Frontend Developer
+Lose Weight
+Save Money
+Quit Smoking
+Goal Features
+Goal Priorities
+High
+Medium
+Low
+Goal Streaks
 
-DigitalTwin uses:
+Tracks:
 
-premium SaaS aesthetics
-adaptive colors
-intelligent motion
-subtle animations
-behavior-aware interfaces
-emotionally adaptive design
+consistency,
+daily completion.
+Goal Progress Tracking
 
-The platform avoids:
+Displays:
 
-generic admin dashboards
-excessive neon AI styling
-static analytics
-cluttered interfaces
-🧠 AI Feed System
+milestones,
+completion percentage,
+deadlines.
+Goal Details Page
 
-The AI Feed continuously generates:
+When a goal card is opened:
+AI generates:
 
-adaptive observations
-behavior insights
-warning signals
-positive reinforcement
+roadmap,
+required effort,
+timeline,
+recommendations.
+
+Example:
+
+Study 2 hours/day for 6 months.
+8. Adaptive AI System
+
+The platform continuously learns user behavior.
+
+How It Works
+
+Tracks:
+
+accepted recommendations,
+ignored recommendations,
+completed activities.
+
+Then dynamically adjusts future suggestions.
+
+Example
+
+If:
+
+gym workouts are ignored,
+home workouts are completed,
+
+then AI prioritizes:
+
+home workouts,
+yoga,
+walking routines.
+Purpose
+
+Makes recommendations:
+
+adaptive,
+personalized,
+realistic.
+9. Anomaly Detection System
+
+Detects unusual or risky behavior patterns.
+
+Health Anomalies
+poor sleep,
+stress spikes,
+inactivity.
+Finance Anomalies
+overspending,
+spending spikes,
+unusual transactions.
+Career Anomalies
+burnout,
+productivity decline,
+learning inconsistency.
+Cross-Domain Anomalies
+
+Example:
+
+Poor sleep + increased stress + higher spending
+
+AI generates:
+
+alerts,
+risk analysis,
+recommendations.
+10. AI Intelligence Page
+
+Acts as the “Digital Brain” of the system.
+
+Features
+Cross-Domain Intelligence
+
+Relates:
+
+health,
+finance,
+career.
+Behavioral Analysis
+
+Understands:
+
+routines,
+habits,
+consistency,
+risks.
+Adaptive AI
+
+Learns user preferences over time.
+
+Explainable AI
+
+Shows:
+
+why recommendations are generated,
+confidence levels,
+contributing factors.
+11. AI Simulation Page (What-If Scenario Engine)
+
+One of the most advanced features.
+
+Allows users to simulate future scenarios before making decisions.
+
+Example Scenarios
+Health
+What if I sleep 8 hours daily?
+What if I workout 5 days/week?
+Finance
+What if I save ₹5000/month?
+What if I reduce dining expenses?
+Career
+What if I study 3 hours/day?
+What if I switch careers?
+Simulation Outputs
+
+AI predicts:
+
+future health score,
+financial growth,
+burnout risk,
+productivity changes,
+goal completion speed.
+Features
+Side-by-Side Comparison
+
+Compares:
+
+current trajectory,
+modified trajectory.
+Risk Analysis
+
+Highlights:
+
+trade-offs,
+future risks,
+opportunity gains.
+Cross-Domain Simulation
+
+Example:
+
+More overtime work
+→ less sleep
+→ higher stress
+→ lower productivity
+Future Prediction Graphs
+
+Visualizes:
+
+current path,
+future predicted path.
+12. Daily Updates Page
+
+Collects daily user activity data.
+
+Daily Questions
 
 Examples:
 
-“Recovery rhythm improving.”
-“Financial stress increasing.”
-“Smoking habit is reducing recovery quality.”
+How much did you sleep today?
+How much water did you drink?
+How much did you study?
+How much did you spend today?
+Purpose
 
-Negative insights dynamically appear in:
-🔴 red warning states.
+Continuously updates:
 
-📂 Complete Project Structure
-digitaltwin/
-│
-├── client/
-│
-├── server/
-│
-├── ai-engine/
-│
-└── README.md
-📁 Frontend Structure
-client/
-│
-├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── layouts/
-│   ├── routes/
-│   ├── hooks/
-│   ├── context/
-│   ├── services/
-│   ├── utils/
-│   └── assets/
-📁 Backend Structure
-server/
-│
-├── config/
-├── controllers/
-├── middleware/
-├── models/
-├── routes/
-├── services/
-├── utils/
-└── index.js
-📁 AI Engine Structure
-ai-engine/
-│
-├── app/
-│   ├── analytics/
-│   ├── models/
-│   ├── routes/
-│   ├── services/
-│   └── utils/
-│
-├── tests/
-├── requirements.txt
-└── run.py
-⚙️ Tech Stack
+dashboard scores,
+AI insights,
+anomalies,
+recommendations,
+future predictions.
+13. Twin AI Chatbot
+
+Personalized AI assistant.
+
+Capabilities
+
+Handles:
+
+health guidance,
+finance advice,
+career mentoring,
+productivity suggestions.
+Example Queries
+Why is my stress increasing?
+Suggest today's study plan.
+Personalized Context
+
+Chatbot uses:
+
+onboarding data,
+daily logs,
+goals,
+anomalies,
+recommendations,
+behavior history.
+14. Settings Page
+
+Manages:
+
+user profile,
+themes,
+notifications,
+security,
+logout.
+Settings Sections
+Profile Settings
+profile details,
+onboarding edits.
+Theme Settings
+dark mode,
+light mode.
+Security Settings
+password updates,
+session management.
+Notification Settings
+reminders,
+AI alerts,
+daily prompts.
+Logout System
+
+Secure session termination.
+
+Complete UI / UX Flow
+User Journey
+Login / Signup
+        ↓
+Onboarding
+        ↓
+Dashboard
+        ↓
+--------------------------------
+| Health                      |
+| Finance                     |
+| Career                      |
+| Goals                       |
+| AI Intelligence             |
+| AI Simulation               |
+| Daily Updates               |
+| Twin AI Chatbot             |
+| Settings                    |
+--------------------------------
+Core Intelligence Flow
+User Data
+    ↓
+Backend Processing
+    ↓
+AI Recommendation Engine
+    ↓
+Adaptive AI Learning
+    ↓
+Anomaly Detection
+    ↓
+Cross-Domain Intelligence
+    ↓
+Simulation & Predictions
+    ↓
+Dashboard Updates
+Backend Architecture
+Recommended Tech Stack
 Frontend
-React.js
+React.js / Next.js
 Tailwind CSS
-React Router DOM
-Axios
-Adaptive UI System
+Framer Motion
 Backend
 Node.js
 Express.js
+Database
 MongoDB
-Mongoose
+Authentication
 JWT
-bcryptjs
-AI Engine
-Flask
-Python
-Scikit-learn
-Pandas
-NumPy
-🧭 Complete Workflow
-Step 1 — Authentication
+bcrypt
+AI Integration
+OpenAI API / Gemini API
+File Storage
+Cloudinary / AWS S3
+Backend Architecture Overview
+Frontend
+   ↓
+Express API Server
+   ↓
+-----------------------------------
+| Auth Service                  |
+| User Service                  |
+| Health Service                |
+| Finance Service               |
+| Career Service                |
+| Goal Service                  |
+| AI Recommendation Engine      |
+| Adaptive AI Engine            |
+| Anomaly Detection Engine      |
+| Cross Intelligence Engine     |
+| Simulation Engine             |
+| Notification Service          |
+-----------------------------------
+   ↓
+MongoDB Database
+Main Backend Services
+Authentication Service
 
-User signs up and logs in securely.
+Handles:
 
-Step 2 — Onboarding
+signup,
+login,
+JWT,
+sessions.
+Onboarding Service
 
-User enters:
+Stores Digital Twin initialization data.
 
-sleep hours
-stress level
-exercise frequency
-smoking habits
-income/expenditure
-savings habits
-GitHub username
-LeetCode username
-LinkedIn profile
-Step 3 — Backend Processing
+Dashboard Service
 
-Backend:
+Aggregates:
 
-validates data
-stores onboarding profile
-connects integrations
-calls AI engine
-Step 4 — AI Analysis
+health,
+finance,
+career,
+AI insights.
+Health Service
 
-AI Engine:
+Processes:
 
-predicts burnout
-analyzes productivity
-calculates wellness balance
-generates recommendations
-creates adaptive insights
-Step 5 — Dashboard Personalization
+sleep,
+stress,
+hydration,
+female health data.
+Finance Service
 
-Dashboard dynamically adapts using:
+Processes:
 
-onboarding behavior
-AI predictions
-thresholds
-integrations
-user activity
-🔌 Backend APIs
-Authentication APIs
-POST /api/auth/signup
-POST /api/auth/login
-Onboarding APIs
-POST /api/onboarding
-Dashboard APIs
-GET /api/dashboard
-GET /api/dashboard/insights
-GET /api/dashboard/recommendations
-Integration APIs
-GET /api/integrations/github/:username
-GET /api/integrations/leetcode/:username
-POST /api/integrations/linkedin
-🤖 AI APIs
-POST /api/predict/burnout
-POST /api/predict/productivity
-POST /api/analyze/correlation
-🔒 Security Features
-JWT route protection
-Password hashing
-User-specific access control
-Secure AI communication
-Protected APIs
-Environment variable protection
-🚀 Future Scope
+expenses,
+savings,
+financial intelligence.
+Career Service
+
+Processes:
+
+learning,
+productivity,
+burnout analysis.
+Goal Service
+
+Handles:
+
+goal tracking,
+AI roadmaps,
+milestones.
+Adaptive AI Engine
+
+Learns user preferences dynamically.
+
+Anomaly Detection Engine
+
+Detects risky behavioral patterns.
+
+Cross Intelligence Engine
+
+Correlates:
+
+health,
+finance,
+career.
+Simulation Engine
+
+Runs “What-If” future predictions.
+
+AI Recommendation Engine
+
+Generates:
+
+suggestions,
+observations,
+warnings,
+roadmaps.
+Security Features
+Authentication Security
+JWT Access Tokens
+Refresh Tokens
+Password Security
+bcrypt hashing
+Data Security
+HTTPS/TLS encryption
+Encrypted storage
+Role-Based Access Control
+
+Users can only access their own data.
+
+Future Scope
+
+Potential future improvements:
+
 Real-time wearable integrations
-AI Copilot assistant
-Long-term behavior forecasting
-Advanced simulations
-AI life coaching
-Mental wellness prediction
-Mobile application
-Real-time behavioral monitoring
-Smart notification system
-Team/Family Digital Twins
+Voice assistant
+OCR receipt scanning
+AI meal recognition
+Social challenges
+Team goals
+AI financial robo-advisor
+Advanced ML prediction models
+Emotional intelligence analysis
+Real-time stock & market integrations
+Conclusion
 
+Personal Digital Twin is an AI-powered life intelligence platform that:
+
+tracks,
+analyzes,
+learns,
+predicts,
+adapts,
+and guides users across all major life domains.
+
+The platform combines:
+
+AI recommendations,
+anomaly detection,
+adaptive learning,
+predictive simulations,
+cross-domain intelligence,
+and behavioral analytics
+
+to create a continuously evolving intelligent digital representation of the user.
