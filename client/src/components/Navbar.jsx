@@ -19,17 +19,14 @@ function Navbar() {
   const pageTitle = pageTitles[location.pathname] || 'DigitalTwin workspace';
 
   return (
-    <header className="sticky top-0 z-10 border-b border-white/10 bg-[#070a10]/80 px-4 py-4 text-white backdrop-blur-xl sm:px-6 lg:px-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(123,97,255,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(16,199,161,0.12),transparent_26%)]" />
-      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+<header className="border-b border-violet-500/20 bg-[#1a103d]/90 px-4 py-4 text-white backdrop-blur-xl sm:px-6 lg:px-8">      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/55 backdrop-blur-xl">
             <span className="h-1.5 w-1.5 rounded-full bg-[#10c7a1] shadow-[0_0_18px_rgba(16,199,161,0.85)]" />
             DigitalTwin workspace
           </div>
           <p className="text-sm font-semibold tracking-[0.18em] text-white/60">Good evening, {firstName}</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            <span className="bg-gradient-to-r from-white via-[#9db7ff] to-[#7df3cc] bg-clip-text text-transparent">{pageTitle}</span>
+<h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">            <span className="bg-gradient-to-r from-white via-[#9db7ff] to-[#7df3cc] bg-clip-text text-transparent">{pageTitle}</span>
           </h1>
         </div>
 
