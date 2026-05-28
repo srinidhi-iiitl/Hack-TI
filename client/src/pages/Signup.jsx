@@ -194,7 +194,7 @@ function Signup() {
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-black">G</span> Continue with Google
                 </motion.button>
 
-                <p className="mt-5 text-center text-sm text-white/62">Already have an account? <Link to="/" className="font-semibold text-[#9db7ff] hover:text-[#7df3cc]">Log in</Link></p>
+                <p className="mt-5 text-center text-sm text-white/62">Already have an account? <Link to="/login" className="font-semibold text-[#9db7ff] hover:text-[#7df3cc]">Log in</Link></p>
               </div>
             </div>
           </div>

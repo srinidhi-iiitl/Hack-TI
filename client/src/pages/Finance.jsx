@@ -38,29 +38,33 @@ const overviewMetrics = [
 ];
 
 function Finance() {
-  // ✅ Form State
+  // ✅ Omniscient Form State
+  const [activeTab, setActiveTab] = useState('expense'); // 'expense' or 'income'
   const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('food');
+  const [isImpulse, setIsImpulse] = useState(false);
   
   // ✅ Initialize the Hook
   const { triggerReward } = useGamification();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
-  // ✅ Submit Function
-  const handleLogExpense = async (e) => {
+  // ✅ Submit Function linked to the new Omniscient Route
+  const handleLogTransaction = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('authToken');
       
-      const response = await axios.post(
-        `${API_BASE_URL}/api/finance/expense`, 
-        { amount: Number(amount), description },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await axios.post(`${API_BASE_URL}/api/finance/transaction`, {
+        type: activeTab,
+        amount: Number(amount),
+        category,
+        isImpulse: activeTab === 'expense' ? isImpulse : false
+      }, { headers: { Authorization: `Bearer ${token}` } });
 
       if (response.data.success) {
+        // Clear fields
         setAmount('');
-        setDescription('');
+        setIsImpulse(false);
         
         // Trigger the cinematic popup!
         const gamificationData = response.data.gamification;
@@ -73,7 +77,7 @@ function Finance() {
         }
       }
     } catch (error) {
-      console.error('Failed to log expense:', error);
+      console.error('Failed to log transaction:', error);
     }
   };
 
@@ -92,36 +96,56 @@ function Finance() {
         </div>
       </section>
 
-      {/* ✅ NEW: Quick Action Gamification Form */}
+      {/* ✅ UPGRADED: Omniscient Gamification Form */}
       <section className="mb-6">
-        <article className={`${glassCardClass} flex flex-col gap-5 p-6 md:flex-row md:items-center md:justify-between`}>
-          <div>
-            <h2 className="text-xl font-semibold">Log a Daily Expense</h2>
-            <p className="mt-1 text-sm text-white/60">Maintain your streak and earn XP.</p>
+        <article className={`${glassCardClass} flex flex-col gap-5 p-6`}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+              <h2 className="text-xl font-semibold">Ledger Entry</h2>
+              <p className="mt-1 text-sm text-white/60">Log transactions to maintain fiscal discipline.</p>
+            </div>
+            <div className="flex rounded-lg bg-white/5 p-1 gap-1">
+              <button onClick={() => setActiveTab('expense')} className={`rounded-md px-4 py-2 text-sm font-bold transition-all ${activeTab === 'expense' ? 'bg-[#ff4d7d] text-white shadow-lg' : 'text-white/60 hover:text-white'}`}>Expense</button>
+              <button onClick={() => setActiveTab('income')} className={`rounded-md px-4 py-2 text-sm font-bold transition-all ${activeTab === 'income' ? 'bg-[#10c7a1] text-black shadow-lg' : 'text-white/60 hover:text-white'}`}>Income</button>
+            </div>
           </div>
-          
-          <form onSubmit={handleLogExpense} className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-            <input
-              type="number"
-              placeholder="Amount ($)"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white focus:border-[#7df3cc] focus:outline-none sm:w-32"
-              required
-            />
-            <input
-              type="text"
-              placeholder="What did you buy?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white focus:border-[#7df3cc] focus:outline-none sm:w-48"
-              required
-            />
-            <button 
-              type="submit"
-              className="whitespace-nowrap rounded-lg bg-gradient-to-r from-[#7df3cc] to-[#10c7a1] px-6 py-3 font-bold text-black transition-all hover:shadow-[0_0_15px_rgba(125,243,204,0.4)]"
-            >
-              Save & Earn XP
+
+          <form onSubmit={handleLogTransaction} className="flex flex-wrap gap-4 items-end">
+            <div className="flex-1 min-w-[200px]">
+              <label className="mb-1 block text-xs uppercase text-white/60">Amount (₹/$)</label>
+              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white focus:border-[#c8a84b] focus:outline-none" required />
+            </div>
+
+            <div className="flex-1 min-w-[200px]">
+              <label className="mb-1 block text-xs uppercase text-white/60">Category</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-lg border border-white/10 bg-[#11131a] p-3 text-white focus:border-[#c8a84b] focus:outline-none">
+                {activeTab === 'expense' ? (
+                  <>
+                    <option value="food">Dining / Groceries</option>
+                    <option value="rent">Rent / Utilities</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="medical">Health / Medical</option>
+                    <option value="other">Other</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="salary">Salary</option>
+                    <option value="freelance">Freelance</option>
+                    <option value="investment">Investment Yield</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {activeTab === 'expense' && (
+              <div className="flex items-center gap-2 mb-3 min-w-[180px]">
+                <input type="checkbox" id="impulse" checked={isImpulse} onChange={(e) => setIsImpulse(e.target.checked)} className="w-4 h-4 accent-[#ff4d7d]" />
+                <label htmlFor="impulse" className="text-sm font-medium text-white/80 cursor-pointer">Mark as Impulse Buy</label>
+              </div>
+            )}
+
+            <button type="submit" className={`whitespace-nowrap px-8 py-3 rounded-lg font-bold transition-all ${activeTab === 'expense' ? 'bg-[#ff4d7d] text-white hover:shadow-[0_0_15px_rgba(255,77,125,0.4)]' : 'bg-[#10c7a1] text-black hover:shadow-[0_0_15px_rgba(16,199,161,0.4)]'}`}>
+              Commit & Earn XP
             </button>
           </form>
         </article>

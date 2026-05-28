@@ -20,10 +20,16 @@ function Health() {
   const [isMounted, setIsMounted] = useState(false);
 
   // --- NEW GAMIFICATION LOGIC START ---
-  const [activeTab, setActiveTab] = useState('workout'); // 'workout' or 'sleep'
+  const [activeTab, setActiveTab] = useState('workout'); // 'workout', 'sleep', 'vitals', 'meds'
+  
+  // States for forms
   const [workoutType, setWorkoutType] = useState('');
   const [duration, setDuration] = useState('');
   const [sleepHours, setSleepHours] = useState('');
+  const [stressLevel, setStressLevel] = useState('5');
+  const [mood, setMood] = useState('neutral');
+  const [waterIntake, setWaterIntake] = useState('');
+  const [medName, setMedName] = useState('');
   
   const { triggerReward } = useGamification();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -32,10 +38,13 @@ function Health() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('authToken');
-      const endpoint = activeTab === 'workout' ? '/api/health-metrics/workout' : '/api/health-metrics/sleep';
-      const payload = activeTab === 'workout' 
-        ? { type: workoutType, duration: Number(duration) }
-        : { hours: Number(sleepHours) };
+      const endpoint = `/api/health-metrics/${activeTab}`; 
+      
+      let payload = {};
+      if (activeTab === 'workout') payload = { type: workoutType, duration: Number(duration) };
+      if (activeTab === 'sleep') payload = { hours: Number(sleepHours) };
+      if (activeTab === 'vitals') payload = { stressLevel: Number(stressLevel), mood, waterLiters: Number(waterIntake) };
+      if (activeTab === 'meds') payload = { medName };
 
       const response = await axios.post(
         `${API_BASE_URL}${endpoint}`, 
@@ -44,9 +53,9 @@ function Health() {
       );
 
       if (response.data.success) {
-        setWorkoutType('');
-        setDuration('');
-        setSleepHours('');
+        // Clear forms on success
+        setWorkoutType(''); setDuration(''); setSleepHours('');
+        setStressLevel('5'); setWaterIntake(''); setMedName('');
         
         const gamificationData = response.data.gamification;
         if (gamificationData) {
@@ -89,7 +98,8 @@ function Health() {
               <p className="mt-1 text-sm text-white/60">Maintain your health streak and earn XP.</p>
             </div>
             
-            <div className="flex rounded-lg bg-white/5 p-1">
+            {/* ✅ EXPANDED TAB TOGGLE */}
+            <div className="flex flex-wrap rounded-lg bg-white/5 p-1 gap-1">
               <button 
                 onClick={() => setActiveTab('workout')}
                 className={`rounded-md px-4 py-2 text-sm font-bold transition-all ${activeTab === 'workout' ? 'bg-[#16a34a] text-white shadow-lg' : 'text-white/60 hover:text-white'}`}
@@ -102,11 +112,23 @@ function Health() {
               >
                 Sleep
               </button>
+              <button 
+                onClick={() => setActiveTab('vitals')} 
+                className={`rounded-md px-4 py-2 text-sm font-bold transition-all ${activeTab === 'vitals' ? 'bg-[#c8a84b] text-black shadow-lg' : 'text-white/60 hover:text-white'}`}
+              >
+                Vitals/Mood
+              </button>
+              <button 
+                onClick={() => setActiveTab('meds')} 
+                className={`rounded-md px-4 py-2 text-sm font-bold transition-all ${activeTab === 'meds' ? 'bg-[#ff4d7d] text-white shadow-lg' : 'text-white/60 hover:text-white'}`}
+              >
+                Medication
+              </button>
             </div>
           </div>
 
           <form onSubmit={handleLogHealth} className="flex w-full flex-col gap-3 sm:flex-row items-end">
-            {activeTab === 'workout' ? (
+            {activeTab === 'workout' && (
               <>
                 <div className="w-full sm:w-1/3">
                   <label className="mb-1 block text-xs uppercase text-white/60">Activity Type</label>
@@ -117,14 +139,51 @@ function Health() {
                   <input type="number" placeholder="45" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white focus:border-[#16a34a] focus:outline-none" required />
                 </div>
               </>
-            ) : (
+            )}
+
+            {activeTab === 'sleep' && (
               <div className="w-full sm:w-2/3">
                 <label className="mb-1 block text-xs uppercase text-white/60">Hours Slept</label>
                 <input type="number" step="0.5" placeholder="e.g., 7.5" value={sleepHours} onChange={(e) => setSleepHours(e.target.value)} className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white focus:border-[#2f83b7] focus:outline-none" required />
               </div>
             )}
+
+            {activeTab === 'vitals' && (
+              <>
+                <div className="w-full sm:w-1/4">
+                  <label className="mb-1 block text-xs uppercase text-white/60">Stress (1-10)</label>
+                  <input type="number" min="1" max="10" value={stressLevel} onChange={(e) => setStressLevel(e.target.value)} className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white focus:border-[#c8a84b] focus:outline-none" required />
+                </div>
+                <div className="w-full sm:w-1/4">
+                  <label className="mb-1 block text-xs uppercase text-white/60">Mood</label>
+                  <select value={mood} onChange={(e) => setMood(e.target.value)} className="w-full rounded-lg border border-white/10 bg-[#11131a] p-3 text-white focus:border-[#c8a84b] focus:outline-none" required>
+                    <option value="excellent">Excellent</option>
+                    <option value="good">Good</option>
+                    <option value="neutral">Neutral</option>
+                    <option value="bad">Bad</option>
+                    <option value="terrible">Terrible</option>
+                  </select>
+                </div>
+                <div className="w-full sm:w-1/4">
+                  <label className="mb-1 block text-xs uppercase text-white/60">Water (Liters)</label>
+                  <input type="number" step="0.1" placeholder="2.5" value={waterIntake} onChange={(e) => setWaterIntake(e.target.value)} className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white focus:border-[#c8a84b] focus:outline-none" required />
+                </div>
+              </>
+            )}
+
+            {activeTab === 'meds' && (
+              <div className="w-full sm:w-2/3">
+                <label className="mb-1 block text-xs uppercase text-white/60">Medication Name</label>
+                <input type="text" placeholder="e.g., Vitamin D, Iron, Prescriptions" value={medName} onChange={(e) => setMedName(e.target.value)} className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white focus:border-[#ff4d7d] focus:outline-none" required />
+              </div>
+            )}
             
-            <button type="submit" className={`w-full sm:w-1/3 whitespace-nowrap rounded-lg px-6 py-3 font-bold transition-all ${activeTab === 'workout' ? 'bg-[#16a34a] text-white hover:shadow-[0_0_15px_rgba(22,163,74,0.4)]' : 'bg-[#2f83b7] text-white hover:shadow-[0_0_15px_rgba(47,131,183,0.4)]'}`}>
+            <button type="submit" className={`w-full sm:w-1/3 whitespace-nowrap rounded-lg px-6 py-3 font-bold transition-all ${
+              activeTab === 'workout' ? 'bg-[#16a34a] text-white hover:shadow-[0_0_15px_rgba(22,163,74,0.4)]' : 
+              activeTab === 'sleep' ? 'bg-[#2f83b7] text-white hover:shadow-[0_0_15px_rgba(47,131,183,0.4)]' :
+              activeTab === 'vitals' ? 'bg-[#c8a84b] text-black hover:shadow-[0_0_15px_rgba(200,168,75,0.4)]' :
+              'bg-[#ff4d7d] text-white hover:shadow-[0_0_15px_rgba(255,77,125,0.4)]'
+            }`}>
               Save & Earn XP
             </button>
           </form>

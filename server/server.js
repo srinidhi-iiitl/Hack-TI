@@ -12,6 +12,9 @@ import gamificationRoutes from './routes/gamificationRoutes.js';
 import financeRoutes from './routes/financeRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import careerRoutes from './routes/careerRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import { startCaretakerJobs } from './cron/caretaker.js';
+import goalRoutes from './routes/goalRoutes.js';
 
 // Initialize Express app
 const app = express();
@@ -63,12 +66,13 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api', onboardingRoutes);
 app.use('/api/integrations', integrationRoutes);
-
+app.use('/api/goals', goalRoutes);
 // ✅ Mount the Gamification API Route
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/health-metrics', healthRoutes);
 app.use('/api/career', careerRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ============================================
 // ERROR HANDLING MIDDLEWARE
@@ -87,10 +91,13 @@ app.use(errorHandler);
 const PORT = Number(process.env.PORT) || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+// ✅ Start the Autonomous Background Jobs before the server listens!
+startCaretakerJobs();
+
 const server = app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════╗
-║     LifeTwin Backend Server              ║
+║    LifeTwin Backend Server               ║
 ╚══════════════════════════════════════════╝
   
   🚀 Server running on port: ${PORT}

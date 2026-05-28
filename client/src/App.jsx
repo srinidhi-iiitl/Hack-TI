@@ -16,10 +16,9 @@ import Settings from './pages/Settings';
 import Signup from './pages/Signup';
 import Simulation from './pages/Simulation';
 import Landing from './pages/Landing';
-
-// ✅ Import the Gamification Provider and the Toast Overlay
 import { GamificationProvider } from './context/GamificationContext';
 import ToastOverlay from './components/ToastOverlay';
+import DailySyncModal from './components/DailySyncModal';
 
 function App() {
   return (
@@ -62,6 +61,7 @@ function App() {
       
       {/* ✅ The Toast Overlay sits here, listening for XP! */}
       <ToastOverlay />
+      <DailySyncModal />
     </GamificationProvider>
   );
 }

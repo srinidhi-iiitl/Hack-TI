@@ -1,6 +1,7 @@
 import UserGamification from '../models/UserGamification.js';
 import ActivityLog from '../models/ActivityLog.js';
 import BadgeDefinition from '../models/BadgeDefinition.js';
+import LifeProfile from '../models/LifeProfile.js';
 const XP_TABLE = {
   EXPENSE_LOGGED: { xp: 10, domain: 'finance' },
   BUDGET_MET: { xp: 30, domain: 'finance' },
@@ -8,6 +9,16 @@ const XP_TABLE = {
   SLEEP_LOGGED: { xp: 10, domain: 'health' },
   COURSE_DONE: { xp: 20, domain: 'career' },
   FOCUS_SESSION_COMPLETED: { xp: 15, domain: 'career' },
+  INCOME_LOGGED: { xp: 15, domain: 'finance' },
+  DAILY_SYNC_COMPLETED: { xp: 50, domain: 'health' },
+  AI_MEAL_LOGGED: { xp: 15, domain: 'health' },
+  AI_RECEIPT_LOGGED: { xp: 15, domain: 'finance' },
+  AI_MEDICAL_LOGGED: { xp: 20, domain: 'health' },
+  VITALS_LOGGED: { xp: 15, domain: 'health' },
+  MEDS_TAKEN: { xp: 20, domain: 'health' },
+  GOAL_SET: { xp: 25, domain: 'career' },
+  GOAL_MILESTONE_HIT: { xp: 50, domain: 'career' },
+  
 };
 
 // Calculate level based on XP (Level 1: 0-99, Level 2: 100-249, Level 3: 250-499...)
