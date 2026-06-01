@@ -2,9 +2,12 @@ import express from 'express';
 import {
   signup,
   login,
+  logout,
   getProfile,
   updateProfile,
   changePassword,
+  forgotPassword,
+  resetPassword,
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -30,6 +33,8 @@ router.post('/signup', asyncHandler(signup));
  * @body    { email, password }
  */
 router.post('/login', asyncHandler(login));
+router.post('/logout', authenticateToken, asyncHandler(logout));
+router.get('/me', authenticateToken, asyncHandler(getProfile));
 
 /**
  * PROTECTED ROUTES (Require Authentication)
@@ -57,5 +62,8 @@ router.put('/profile', authenticateToken, asyncHandler(updateProfile));
  * @body    { oldPassword, newPassword, confirmPassword }
  */
 router.post('/change-password', authenticateToken, asyncHandler(changePassword));
+router.put('/change-password', authenticateToken, asyncHandler(changePassword));
+router.post('/forgot-password', asyncHandler(forgotPassword));
+router.post('/reset-password', asyncHandler(resetPassword));
 
 export default router;

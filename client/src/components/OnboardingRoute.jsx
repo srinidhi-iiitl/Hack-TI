@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
-function ProtectedRoute({ children }) {
-  const location = useLocation();
+function OnboardingRoute({ children }) {
   const { isAuthenticated, loading, token } = useSelector((state) => state.auth);
   const activeToken = token || localStorage.getItem('authToken');
   const [checkingOnboarding, setCheckingOnboarding] = useState(false);
@@ -46,14 +45,14 @@ function ProtectedRoute({ children }) {
   }
 
   if (!isAuthenticated && !activeToken) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (onboardingCompleted === false) {
-    return <Navigate to="/onboarding" replace />;
+  if (onboardingCompleted) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
 }
 
-export default ProtectedRoute;
+export default OnboardingRoute;

@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
+import { getGithubIntegration, getLeetcodeIntegration, postLinkedinIntegration } from '../controllers/integrationController.js';
 
 const router = express.Router();
 
@@ -86,30 +87,7 @@ router.get('/career', authenticateToken, async (req, res) => {
 // ONBOARDING VERIFICATION ROUTES
 // ==========================================
 
-// Verify GitHub Profile (Using (*) wildcard to allow https:// URLs safely)
-router.get('/github/:username(*)', authenticateToken, async (req, res) => {
-  await simulateNetwork(800); // Quick validation delay
-  res.status(200).json({
-    success: true,
-    data: { connected: true, source: 'github', profileLink: req.params.username }
-  });
-});
-
-// Verify LeetCode Profile
-router.get('/leetcode/:username(*)', authenticateToken, async (req, res) => {
-  await simulateNetwork(800);
-  res.status(200).json({
-    success: true,
-    data: { connected: true, source: 'leetcode', profileLink: req.params.username }
-  });
-});
-
-// Verify LinkedIn Profile (Uses POST to safely send URLs in body)
-router.post('/linkedin', authenticateToken, async (req, res) => {
-  await simulateNetwork(800);
-  res.status(200).json({
-    success: true,
-    data: { connected: true, source: 'linkedin', profileLink: req.body.linkedinProfile }
-  });
-});
+router.get('/github/:username(*)', authenticateToken, getGithubIntegration);
+router.get('/leetcode/:username(*)', authenticateToken, getLeetcodeIntegration);
+router.post('/linkedin', authenticateToken, postLinkedinIntegration);
 export default router;

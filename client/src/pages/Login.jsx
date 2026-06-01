@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
-import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import DigitalTwinLogo from '../components/DigitalTwinLogo';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+import { loginUser } from '../features/auth/authThunks';
 
 const activeSignals = [
   {
@@ -75,6 +74,7 @@ function RotatingSignal({ signal }) {
 
 function Login() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [activeSignalIndex, setActiveSignalIndex] = useState(0);
@@ -92,13 +92,11 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, formData);
+      await dispatch(loginUser(formData)).unwrap();
       toast.success('Login successful!');
-      localStorage.setItem('authToken', response.data.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.data.user));
-      setTimeout(() => navigate('/dashboard'), 500);
+      navigate('/dashboard', { replace: true });
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed.');
+      toast.error(typeof error === 'string' ? error : 'Login failed.');
     } finally {
       setIsLoading(false);
     }

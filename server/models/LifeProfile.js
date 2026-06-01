@@ -26,6 +26,12 @@ const lifeProfileSchema = new mongoose.Schema({
     cycleLengthDays: { type: Number, default: 28 },
     nextExpectedDate: { type: Date }
   },
+  pregnancy: {
+    isTracking: { type: Boolean, default: false },
+    dueDate: { type: Date },
+    week: { type: Number, min: 0, max: 42, default: 0 },
+    notes: { type: String, trim: true, default: '' }
+  },
   // --- FINANCIAL RULES ---
   financeContext: {
     monthlyIncomeTarget: { type: Number, default: 0 },

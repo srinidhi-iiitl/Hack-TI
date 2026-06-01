@@ -226,4 +226,18 @@ ${JSON.stringify(simulated)}
   }
 });
 
+router.post('/run', authenticateToken, async (req, res) => {
+  try {
+    const { current, simulated } = req.body;
+    if (!current || !simulated) {
+      return res.status(400).json({ success: false, message: 'Current and simulated values are required.' });
+    }
+
+    return res.status(200).json({ success: true, data: fallbackAnalysis(current, simulated) });
+  } catch (error) {
+    console.error('Simulation run route error:', error);
+    return res.status(500).json({ success: false, message: 'Unable to run simulation analysis.' });
+  }
+});
+
 export default router;

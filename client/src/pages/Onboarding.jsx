@@ -269,7 +269,7 @@ function Onboarding() {
 
     if (!token) {
       toast.error('Please log in again before connecting integrations.');
-      navigate('/');
+      navigate('/login', { replace: true });
       return;
     }
 
@@ -391,12 +391,10 @@ function Onboarding() {
   };
 
   const handlePersonalizeDashboard = async () => {
-    localStorage.setItem('lifetwinOnboardingProfile', JSON.stringify(onboardingData));
-
     const token = localStorage.getItem('authToken');
     if (!token) {
       toast.error('Please log in again to save onboarding.');
-      navigate('/');
+      navigate('/login', { replace: true });
       return;
     }
 
@@ -405,13 +403,14 @@ function Onboarding() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      localStorage.setItem('lifetwinOnboardingProfile', JSON.stringify(onboardingData));
       localStorage.setItem('digitalTwinDashboardData', JSON.stringify(response.data.data));
       toast.success('Dashboard personalized');
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       console.error('Onboarding save error:', error);
-      toast.error(error.response?.data?.message || 'Using local profile for now.');
-      navigate('/dashboard');
+      localStorage.removeItem('lifetwinOnboardingProfile');
+      toast.error(error.response?.data?.message || 'Unable to save onboarding. Please try again.');
     }
   };
 

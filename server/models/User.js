@@ -109,6 +109,16 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    passwordResetToken: {
+      type: String,
+      select: false,
+      default: null,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+      default: null,
+    },
 
     // Firebase ID (optional, for Firebase Authentication)
     firebaseUID: {
@@ -121,7 +131,9 @@ const userSchema = new mongoose.Schema(
     preferences: {
       language: { type: String, default: 'en' },
       timezone: { type: String, default: 'UTC' },
+      theme: { type: String, default: 'dark' },
       notifications: { type: Boolean, default: true },
+      twinAssistantEnabled: { type: Boolean, default: false },
     },
   },
   {

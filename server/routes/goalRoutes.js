@@ -45,4 +45,42 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// @desc    Update a SMART Goal
+// @route   PUT /api/goals/:id
+router.put('/:id', authenticateToken, async (req, res) => {
+  try {
+    const goal = await SmartGoal.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.userId },
+      { $set: req.body },
+      { new: true, runValidators: true },
+    );
+
+    if (!goal) {
+      return res.status(404).json({ success: false, message: 'Goal not found' });
+    }
+
+    res.status(200).json({ success: true, data: goal });
+  } catch (error) {
+    console.error('Update Goal Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// @desc    Delete a SMART Goal
+// @route   DELETE /api/goals/:id
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const goal = await SmartGoal.findOneAndDelete({ _id: req.params.id, userId: req.user.userId });
+
+    if (!goal) {
+      return res.status(404).json({ success: false, message: 'Goal not found' });
+    }
+
+    res.status(200).json({ success: true, data: goal });
+  } catch (error) {
+    console.error('Delete Goal Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
 export default router;

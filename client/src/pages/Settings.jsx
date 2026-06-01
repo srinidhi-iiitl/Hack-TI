@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import {
   Activity,
+  Bot,
   CalendarDays,
   Check,
   CircleHelp,
@@ -21,6 +23,8 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
+import { getSettings, updateSettings } from '../services/voiceAssistantService';
+import { logoutUser } from '../features/auth/authThunks';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -94,10 +98,16 @@ function normalizeBackendProfile(user = {}, onboarding = {}) {
 
 function Settings() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [profile, setProfile] = useState(getInitialProfile);
   const [draft, setDraft] = useState(profile);
   const [editing, setEditing] = useState('');
   const [savedMessage, setSavedMessage] = useState('');
+  const [settings, setSettings] = useState({
+    theme: 'dark',
+    notifications: true,
+    twinAssistantEnabled: false,
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -110,21 +120,26 @@ function Settings() {
 
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const [authResult, onboardingResult] = await Promise.allSettled([
+        const [authResult, onboardingResult, settingsResult] = await Promise.allSettled([
           axios.get(`${API_BASE_URL}/api/auth/profile`, { headers }),
           axios.get(`${API_BASE_URL}/api/dashboard`, { headers }),
+          getSettings(),
         ]);
 
         if (!isMounted) return;
 
         const authUser = authResult.status === 'fulfilled' ? authResult.value.data?.data || {} : {};
         const onboardingProfile = onboardingResult.status === 'fulfilled' ? onboardingResult.value.data?.data?.profile || {} : {};
+        const backendSettings = settingsResult.status === 'fulfilled'
+          ? settingsResult.value
+          : { theme: 'dark', notifications: true, twinAssistantEnabled: false };
         const nextProfile = normalizeBackendProfile(authUser, onboardingProfile);
 
         localStorage.setItem('user', JSON.stringify(nextProfile));
         localStorage.setItem('lifetwinOnboardingProfile', JSON.stringify(onboardingProfile));
         setProfile(nextProfile);
         setDraft(nextProfile);
+        setSettings(backendSettings);
       } catch (error) {
         if (!isMounted) return;
         console.warn('Settings profile fallback:', error.response?.data?.message || error.message);
@@ -235,10 +250,28 @@ function Settings() {
     setEditing('');
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    navigate('/login', { replace: true });
+  const handleLogout = async () => {
+    await dispatch(logoutUser());
+    navigate('/', { replace: true });
+  };
+
+  const handleTwinAssistantToggle = async () => {
+    const nextEnabled = !settings.twinAssistantEnabled;
+    const optimisticSettings = { ...settings, twinAssistantEnabled: nextEnabled };
+    setSettings(optimisticSettings);
+
+    try {
+      const savedSettings = await updateSettings({ twinAssistantEnabled: nextEnabled });
+      setSettings(savedSettings);
+      window.dispatchEvent(new Event('twin-assistant-settings-updated'));
+      setSavedMessage(nextEnabled ? 'Twin Assistant enabled' : 'Twin Assistant disabled');
+    } catch (error) {
+      setSettings(settings);
+      setSavedMessage('Assistant setting could not be saved');
+      console.warn('Twin Assistant setting save failed:', error.response?.data?.message || error.message);
+    } finally {
+      window.setTimeout(() => setSavedMessage(''), 2200);
+    }
   };
 
   return (
@@ -332,6 +365,34 @@ function Settings() {
                   onSave={() => saveProfile([field.key])}
                 />
               ))}
+            </div>
+          </SettingsSection>
+
+          <SettingsSection icon={Bot} eyebrow="Voice Control" title="Twin Assistant">
+            <div className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-white/[0.045] p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="max-w-3xl">
+                <h4 className="text-xl font-black text-white">Twin Assistant</h4>
+                <p className="mt-2 text-sm leading-6 text-white/56">
+                  Enable or disable the Twin Voice Assistant. When enabled, users can control parts of the application using voice commands. When disabled, all actions must be performed manually.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.twinAssistantEnabled}
+                onClick={handleTwinAssistantToggle}
+                className={`relative h-9 w-16 shrink-0 rounded-full border p-1 transition ${
+                  settings.twinAssistantEnabled
+                    ? 'border-[#10c7a1]/45 bg-[#10c7a1]'
+                    : 'border-white/12 bg-white/10'
+                }`}
+              >
+                <span
+                  className={`block h-7 w-7 rounded-full bg-white shadow-lg transition ${
+                    settings.twinAssistantEnabled ? 'translate-x-7' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
           </SettingsSection>
 

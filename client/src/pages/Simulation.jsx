@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
   ArrowRight,
@@ -169,6 +170,8 @@ function normalizeAnalysis(data) {
 }
 
 function Simulation() {
+  const location = useLocation();
+  const assistantSimulationApplied = useRef(false);
   const [currentValues, setCurrentValues] = useState(buildCurrentValues);
   const [values, setValues] = useState(buildInitialValues);
   const [customFields, setCustomFields] = useState([]);
@@ -262,7 +265,10 @@ function Simulation() {
     setModalGroup(null);
   };
 
-  const startSimulation = async () => {
+  const startSimulation = useCallback(async (overrides = {}) => {
+    const nextCurrentValues = { ...currentValues, ...(overrides.current || {}) };
+    const nextValues = { ...values, ...(overrides.simulated || {}) };
+
     setPhase('loading');
     setCompletedSteps(0);
     setDotCount(3);
@@ -286,7 +292,7 @@ function Simulation() {
     try {
       const responsePromise = axios.post(
         `${API_BASE_URL}/api/simulation/analyze`,
-        { current: currentValues, simulated: values },
+        { current: nextCurrentValues, simulated: nextValues },
         { headers: authHeaders },
       );
       const [response] = await Promise.all([responsePromise, minimumRunTime]);
@@ -301,7 +307,17 @@ function Simulation() {
       setCompletedSteps(processingSteps.length);
       setPhase('result');
     }
-  };
+  }, [authHeaders, currentValues, values]);
+
+  useEffect(() => {
+    const assistantSimulation = location.state?.assistantSimulation;
+    if (!assistantSimulation || assistantSimulationApplied.current || isLoadingInputs) return;
+
+    assistantSimulationApplied.current = true;
+    setCurrentValues((current) => ({ ...current, ...(assistantSimulation.current || {}) }));
+    setValues((current) => ({ ...current, ...(assistantSimulation.simulated || {}) }));
+    startSimulation(assistantSimulation);
+  }, [isLoadingInputs, location.state, startSimulation]);
 
   const resetSimulation = () => {
     setCompletedSteps(0);
@@ -325,6 +341,11 @@ function Simulation() {
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">
             Adjust future inputs. Watch the twin calculate before and after impact.
           </p>
+          {(isLoadingInputs || inputError) && (
+            <p className="mt-3 text-sm font-semibold text-[#7df3cc]/80">
+              {isLoadingInputs ? 'Loading your current twin inputs...' : inputError}
+            </p>
+          )}
         </HeroPanel>
 
         <section className="grid gap-5 xl:grid-cols-3">
@@ -550,7 +571,7 @@ function ProcessingScreen({ completedSteps, dotCount }) {
               <Brain className="h-9 w-9 animate-pulse text-[#7df3cc]" />
             </div>
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-white/48">Digital Twin Processing</p>
-            <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">Cooking{dots}</h2>
+            <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">Processing{dots}</h2>
 
             <div className="mt-8 space-y-3 text-left">
               {processingSteps.map((step, index) => {

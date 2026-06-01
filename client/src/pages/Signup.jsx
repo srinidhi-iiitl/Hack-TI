@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import DigitalTwinLogo from '../components/DigitalTwinLogo';
+import { loginSuccess } from '../features/auth/authSlice';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -45,6 +47,7 @@ function RotatingSignal({ signal }) {
 
 function Signup() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [animatedStats, setAnimatedStats] = useState(signalStats.map(() => 0));
@@ -76,7 +79,13 @@ function Signup() {
       toast.success('Account created!');
       localStorage.setItem('authToken', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
-      setTimeout(() => navigate('/onboarding'), 500);
+      localStorage.removeItem('lifetwinOnboardingProfile');
+      dispatch(loginSuccess({
+        token: response.data.data.token,
+        user: response.data.data.user,
+        onboardingCompleted: false,
+      }));
+      navigate('/onboarding', { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.message || 'Signup failed.');
     } finally {

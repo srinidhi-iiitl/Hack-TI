@@ -14,8 +14,13 @@ import financeRoutes from './routes/financeRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import careerRoutes from './routes/careerRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import aiInsightsRoutes from './routes/aiInsightsRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
 import simulationRoutes from './routes/simulationRoutes.js';
+import assistantRoutes from './routes/assistantRoutes.js';
+import settingsRoutes from './routes/settingsRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 // ✅ FIXED: Only one import for integrations
 import integrationRoutes from './routes/integrationRoutes.js'; 
 
@@ -56,7 +61,7 @@ initializeFirebase();
  * Health Check Endpoint
  * Returns server status
  */
-app.get('/api/health', (req, res) => {
+app.get('/api/server-health', (req, res) => {
   return res.status(200).json({
     success: true,
     message: 'Server is running',
@@ -68,16 +73,21 @@ app.get('/api/health', (req, res) => {
  * Authentication & App Routes
  */
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
 app.use('/api', onboardingRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/health', healthRoutes);
 app.use('/api/health-metrics', healthRoutes);
 app.use('/api/career', careerRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/ai-insights', aiInsightsRoutes);
 app.use('/api/simulation', simulationRoutes);
+app.use('/api/assistant', assistantRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
-// ✅ FIXED: Only mounted once
 app.use('/api/integrations', integrationRoutes);
 
 // ============================================

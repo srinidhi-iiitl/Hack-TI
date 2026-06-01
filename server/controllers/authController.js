@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import User from '../models/User.js';
 import { generateToken } from '../middleware/auth.js';
 
@@ -284,7 +285,72 @@ export const changePassword = async (req, res, next) => {
   }
 };
 
-export default { signup, login, getProfile, updateProfile, changePassword };
+export const logout = async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: 'Logged out successfully',
+  });
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (user) {
+      const resetToken = crypto.randomBytes(24).toString('hex');
+      user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+      user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
+      await user.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'If an account exists for this email, a reset link has been generated.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+
+    if (!token || !password || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Token and password fields are required' });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match' });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+    }
+
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Password reset successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export default { signup, login, logout, getProfile, updateProfile, changePassword, forgotPassword, resetPassword };
 
 function sanitizeProfileText(value) {
   if (value === undefined || value === null) return '';
