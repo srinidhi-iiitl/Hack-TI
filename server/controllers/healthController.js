@@ -8,6 +8,8 @@ import {
   todayKey,
 } from '../services/domainDataService.js';
 
+// ── Unchanged controllers ─────────────────────────────────────────────────────
+
 export const getHealth = async (req, res) => {
   const [daily, lifeProfile] = await Promise.all([
     getOrCreateDailyTracking(req.user.userId),
@@ -18,7 +20,6 @@ export const getHealth = async (req, res) => {
     Math.min(100, (daily.health?.waterLiters || 0) * 25),
     Math.min(100, (daily.health?.workouts?.length || 0) * 25),
   ]);
-
   res.status(200).json({
     success: true,
     data: {
@@ -53,16 +54,15 @@ export const getHealthAnalytics = async (req, res) => {
     Math.min(100, (latest.waterLiters || 0) * 25),
     Math.min(100, (latest.workouts?.length || 0) * 25),
   ]);
-
   res.status(200).json({
     success: true,
     data: {
       score,
       averages: {
-        sleepHours: average(logs.map((log) => log.health?.sleepHours)),
-        waterLiters: average(logs.map((log) => log.health?.waterLiters)),
+        sleepHours: average(logs.map((l) => l.health?.sleepHours)),
+        waterLiters: average(logs.map((l) => l.health?.waterLiters)),
       },
-      totalWorkouts: logs.reduce((sum, log) => sum + (log.health?.workouts?.length || 0), 0),
+      totalWorkouts: logs.reduce((sum, l) => sum + (l.health?.workouts?.length || 0), 0),
     },
   });
 };
@@ -96,58 +96,100 @@ export const savePregnancy = async (req, res) => {
   res.status(201).json({ success: true, data: profile.pregnancy });
 };
 
-// @desc    Log a workout and award XP
-// @route   POST /api/health-metrics/workout
+// ── FIXED: logWorkout — now writes to DailyTracking ──────────────────────────
+// Previously only fired gamification. Now saves workout to DailyTracking
+// so GoalSyncEngine can map durationMinutes → matching workout/exercise goals.
 export const logWorkout = async (req, res) => {
   try {
-    // ✅ FIXED: Using .userId from your auth middleware
-    const userId = req.user.userId; 
+    const userId = req.user.userId;
     const { type, duration } = req.body;
+    const today  = todayKey();
 
-    const gamificationResult = await GamificationEngine.logEvent(
-      userId, 
-      'WORKOUT_LOGGED', 
-      { type, duration }
-    );
+    // 1. Find or create today's log
+    let daily = await DailyTracking.findOne({ userId, dateString: today });
+    if (!daily) daily = new DailyTracking({ userId, dateString: today });
 
-    res.status(201).json({
-      success: true,
-      message: 'Workout logged successfully!',
-      gamification: gamificationResult 
-    });
+    // 2. Snapshot BEFORE mutation so GoalSyncEngine gets the delta only
+    daily._prevSnapshot = {
+      health:  { ...snapshotHealth(daily.health) },
+      finance: { ...snapshotFinance(daily.finance) },
+    };
+
+    // 3. Append workout entry
+    daily.health.workouts.push({ type: type || 'General', durationMinutes: Number(duration) || 0 });
+
+    // 4. Save — post-save hook fires GoalSyncEngine automatically
+    await daily.save();
+
+    // 5. Gamification
+    const gamification = await GamificationEngine.logEvent(userId, 'WORKOUT_LOGGED', { type, duration });
+
+    res.status(201).json({ success: true, message: 'Workout logged!', gamification });
   } catch (error) {
-    console.error('Health Controller Error:', error);
+    console.error('logWorkout Error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
-// @desc    Log sleep and award XP
-// @route   POST /api/health-metrics/sleep
+// ── FIXED: logSleep — now writes to DailyTracking ────────────────────────────
+// Previously only fired gamification. Now saves sleepHours to DailyTracking
+// so GoalSyncEngine can map sleepHours → matching sleep goals.
 export const logSleep = async (req, res) => {
   try {
-    // ✅ FIXED: Using .userId
-    const userId = req.user.userId; 
+    const userId = req.user.userId;
     const { hours } = req.body;
+    const today   = todayKey();
 
-    const gamificationResult = await GamificationEngine.logEvent(
-      userId, 
-      'SLEEP_LOGGED', 
-      { hours }
-    );
+    // 1. Find or create today's log
+    let daily = await DailyTracking.findOne({ userId, dateString: today });
+    if (!daily) daily = new DailyTracking({ userId, dateString: today });
 
-    res.status(201).json({
-      success: true,
-      message: 'Sleep logged successfully!',
-      gamification: gamificationResult 
-    });
+    // 2. Snapshot BEFORE mutation
+    daily._prevSnapshot = {
+      health:  { ...snapshotHealth(daily.health) },
+      finance: { ...snapshotFinance(daily.finance) },
+    };
+
+    // 3. Set sleep hours (replace, not increment — you only sleep once per day)
+    daily.health.sleepHours = Number(hours) || 0;
+
+    // 4. Save — post-save hook fires GoalSyncEngine automatically
+    await daily.save();
+
+    // 5. Gamification
+    const gamification = await GamificationEngine.logEvent(userId, 'SLEEP_LOGGED', { hours });
+
+    res.status(201).json({ success: true, message: 'Sleep logged!', gamification });
   } catch (error) {
-    console.error('Health Controller Error:', error);
+    console.error('logSleep Error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Safe snapshot that handles both Mongoose subdocs and plain objects
+function snapshotHealth(health) {
+  if (!health) return { caloriesConsumed: 0, proteinConsumed: 0, waterLiters: 0, sleepHours: 0, workouts: [] };
+  return {
+    caloriesConsumed: health.caloriesConsumed || 0,
+    proteinConsumed:  health.proteinConsumed  || 0,
+    waterLiters:      health.waterLiters      || 0,
+    sleepHours:       health.sleepHours       || 0,
+    workouts:         (health.workouts || []).map(w => ({ type: w.type, durationMinutes: w.durationMinutes })),
+  };
+}
+
+function snapshotFinance(finance) {
+  if (!finance) return { moneySpent: 0, moneyCredited: 0 };
+  return {
+    moneySpent:    finance.moneySpent    || 0,
+    moneyCredited: finance.moneyCredited || 0,
+  };
+}
+
 function average(values) {
-  const numbers = values.map(Number).filter((value) => Number.isFinite(value) && value > 0);
+  const numbers = values.map(Number).filter((v) => Number.isFinite(v) && v > 0);
   if (!numbers.length) return 0;
-  return Number((numbers.reduce((sum, value) => sum + value, 0) / numbers.length).toFixed(1));
+  return Number((numbers.reduce((s, v) => s + v, 0) / numbers.length).toFixed(1));
 }
