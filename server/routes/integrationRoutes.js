@@ -2,12 +2,16 @@ import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import {
+  connectFitbandIntegration,
+  connectGithubIntegration,
   connectIntegration,
+  connectLeetcodeIntegration,
+  connectLinkedinIntegration,
   disconnectIntegration,
   getGithubIntegration,
   getIntegrationStatus,
   getLeetcodeIntegration,
-  postLinkedinIntegration,
+  updateIntegration,
   getHackerrankIntegration,   // NEW
   getCodeforcesIntegration,   // NEW
 } from '../controllers/integrationController.js';
@@ -126,14 +130,20 @@ router.get('/career', authenticateToken, async (req, res) => {
 });
 
 // ── Status / connect / disconnect — UNCHANGED ─────────────────────────────────
-router.get('/status',      authenticateToken, asyncHandler(getIntegrationStatus));
-router.post('/connect',    authenticateToken, asyncHandler(connectIntegration));
+router.get('/',           authenticateToken, asyncHandler(getIntegrationStatus));
+router.get('/status',     authenticateToken, asyncHandler(getIntegrationStatus));
+router.post('/connect',   authenticateToken, asyncHandler(connectIntegration));
 router.post('/disconnect', authenticateToken, asyncHandler(disconnectIntegration));
+router.post('/github',    authenticateToken, asyncHandler(connectGithubIntegration));
+router.post('/leetcode',  authenticateToken, asyncHandler(connectLeetcodeIntegration));
+router.post('/linkedin',  authenticateToken, asyncHandler(connectLinkedinIntegration));
+router.post('/fitband',   authenticateToken, asyncHandler(connectFitbandIntegration));
+router.put('/update',     authenticateToken, asyncHandler(updateIntegration));
+router.delete('/',        authenticateToken, asyncHandler(disconnectIntegration));
 
 // ── Onboarding verification routes — UNCHANGED ────────────────────────────────
 router.get('/github/:username(*)',   authenticateToken, getGithubIntegration);
 router.get('/leetcode/:username(*)', authenticateToken, getLeetcodeIntegration);
-router.post('/linkedin',             authenticateToken, postLinkedinIntegration);
 
 // ── NEW: HackerRank and Codeforces routes ─────────────────────────────────────
 router.get('/hackerrank/:username(*)', authenticateToken, getHackerrankIntegration);

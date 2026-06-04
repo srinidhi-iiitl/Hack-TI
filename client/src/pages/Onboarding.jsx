@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'motion/react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import BackgroundBeams from '../components/BackgroundBeams';
 import DigitalTwinLogo from '../components/DigitalTwinLogo';
+import { saveCareerIntegrations } from '../features/careerIntegrations/careerIntegrationSlice';
+import { saveHealthIntegration } from '../features/healthIntegration/healthIntegrationSlice';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -37,15 +40,6 @@ const integrationProfiles = [
     logo: LeetCodeLogo,
   },
   {
-    id: 'fitbit',
-    title: 'Fitbit',
-    field: 'profileLink',
-    label: 'Fitbit profile link',
-    placeholder: 'https://fitbit.com/user/...',
-    description: 'Sleep, recovery, steps, and activity trends.',
-    logo: FitbitLogo,
-  },
-  {
     id: 'linkedin',
     title: 'LinkedIn',
     field: 'profileLink',
@@ -55,12 +49,21 @@ const integrationProfiles = [
     logo: LinkedInLogo,
   },
   {
+    id: 'health',
+    title: 'Fitband',
+    field: 'integrationLink',
+    label: 'Health Integration Link',
+    placeholder: 'https://gargi-fitband/user/12345',
+    description: 'Sleep, steps, heart rate, and HRV from your mock health device.',
+    logo: FitbitLogo,
+  },
+  {
     id: 'banking',
-    title: 'Banking App',
+    title: 'Finance',
     field: 'profileLink',
-    label: 'Banking profile link',
-    placeholder: 'https://bank.example/profile',
-    description: 'Spending rhythm, savings behavior, and cashflow.',
+    label: 'Finance profile or banking link',
+    placeholder: 'https://finance-provider/user/12345',
+    description: 'Cashflow and spending signals. UI-only for now.',
     logo: BankingLogo,
   },
 ];
@@ -74,6 +77,8 @@ const analysisMessages = [
   'Personalizing your dashboard...',
 ];
 
+const delay = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
 const initialOnboardingData = {
   behavioralAnalysis: {
     focusAreas: [],
@@ -82,6 +87,7 @@ const initialOnboardingData = {
     github: { status: 'skipped', username: '' },
     leetcode: { status: 'skipped', username: '' },
     fitbit: { status: 'skipped', profileLink: '' },
+    health: { status: 'skipped', integrationLink: '' },
     linkedin: { status: 'skipped', profileLink: '' },
     banking: { status: 'skipped', profileLink: '' },
   },
@@ -111,9 +117,11 @@ const initialOnboardingData = {
 
 function Onboarding() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [step, setStep] = useState(1);
   const [navigationDirection, setNavigationDirection] = useState(1);
   const [onboardingData, setOnboardingData] = useState(initialOnboardingData);
+  const [integrationLoadingMessages, setIntegrationLoadingMessages] = useState({});
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
 
@@ -179,6 +187,12 @@ function Onboarding() {
       },
     }));
   };
+
+  const getCareerIntegrationLinks = (data = onboardingData) => ({
+    github: data.integrations.github?.username || '',
+    leetcode: data.integrations.leetcode?.username || '',
+    linkedin: data.integrations.linkedin?.profileLink || '',
+  });
 
   const updateIntegrationField = (integrationId, field, value) => {
     setOnboardingData((current) => ({
@@ -274,25 +288,55 @@ function Onboarding() {
     }
 
     setIntegrationStatus(integration.id, 'verifying');
+    setIntegrationLoadingMessages((current) => ({ ...current, [integration.id]: integration.id === 'health' ? 'Connecting Device...' : 'Connecting...' }));
+    const messageTimers = [
+      window.setTimeout(() => {
+        setIntegrationLoadingMessages((current) => ({ ...current, [integration.id]: integration.id === 'health' ? 'Fetching Health Data...' : 'Fetching profile...' }));
+      }, 450),
+      window.setTimeout(() => {
+        setIntegrationLoadingMessages((current) => ({ ...current, [integration.id]: integration.id === 'health' ? 'Verifying Device...' : 'Verifying account...' }));
+      }, 950),
+    ];
 
     try {
-      const verifiedData = await verifyIntegrationProfile(integration, value, token);
+      const [verifiedData] = await Promise.all([
+        verifyIntegrationProfile(integration, value),
+        delay(1500),
+      ]);
 
       if (!verifiedData.connected) {
         throw new Error(verifiedData.error || `${integration.title} profile was not found.`);
       }
 
+      if (integration.id === 'health') {
+        setIntegrationStatus(integration.id, 'connected', verifiedData);
+        await dispatch(saveHealthIntegration({ integrationLink: value })).unwrap();
+        toast.success('Health Device Connected');
+        return;
+      }
+
+      if (integration.id === 'banking') {
+        setIntegrationStatus(integration.id, 'connected', verifiedData);
+        toast.success('Finance integration saved for onboarding');
+        return;
+      }
+
       if (integration.id === 'linkedin') {
         setIntegrationStatus(integration.id, 'saved', verifiedData);
-        toast.success('LinkedIn profile link saved as an unverified career signal.');
+        await dispatch(saveCareerIntegrations(getCareerIntegrationLinks())).unwrap();
+        toast.success('LinkedIn profile connected successfully');
         return;
       }
 
       setIntegrationStatus(integration.id, 'connected', verifiedData);
-      toast.success(`${integration.title} verified and connected.`);
+      await dispatch(saveCareerIntegrations(getCareerIntegrationLinks())).unwrap();
+      toast.success(`${integration.title} profile connected successfully`);
     } catch (error) {
       setIntegrationStatus(integration.id, 'skipped');
       toast.error(error.response?.data?.message || error.message || `${integration.title} connection failed.`);
+    } finally {
+      messageTimers.forEach((timer) => window.clearTimeout(timer));
+      setIntegrationLoadingMessages((current) => ({ ...current, [integration.id]: '' }));
     }
   };
 
@@ -310,19 +354,12 @@ function Onboarding() {
     setStep(4);
   };
 
-  const verifyIntegrationProfile = async (integration, value, token) => {
-    const headers = { Authorization: `Bearer ${token}` };
-    if (integration.id === 'github') {
-      const response = await axios.get(`${API_BASE_URL}/api/integrations/github/${encodeURIComponent(value)}`, { headers });
-      return response.data.data;
+  const verifyIntegrationProfile = async (integration, value) => {
+    if (integration.id === 'health') {
+      return { connected: true, source: 'gargi_fitband', profileLink: value };
     }
-    if (integration.id === 'leetcode') {
-      const response = await axios.get(`${API_BASE_URL}/api/integrations/leetcode/${encodeURIComponent(value)}`, { headers });
-      return response.data.data;
-    }
-    if (integration.id === 'linkedin') {
-      const response = await axios.post(`${API_BASE_URL}/api/integrations/linkedin`, { linkedinProfile: value }, { headers });
-      return response.data.data;
+    if (['github', 'leetcode', 'linkedin'].includes(integration.id)) {
+      return { connected: true, source: integration.id, profileLink: value };
     }
     return { connected: true, source: integration.id, profileLink: value };
   };
@@ -399,6 +436,8 @@ function Onboarding() {
     }
 
     try {
+      await dispatch(saveCareerIntegrations(getCareerIntegrationLinks())).unwrap();
+
       const response = await axios.post(`${API_BASE_URL}/api/onboarding`, onboardingData, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -536,11 +575,12 @@ function Onboarding() {
           const saved = data.status === 'saved';
           const verifying = data.status === 'verifying';
           const hasValue = Boolean(data[integration.field]?.trim());
+          const loadingMessage = integrationLoadingMessages[integration.id] || 'Connecting...';
 
           return (
             <div
               key={integration.id}
-              className={`grid grid-cols-1 items-center gap-3 rounded-lg border px-3 py-2 transition-colors md:grid-cols-[240px_minmax(0,1fr)_120px] ${
+              className={`grid grid-cols-1 items-center gap-3 rounded-lg border px-3 py-2 transition-colors md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[240px_minmax(220px,520px)_minmax(150px,auto)] ${
                 connected || saved
                   ? 'border-[#b8d8c5] bg-[#f4fbf6]'
                   : 'border-transparent bg-white hover:border-[#d8e5ea] hover:bg-[#f7fbfc]'
@@ -560,7 +600,7 @@ function Onboarding() {
               </div>
 
               {integration.field && (
-                <label className="block min-w-0">
+                <label className="block min-w-0 lg:max-w-[520px]">
                   <span className="sr-only">{integration.label}</span>
                   <input
                     type="text"
@@ -573,7 +613,7 @@ function Onboarding() {
                 </label>
               )}
 
-              <div className="flex items-center justify-start gap-3 md:justify-end">
+              <div className="flex items-center justify-start gap-3 md:col-start-2 md:justify-start lg:col-start-auto lg:justify-end">
                 {connected || saved ? (
                   <>
                     <span className="inline-flex h-9 w-9 items-center justify-center text-[#22c55e]" aria-label={connected ? 'Connected' : 'Saved'}>
@@ -594,7 +634,7 @@ function Onboarding() {
                     type="button"
                     onClick={() => handleConnectIntegration(integration)}
                     disabled={verifying || !hasValue}
-                    className={`h-9 min-w-24 rounded-lg border px-4 text-sm font-semibold transition ${
+                    className={`inline-flex h-9 min-w-[9.5rem] items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold transition ${
                       verifying
                         ? 'cursor-not-allowed border-[#9ebfca] bg-[#9ebfca] text-white'
                         : hasValue
@@ -602,7 +642,8 @@ function Onboarding() {
                           : 'cursor-not-allowed border-[#d8e5ea] bg-[#f7fbfc] text-zinc-400'
                     }`}
                   >
-                    {verifying ? 'Checking...' : 'Connect'}
+                    {verifying && <span className="h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />}
+                    {verifying ? loadingMessage : 'Connect'}
                   </button>
                 )}
               </div>

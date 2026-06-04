@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import {
   Activity, Bot, CalendarDays, Check, CircleHelp, Code2, CreditCard,
@@ -11,7 +11,18 @@ import {
 } from 'lucide-react';
 import { getSettings, updateSettings } from '../services/voiceAssistantService';
 import { logoutUser } from '../features/auth/authThunks';
+import {
+  disconnectCareerIntegration,
+  fetchCareerIntegrations,
+  saveCareerIntegrations,
+} from '../features/careerIntegrations/careerIntegrationSlice';
+import {
+  disconnectHealthIntegration,
+  fetchHealthIntegration,
+  saveHealthIntegration,
+} from '../features/healthIntegration/healthIntegrationSlice';
 import { useIntegrations } from '../context/IntegrationContext';
+import { fetchCareerIntegrationStats, getCareerProfileLabel } from '../utils/careerIntegrationStats';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -155,6 +166,8 @@ function Settings() {
   const navigate  = useNavigate();
   const dispatch  = useDispatch();
   const { integrations, saveIntegration, disconnectIntegration, loading: intLoading, refreshIntegrations } = useIntegrations();
+  const careerIntegrations = useSelector((state) => state.careerIntegrations);
+  const healthIntegration = useSelector((state) => state.healthIntegration);
 
   const [profile, setProfile] = useState(getInitialProfile);
   const [draft,   setDraft]   = useState(profile);
@@ -204,6 +217,11 @@ function Settings() {
     load();
     return () => { isMounted = false; };
   }, []);
+
+  useEffect(() => {
+    dispatch(fetchCareerIntegrations());
+    dispatch(fetchHealthIntegration());
+  }, [dispatch]);
 
   const initials = useMemo(() =>
     profile.fullName.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase(),
@@ -281,6 +299,26 @@ function Settings() {
 
   const handleLogout = async () => { await dispatch(logoutUser()); navigate('/', { replace: true }); };
 
+  const handleSaveCareerIntegrations = async (links) => {
+    await dispatch(saveCareerIntegrations(links)).unwrap();
+    showToast('Career integrations saved');
+  };
+
+  const handleDisconnectCareerIntegration = async (provider) => {
+    await dispatch(disconnectCareerIntegration(provider)).unwrap();
+    showToast(`${providerLabel(provider)} disconnected`);
+  };
+
+  const handleSaveHealthIntegration = async (integrationLink) => {
+    await dispatch(saveHealthIntegration({ integrationLink })).unwrap();
+    showToast('Health device connected');
+  };
+
+  const handleDisconnectHealthIntegration = async () => {
+    await dispatch(disconnectHealthIntegration()).unwrap();
+    showToast('Health device disconnected');
+  };
+
   return (
     <div className="min-h-[calc(100vh-112px)] bg-[#05070d] px-4 py-6 text-white sm:px-6 lg:px-8">
       <div className="pointer-events-none fixed inset-0 left-[20rem] bg-[radial-gradient(circle_at_16%_0%,rgba(255,122,0,0.12),transparent_28%),radial-gradient(circle_at_86%_12%,rgba(16,199,161,0.10),transparent_30%),linear-gradient(135deg,rgba(123,97,255,0.08),transparent_34%)]" />
@@ -341,8 +379,26 @@ function Settings() {
             </aside>
           </div>
 
+          <SettingsSection icon={Network} eyebrow="Career" title="Career Integrations">
+            <CareerIntegrationsSettings
+              integrations={careerIntegrations}
+              onSave={handleSaveCareerIntegrations}
+              onDisconnect={handleDisconnectCareerIntegration}
+              onRefresh={() => dispatch(fetchCareerIntegrations())}
+            />
+          </SettingsSection>
+
+          <SettingsSection icon={Activity} eyebrow="Health" title="Health Integration">
+            <HealthIntegrationSettings
+              integration={healthIntegration}
+              onSave={handleSaveHealthIntegration}
+              onDisconnect={handleDisconnectHealthIntegration}
+              onRefresh={() => dispatch(fetchHealthIntegration())}
+            />
+          </SettingsSection>
+
           {/* ── INTEGRATIONS ── */}
-          <SettingsSection icon={Wifi} eyebrow="Integrations" title="Connected Integrations">
+          <SettingsSection icon={Wifi} eyebrow="Integrations" title="Finance Integration">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-white/50">
                 Connect your accounts once — data flows to Dashboard, Health, Career, and Finance automatically.
@@ -354,7 +410,7 @@ function Settings() {
               </button>
             </div>
             <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-              {INTEGRATIONS.map(def => (
+              {INTEGRATIONS.filter(def => !['github', 'leetcode', 'linkedin', 'fitbit', 'portfolio'].includes(def.key)).map(def => (
                 <IntegrationCard
                   key={def.key}
                   def={def}
@@ -440,6 +496,309 @@ function Settings() {
           onSave={() => saveProfile([editing])}
         />
       )}
+    </div>
+  );
+}
+
+function CareerIntegrationsSettings({ integrations, onSave, onDisconnect, onRefresh }) {
+  const [draft, setDraft] = useState({
+    github: integrations.github?.profileUrl || '',
+    leetcode: integrations.leetcode?.profileUrl || '',
+    linkedin: integrations.linkedin?.profileUrl || '',
+  });
+  const [savingKey, setSavingKey] = useState('');
+  const [editingKey, setEditingKey] = useState('');
+  const [statsByKey, setStatsByKey] = useState({});
+  const [statsLoading, setStatsLoading] = useState({});
+
+  useEffect(() => {
+    setDraft({
+      github: integrations.github?.profileUrl || '',
+      leetcode: integrations.leetcode?.profileUrl || '',
+      linkedin: integrations.linkedin?.profileUrl || '',
+    });
+  }, [
+    integrations.github?.profileUrl,
+    integrations.leetcode?.profileUrl,
+    integrations.linkedin?.profileUrl,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    ['github', 'leetcode'].forEach((key) => {
+      const profileUrl = integrations[key]?.profileUrl || '';
+      if (!profileUrl) {
+        setStatsByKey((current) => ({ ...current, [key]: null }));
+        return;
+      }
+
+      setStatsLoading((current) => ({ ...current, [key]: true }));
+      fetchCareerIntegrationStats(key, profileUrl)
+        .then((stats) => {
+          if (!cancelled) setStatsByKey((current) => ({ ...current, [key]: stats }));
+        })
+        .catch(() => {
+          if (!cancelled) setStatsByKey((current) => ({ ...current, [key]: null }));
+        })
+        .finally(() => {
+          if (!cancelled) setStatsLoading((current) => ({ ...current, [key]: false }));
+        });
+    });
+
+    return () => { cancelled = true; };
+  }, [integrations.github?.profileUrl, integrations.leetcode?.profileUrl]);
+
+  const rows = [
+    { key: 'github', label: 'GitHub', icon: Code2, placeholder: 'https://github.com/anjali', value: integrations.github?.profileUrl || '' },
+    { key: 'leetcode', label: 'LeetCode', icon: Zap, placeholder: 'https://leetcode.com/u/anjali', value: integrations.leetcode?.profileUrl || '' },
+    { key: 'linkedin', label: 'LinkedIn', icon: Network, placeholder: 'https://linkedin.com/in/anjali', value: integrations.linkedin?.profileUrl || '' },
+  ];
+
+  const saveOne = async (key) => {
+    setSavingKey(key);
+    try {
+      await onSave({ [key]: draft[key] || '' });
+      setEditingKey('');
+    } finally {
+      setSavingKey('');
+    }
+  };
+
+  const disconnectOne = async (key) => {
+    setSavingKey(key);
+    try {
+      await onDisconnect(key);
+    } finally {
+      setSavingKey('');
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-white/50">Career links are shared by Onboarding, Career, and Settings through Redux.</p>
+        <button type="button" onClick={onRefresh} disabled={integrations.loading}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/50 transition hover:bg-white/8 hover:text-white disabled:opacity-40">
+          <RefreshCw className={`h-3.5 w-3.5 ${integrations.loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {rows.map((row) => {
+          const Icon = row.icon;
+          const connected = Boolean(row.value);
+          const saving = savingKey === row.key || integrations.saving;
+          const editing = editingKey === row.key || !connected;
+          const stats = statsByKey[row.key];
+
+          return (
+            <div key={row.key} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/8 text-[#7df3cc]">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h4 className="text-base font-black text-white">{row.label}</h4>
+                    <p className={`mt-1 text-[11px] font-black uppercase tracking-[0.16em] ${connected ? 'text-[#10c7a1]' : 'text-white/32'}`}>
+                      {connected ? 'Connected' : 'Not connected'}
+                    </p>
+                  </div>
+                </div>
+                {connected && (
+                  <button type="button" onClick={() => setEditingKey(row.key)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[10px] font-bold text-white/55 transition hover:bg-white/10 hover:text-white">
+                    <Pencil className="h-3 w-3" />
+                    Edit
+                  </button>
+                )}
+              </div>
+
+              {connected && row.key === 'github' && (
+                <StatsChips
+                  loading={statsLoading.github}
+                  items={[
+                    ['Username', stats?.username || integrations.github.username],
+                    ['Repositories', stats?.repositories],
+                    ['Followers', stats?.followers],
+                    ['Following', stats?.following],
+                    ['Stars', stats?.stars],
+                  ]}
+                />
+              )}
+
+              {connected && row.key === 'leetcode' && (
+                <StatsChips
+                  loading={statsLoading.leetcode}
+                  items={[
+                    ['Solved Questions', stats?.solved],
+                    ['Rank', stats?.rank],
+                    ['Rating', stats?.contestRating],
+                    ['Contests Given', stats?.contests],
+                  ]}
+                />
+              )}
+
+              {connected && row.value && (
+                <a href={row.value} target="_blank" rel="noreferrer"
+                  className="mb-3 block truncate rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-[#7df3cc]/70 hover:text-[#7df3cc]">
+                  Profile: {getCareerProfileLabel(row.key, row.value)}
+                </a>
+              )}
+
+              {editing && (
+                <input
+                  value={draft[row.key]}
+                  onChange={(event) => setDraft((current) => ({ ...current, [row.key]: event.target.value }))}
+                  placeholder={row.placeholder}
+                  className="h-11 w-full rounded-xl border border-white/10 bg-[#080d15] px-3 text-base font-semibold text-white outline-none placeholder:text-white/20 focus:border-[#10c7a1]/45"
+                />
+              )}
+
+              <div className="mt-4 flex gap-2">
+                {editing && (
+                  <button type="button" onClick={() => saveOne(row.key)} disabled={saving}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10c7a1] px-3 py-2 text-xs font-black text-[#06110f] transition hover:bg-[#7df3cc] disabled:opacity-50">
+                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                    Save
+                  </button>
+                )}
+                {connected && (
+                  <button type="button" onClick={() => disconnectOne(row.key)} disabled={saving}
+                    className={`${editing ? '' : 'w-full'} rounded-xl border border-[#ff4d7d]/20 bg-[#ff4d7d]/8 px-3 py-2 text-xs font-bold text-[#ff4d7d] transition hover:bg-[#ff4d7d]/15 disabled:opacity-50`}>
+                    Disconnect
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {integrations.error && (
+        <p className="rounded-xl border border-[#ff4d7d]/20 bg-[#ff4d7d]/8 px-3 py-2 text-sm text-[#ff8fbd]">{integrations.error}</p>
+      )}
+    </div>
+  );
+}
+
+function providerLabel(provider) {
+  return ({ github: 'GitHub', leetcode: 'LeetCode', linkedin: 'LinkedIn' })[provider] || provider;
+}
+
+function HealthIntegrationSettings({ integration, onSave, onDisconnect, onRefresh }) {
+  const [draft, setDraft] = useState(integration.integrationLink || '');
+  const [editing, setEditing] = useState(!integration.connected);
+
+  useEffect(() => {
+    setDraft(integration.integrationLink || '');
+    setEditing(!integration.connected);
+  }, [integration.connected, integration.integrationLink]);
+
+  const save = async () => {
+    if (!draft.trim()) return;
+    await onSave(draft.trim());
+    setEditing(false);
+  };
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/8 text-[#34d399]">
+            <Activity className="h-5 w-5" />
+          </span>
+          <div>
+            <h4 className="text-base font-black text-white">Health Device</h4>
+            <p className={`mt-1 text-[11px] font-black uppercase tracking-[0.16em] ${integration.connected ? 'text-[#10c7a1]' : 'text-white/32'}`}>
+              {integration.connected ? 'Connected' : 'Not connected'}
+            </p>
+          </div>
+        </div>
+        <button type="button" onClick={onRefresh} disabled={integration.loading}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/50 transition hover:bg-white/8 hover:text-white disabled:opacity-40">
+          <RefreshCw className={`h-3.5 w-3.5 ${integration.loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
+
+      {integration.connected && (
+        <div className="mb-3 grid gap-2 text-sm text-white/62 md:grid-cols-3">
+          <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">Provider: Gargi Fitband</div>
+          <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">Status: Synced</div>
+          <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
+            Last Sync: {integration.lastSync ? new Date(integration.lastSync).toLocaleString() : 'Not synced'}
+          </div>
+        </div>
+      )}
+
+      {integration.connected && integration.integrationLink && !editing && (
+        <p className="mb-3 truncate rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-[#7df3cc]/70">
+          {integration.integrationLink}
+        </p>
+      )}
+
+      {editing && (
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="https://gargi-fitband/user/12345"
+          className="h-11 w-full rounded-xl border border-white/10 bg-[#080d15] px-3 text-base font-semibold text-white outline-none placeholder:text-white/20 focus:border-[#10c7a1]/45"
+        />
+      )}
+
+      <div className="mt-4 flex gap-2">
+        {editing ? (
+          <button type="button" onClick={save} disabled={integration.saving || !draft.trim()}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10c7a1] px-3 py-2 text-xs font-black text-[#06110f] transition hover:bg-[#7df3cc] disabled:opacity-50">
+            {integration.saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Save
+          </button>
+        ) : (
+          <button type="button" onClick={() => setEditing(true)}
+            className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white/55 transition hover:bg-white/10 hover:text-white">
+            <Pencil className="h-3.5 w-3.5" />
+            Edit
+          </button>
+        )}
+        {integration.connected && (
+          <button type="button" onClick={onDisconnect} disabled={integration.saving}
+            className="rounded-xl border border-[#ff4d7d]/20 bg-[#ff4d7d]/8 px-3 py-2 text-xs font-bold text-[#ff4d7d] transition hover:bg-[#ff4d7d]/15 disabled:opacity-50">
+            Disconnect
+          </button>
+        )}
+      </div>
+
+      {integration.error && (
+        <p className="mt-3 rounded-xl border border-[#ff4d7d]/20 bg-[#ff4d7d]/8 px-3 py-2 text-sm text-[#ff8fbd]">{integration.error}</p>
+      )}
+    </div>
+  );
+}
+
+function StatsChips({ loading, items }) {
+  if (loading) {
+    return (
+      <div className="mb-3 flex flex-wrap gap-2">
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white/40">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Fetching profile
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-3 flex flex-wrap gap-2">
+      {items
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .map(([label, value]) => (
+          <span key={label} className="rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[11px] font-bold text-white/62">
+            {label}: {typeof value === 'number' ? value.toLocaleString() : value}
+          </span>
+        ))}
     </div>
   );
 }

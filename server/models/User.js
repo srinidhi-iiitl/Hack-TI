@@ -60,6 +60,17 @@ const userSchema = new mongoose.Schema(
       fitband: { type: String, trim: true, default: '' },
       banking: { type: String, trim: true, default: '' },
     },
+    careerIntegrations: {
+      github: { type: String, trim: true, default: '' },
+      leetcode: { type: String, trim: true, default: '' },
+      linkedin: { type: String, trim: true, default: '' },
+    },
+    healthIntegration: {
+      connected: { type: Boolean, default: false },
+      provider: { type: String, trim: true, default: 'gargi_fitband' },
+      integrationLink: { type: String, trim: true, default: '' },
+      lastSync: { type: Date, default: null },
+    },
 
     // Subscription & Role
     role: {

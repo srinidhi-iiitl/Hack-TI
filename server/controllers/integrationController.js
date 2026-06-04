@@ -52,6 +52,12 @@ export const getIntegrationStatus = async (req, res, next) => {
         data:        null,
         connectedAt: p.updatedAt || null,
       },
+      fitband: {
+        status:      p.fitbitProfile ? 'connected' : 'disconnected',
+        username:    p.fitbitProfile  || links.fitband || '',
+        data:        null,
+        connectedAt: p.updatedAt || null,
+      },
       linkedin: {
         status:      p.linkedinProfile ? 'connected' : 'disconnected',
         username:    p.linkedinProfile  || '',
@@ -81,7 +87,9 @@ export const getIntegrationStatus = async (req, res, next) => {
 // ─── POST /api/integrations/connect ───────────────────────────────────────────
 export const connectIntegration = async (req, res, next) => {
   try {
-    const { integration, username, profileLink, url } = req.body;
+    const body = req.body || {};
+    const { username, profileLink, url } = body;
+    const integration = normalizeIntegrationName(body.integration);
 
     if (!integration) {
       return res.status(400).json({ success: false, message: 'integration field is required' });
@@ -197,6 +205,38 @@ export const connectIntegration = async (req, res, next) => {
   }
 };
 
+export const connectGithubIntegration = async (req, res, next) => {
+  req.body = { ...(req.body || {}), integration: 'github' };
+  return connectIntegration(req, res, next);
+};
+
+export const connectLeetcodeIntegration = async (req, res, next) => {
+  req.body = { ...(req.body || {}), integration: 'leetcode' };
+  return connectIntegration(req, res, next);
+};
+
+export const connectLinkedinIntegration = async (req, res, next) => {
+  req.body = {
+    ...(req.body || {}),
+    integration: 'linkedin',
+    profileLink: req.body?.linkedinProfile || req.body?.profileLink || req.body?.username,
+  };
+  return connectIntegration(req, res, next);
+};
+
+export const connectFitbandIntegration = async (req, res, next) => {
+  req.body = {
+    ...(req.body || {}),
+    integration: 'fitband',
+    username: req.body?.username || req.body?.fitbandProfile || req.body?.fitbitProfile || req.body?.profileLink,
+  };
+  return connectIntegration(req, res, next);
+};
+
+export const updateIntegration = async (req, res, next) => {
+  return connectIntegration(req, res, next);
+};
+
 // ─── Legacy onboarding endpoints — UNCHANGED ──────────────────────────────────
 export const getGithubIntegration = async (req, res, next) => {
   req.body = { ...(req.body || {}), integration: 'github', username: req.params?.username || req.body?.username };
@@ -229,7 +269,7 @@ export const getCodeforcesIntegration = async (req, res, next) => {
 // ─── POST /api/integrations/disconnect — UNCHANGED ────────────────────────────
 export const disconnectIntegration = async (req, res, next) => {
   try {
-    const { integration } = req.body;
+    const integration = normalizeIntegrationName(req.body?.integration || req.query?.integration);
 
     if (!integration) {
       return res.status(400).json({ success: false, message: 'integration field is required' });
@@ -459,4 +499,10 @@ function buildMockFitbitData() {
     isMock:         true,
     fetchedAt:      new Date().toISOString(),
   };
+}
+
+function normalizeIntegrationName(integration = '') {
+  const normalized = String(integration).trim().toLowerCase();
+  if (normalized === 'fitband') return 'fitbit';
+  return normalized;
 }

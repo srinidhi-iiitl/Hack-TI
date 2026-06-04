@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useDispatch, useSelector } from 'react-redux';
 import { useGamification } from '../context/GamificationContext';
-import { useIntegrations } from '../context/IntegrationContext';
+import {
+  disconnectHealthIntegration,
+  fetchHealthIntegration,
+  saveHealthIntegration,
+} from '../features/healthIntegration/healthIntegrationSlice';
 import {
   Eye, EyeOff, AlertCircle, Baby, Flower2,
   Sparkles, ChevronRight, ChevronLeft, Wifi, WifiOff,
@@ -98,6 +103,8 @@ function NoDataCell({ label, icon: Icon, onConnect }) {
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Health() {
+  const dispatch = useDispatch();
+  const healthIntegration = useSelector((state) => state.healthIntegration);
   const [mounted, setMounted]               = useState(false);
   const [syncStatus, setSyncStatus]         = useState('idle'); // idle|syncing|connected|error
   const [syncError, setSyncError]           = useState('');
@@ -107,18 +114,16 @@ export default function Health() {
   const [weatherError, setWeatherError]     = useState(false);
   const [dashProfile, setDashProfile]       = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const { integrations, isConnected: intIsConnected } = useIntegrations();
 
   // ── ONE-TIME connection state ──────────────────────────────────────────────
   // Read ONCE at mount from localStorage — never re-derived on every render.
   // alreadyConnected  → user has a saved Fitbit session  → auto-sync, no prompt ever
   // promptDismissed   → user explicitly closed the banner → never show it again
-  const [alreadyConnected]  = useState(() => intIsConnected('fitbit') || !!localStorage.getItem(LS_FITBIT));
   const [promptDismissed, setPromptDismissed] = useState(
     () => localStorage.getItem(LS_DISMISSED) === 'true'
   );
   // showConnectBanner: true only for brand-new users who haven't connected or dismissed
-  const showConnectBanner = !alreadyConnected && !promptDismissed && syncStatus !== 'connected';
+  const showConnectBanner = !healthIntegration.connected && !promptDismissed && syncStatus !== 'connected';
 
   // Women's health
   const [womenMode, setWomenMode]   = useState('period_setup');
@@ -143,6 +148,7 @@ export default function Health() {
   // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(() => {
     setMounted(true);
+    dispatch(fetchHealthIntegration());
     fetchDashProfile();
 
     // Women's health — localStorage only
@@ -165,46 +171,28 @@ export default function Health() {
 
     // ── KEY FIX: if the user already connected before, silently re-sync.
     // No modal, no banner, no prompt — just fetch data in the background.
-    const savedFitbit = JSON.parse(localStorage.getItem(LS_FITBIT) || 'null');
-    if (savedFitbit?.username) {
-      setSyncStatus('connected');
-      fetchWearable(); // silent background sync
-    }
-
     fetchWeather();
   }, []);
 
   useEffect(() => {
-    if (!integrations?.fitbit) return;
-
-    const fitbitFromContext = integrations.fitbit;
-
-    if (fitbitFromContext.status === 'connected' && syncStatus !== 'connected') {
-      if (fitbitFromContext.username) {
-        localStorage.setItem(LS_FITBIT, JSON.stringify({
-          username: fitbitFromContext.username,
-          connectedAt: fitbitFromContext.connectedAt || new Date().toISOString(),
-        }));
-      }
+    if (healthIntegration.connected) {
       setSyncStatus('connected');
-      fetchWearable();
+      if (Object.keys(healthIntegration.deviceData || {}).length > 0) {
+        setWearable(healthIntegration.deviceData);
+      } else {
+        fetchWearable();
+      }
+      localStorage.setItem(LS_DISMISSED, 'true');
+      setPromptDismissed(true);
+      return;
     }
 
-    if (fitbitFromContext.status === 'disconnected' && syncStatus === 'connected') {
+    if (!healthIntegration.connected && syncStatus === 'connected') {
       localStorage.removeItem(LS_FITBIT);
       setWearable(null);
       setSyncStatus('idle');
     }
-  }, [integrations?.fitbit?.status]);
-
-  // After dashProfile loads, also auto-sync if fitbitProfile is set server-side
-  useEffect(() => {
-    if (!dashProfile) return;
-    if (dashProfile.profile?.fitbitProfile && syncStatus !== 'connected') {
-      setSyncStatus('connected');
-      fetchWearable();
-    }
-  }, [dashProfile]);
+  }, [healthIntegration.connected, healthIntegration.deviceData]);
 
   // ── API helpers ─────────────────────────────────────────────────────────────
   async function fetchDashProfile() {
@@ -293,11 +281,17 @@ export default function Health() {
   const [connectInput, setConnectInput]     = useState('');
   const [connectLoading, setConnectLoading] = useState(false);
   const [connectError, setConnectError]     = useState('');
+  const [healthLinkDraft, setHealthLinkDraft] = useState('');
+  const [healthPageError, setHealthPageError] = useState('');
+
+  useEffect(() => {
+    setHealthLinkDraft(healthIntegration.integrationLink || '');
+  }, [healthIntegration.integrationLink]);
 
   // Only called from explicit user action (error retry or settings button)
   function handleConnect() {
     setConnectModal(true);
-    setConnectInput('');
+    setConnectInput(healthIntegration.integrationLink || healthLinkDraft || '');
     setConnectError('');
   }
 
@@ -307,33 +301,56 @@ export default function Health() {
     setPromptDismissed(true);
   }
 
+  async function handleDisconnectDevice() {
+    try {
+      await dispatch(disconnectHealthIntegration()).unwrap();
+      localStorage.removeItem(LS_FITBIT);
+      localStorage.removeItem(LS_DISMISSED);
+      setWearable(null);
+      setSyncStatus('idle');
+      setPromptDismissed(false);
+      setHealthLinkDraft('');
+      setHealthPageError('');
+    } catch (err) {
+      setSyncError(err?.response?.data?.message || 'Could not disconnect your health device.');
+      setSyncStatus('error');
+    }
+  }
+
+  async function saveHealthFromPage() {
+    if (!healthLinkDraft.trim()) {
+      setHealthPageError('Enter your health integration link.');
+      return;
+    }
+
+    setHealthPageError('');
+    try {
+      const saved = await dispatch(saveHealthIntegration({ integrationLink: healthLinkDraft.trim() })).unwrap();
+      localStorage.setItem(LS_DISMISSED, 'true');
+      setPromptDismissed(true);
+      setSyncStatus('connected');
+      setWearable(saved.deviceData || {});
+    } catch (err) {
+      setHealthPageError(err?.response?.data?.message || 'Could not save health integration.');
+    }
+  }
+
   async function submitConnect() {
-    if (!connectInput.trim()) { setConnectError('Enter your Fitbit username or email.'); return; }
+    if (!connectInput.trim()) { setConnectError('Enter your health integration link.'); return; }
     setConnectLoading(true); setConnectError('');
     try {
-      const res = await axios.get(`${API}/api/integrations/health`, {
-        headers: { Authorization: `Bearer ${token()}` },
-      });
-      if (res.data?.success) {
-        // Persist — this is the flag checked on every future page load
-        localStorage.setItem(LS_FITBIT, JSON.stringify({
-          username: connectInput.trim(),
-          connectedAt: new Date().toISOString(),
-        }));
-        localStorage.setItem(LS_DISMISSED, 'true'); // banner never shows again
-        setSyncStatus('connected');
-        setConnectModal(false);
-        const m = res.data.data.metrics;
-        m.sleepHours = parseFloat(m.sleepHours);
-        setWearable(m);
-        const sg = dashProfile?.profile?.sleepHours || 7;
-        if (m.steps >= 10000)                             triggerReward(50, 'Daily Step Goal Hit', '👟');
-        if (m.sleepHours >= sg)                           triggerReward(40, 'Sleep Goal Achieved', '💤');
-        if (m.avgHeartRate >= 55 && m.avgHeartRate <= 85) triggerReward(30, 'Healthy Resting HR', '❤️');
-        if (m.hrv > 60)                                   triggerReward(75, 'Optimal HRV Recovery', '⚡');
-      } else {
-        setConnectError('Could not reach the health service. Is your server running?');
-      }
+      const saved = await dispatch(saveHealthIntegration({ integrationLink: connectInput.trim() })).unwrap();
+      localStorage.setItem(LS_DISMISSED, 'true');
+      setPromptDismissed(true);
+      setSyncStatus('connected');
+      setConnectModal(false);
+      const m = saved.deviceData || {};
+      setWearable(m);
+      const sg = dashProfile?.profile?.sleepHours || 7;
+      if (m.steps >= 10000)                             triggerReward(50, 'Daily Step Goal Hit', '👟');
+      if (m.sleepHours >= sg)                           triggerReward(40, 'Sleep Goal Achieved', '💤');
+      if (m.avgHeartRate >= 55 && m.avgHeartRate <= 85) triggerReward(30, 'Healthy Resting HR', '❤️');
+      if (m.hrv > 60)                                   triggerReward(75, 'Optimal HRV Recovery', '⚡');
     } catch (err) {
       const msg = err?.response?.status === 401
         ? 'Session expired — please log in again.'
@@ -426,9 +443,6 @@ export default function Health() {
   const healthHistory = history.filter(l => ['👟','💤','❤️','⚡','🧬','💧','🚭'].includes(l.emoji)).slice(0,6);
   const healthBadges  = availableBadges.filter(b => ['fitbit','sleep_master','first_step','hydration_hero','heart_health'].includes(b.id));
 
-  const hour     = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="relative min-h-full overflow-hidden bg-[#06080f] px-6 py-8 text-white sm:px-8 lg:px-12">
@@ -439,7 +453,6 @@ export default function Health() {
         {/* ── HEADER ── */}
         <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-white/40 mb-1">{greeting}{name && name !== 'You' ? `, ${name}` : ''}</p>
             <h1 className="text-4xl font-semibold tracking-tight text-white">Health Dashboard</h1>
             <p className="mt-2 max-w-2xl text-base leading-relaxed text-white/55">
               {profileLoading ? 'Waking up your Digital Twin…'
@@ -464,7 +477,7 @@ export default function Health() {
                   <span className="animate-ping absolute h-full w-full rounded-full bg-[#16a34a] opacity-75" />
                   <span className="relative h-2.5 w-2.5 rounded-full bg-[#16a34a]" />
                 </span>
-                Wearable Synced{integrations?.fitbit?.username ? ` · ${integrations.fitbit.username}` : ''}
+                Health Device Connected
               </div>
             ) : syncStatus === 'error' ? (
               // ⚠️ Sync failed — show error + reconnect link (user explicitly clicks)
@@ -475,7 +488,7 @@ export default function Health() {
                   Reconnect →
                 </button>
               </div>
-            ) : alreadyConnected ? (
+            ) : healthIntegration.loading ? (
               // 🔄 Was connected before but sync hasn't resolved yet — quiet spinner
               <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/35">
                 <div className="h-3 w-3 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
@@ -486,7 +499,7 @@ export default function Health() {
               showConnectBanner && (
                 <button onClick={handleConnect}
                   className="flex items-center gap-2 rounded-xl border border-[#ff4d7d]/50 bg-[#ff4d7d]/10 px-5 py-2.5 text-sm font-bold text-[#ff4d7d] hover:bg-[#ff4d7d]/20 transition-all">
-                  <Wifi className="h-4 w-4" /> Connect Apple Health / Fitbit
+                  <Wifi className="h-4 w-4" /> Connect Health Device
                 </button>
               )
             )}
@@ -494,6 +507,93 @@ export default function Health() {
               <p className="text-[10px] text-white/25 text-right">
                 Last sync: just now · {wearable.steps?.toLocaleString()} steps logged
               </p>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/8 text-[#34d399]">
+                  <Wifi className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white">Health API Integration</h2>
+                  <p className={`mt-1 text-[11px] font-bold uppercase tracking-[0.16em] ${healthIntegration.connected ? 'text-[#10c7a1]' : 'text-white/35'}`}>
+                    {healthIntegration.connected ? 'Gargi Fitband Connected' : 'Connect Gargi Fitband'}
+                  </p>
+                </div>
+              </div>
+              {!healthIntegration.connected && (
+                <button
+                  type="button"
+                  onClick={() => dispatch(fetchHealthIntegration())}
+                  disabled={healthIntegration.loading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white/50 transition hover:bg-white/8 hover:text-white disabled:opacity-40"
+                >
+                  <span className={`h-3 w-3 rounded-full border-2 border-white/20 border-t-white/60 ${healthIntegration.loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              )}
+            </div>
+
+            {healthIntegration.connected ? (
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                <div className="min-w-0 w-full">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/30">
+                    Connected Link
+                  </p>
+                  <p className="w-full truncate rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-white/65">
+                    {healthIntegration.integrationLink || 'Gargi Fitband connected'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDisconnectDevice}
+                  disabled={healthIntegration.saving}
+                  className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl border border-[#ea580c]/30 bg-[#ea580c]/10 px-4 py-2 text-sm font-bold text-[#ea580c] transition hover:bg-[#ea580c]/18 disabled:opacity-40"
+                >
+                  {healthIntegration.saving ? 'Disconnecting...' : 'Disconnect'}
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+                <div>
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-white/30">
+                    Health Integration Link
+                  </label>
+                  <input
+                    type="text"
+                    value={healthLinkDraft}
+                    onChange={(event) => setHealthLinkDraft(event.target.value)}
+                    onKeyDown={(event) => event.key === 'Enter' && saveHealthFromPage()}
+                    placeholder="https://gargi-fitband/user/12345"
+                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3.5 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/20 focus:border-[#34d399]/50"
+                  />
+                  {healthPageError && <p className="mt-2 text-xs font-semibold text-[#ea580c]">{healthPageError}</p>}
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={saveHealthFromPage}
+                    disabled={healthIntegration.saving || !healthLinkDraft.trim()}
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[#10c7a1]/35 bg-[#10c7a1]/12 px-4 py-2 text-sm font-bold text-[#10c7a1] transition hover:bg-[#10c7a1]/20 disabled:opacity-40"
+                  >
+                    {healthIntegration.saving ? 'Saving...' : 'Connect'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {healthIntegration.connected && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-white/50">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">Provider: Gargi Fitband</span>
+                <span className="rounded-full border border-[#10c7a1]/20 bg-[#10c7a1]/10 px-3 py-1.5 text-[#10c7a1]">Status: Synced</span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                  Last sync: {healthIntegration.lastSync ? new Date(healthIntegration.lastSync).toLocaleString() : 'Just now'}
+                </span>
+              </div>
             )}
           </div>
         </section>
@@ -540,22 +640,6 @@ export default function Health() {
                 className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/35 hover:bg-white/8 transition-all disabled:opacity-40">
                 ⌚ Re-sync Mock Data
               </button>
-              {syncStatus === 'connected' && (
-                <button
-                  onClick={() => {
-                    localStorage.removeItem(LS_FITBIT);
-                    localStorage.removeItem(LS_DISMISSED);
-                    setWearable(null);
-                    setSyncStatus('idle');
-                    setPromptDismissed(false);
-                    // Note: alreadyConnected is read-once at mount so requires page reload to reset
-                    // That's intentional — in production a real user would never hit this path
-                    window.location.reload();
-                  }}
-                  className="flex items-center gap-2 rounded-lg border border-[#ea580c]/20 bg-[#ea580c]/8 px-3 py-1.5 text-xs font-bold text-[#ea580c]/60 hover:bg-[#ea580c]/15 transition-all">
-                  ✕ Disconnect Device
-                </button>
-              )}
             </div>
           </section>
         )}
@@ -1037,8 +1121,8 @@ export default function Health() {
                 <Wifi className="h-6 w-6 text-[#ff4d7d]" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Connect Your Wearable</h3>
-                <p className="text-xs text-white/40">Fitbit · Apple Health · Garmin</p>
+                <h3 className="text-lg font-bold text-white">Connect Health Device</h3>
+                <p className="text-xs text-white/40">Provider · Gargi Fitband</p>
               </div>
             </div>
             <p className="text-sm text-white/60 leading-relaxed mb-5">
@@ -1046,9 +1130,9 @@ export default function Health() {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#ff4d7d] mb-2">Your Fitbit Username or Email</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#ff4d7d] mb-2">Health Integration Link</label>
                 <input type="text"
-                  placeholder="e.g. gargi_fitbit or gargi@email.com"
+                  placeholder="https://gargi-fitband/user/12345"
                   value={connectInput}
                   onChange={e => setConnectInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && submitConnect()}
@@ -1059,7 +1143,7 @@ export default function Health() {
               <button onClick={submitConnect} disabled={connectLoading}
                 className="w-full bg-gradient-to-r from-[#ff4d7d] to-[#a78bfa] text-white font-bold py-3.5 rounded-xl hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
                 {connectLoading
-                  ? <><div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Connecting…</>
+                  ? <><div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Connecting Device...</>
                   : <><Wifi className="h-4 w-4" /> Connect & Start Syncing</>}
               </button>
               <div className="pt-2 border-t border-white/5">

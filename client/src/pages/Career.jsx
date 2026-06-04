@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import { useDispatch, useSelector } from 'react-redux';
 import { useGamification } from '../context/GamificationContext';
+import {
+  disconnectCareerIntegration,
+  fetchCareerIntegrations,
+  saveCareerIntegrations,
+} from '../features/careerIntegrations/careerIntegrationSlice';
 import {
   Code2, TrendingUp, AlertTriangle, Zap, Target, Activity,
   ChevronDown, ChevronUp, Sparkles, RefreshCw, Award,
   CheckCircle, Loader2, X, Plus, Link, ExternalLink,
   Briefcase, Palette, Terminal, BookOpen, BarChart2,
-  Users, Star, GitCommit, Trophy, Hash,
+  Users, Star, GitCommit, Trophy, Hash, Pencil,
 } from 'lucide-react';
+import { fetchCareerIntegrationStats, getCareerProfileLabel } from '../utils/careerIntegrationStats';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const card  = 'rounded-2xl border border-white/10 bg-[#11131a]/84 shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl';
@@ -184,18 +191,220 @@ function seededRng(seed, offset) {
   return x - Math.floor(x);
 }
 
-function buildHeatmap(githubData) {
+function buildNeutralHeatmap(days = 365) {
   const today = new Date();
-  const todaySeed = parseInt(today.toISOString().slice(0, 10).replace(/-/g, ''), 10);
-  return Array.from({ length: 35 }, (_, i) => {
+  return Array.from({ length: days }, (_, i) => {
     const d = new Date(today);
-    d.setDate(d.getDate() - (34 - i));
-    const seed = todaySeed - (34 - i);
-    const raw  = seededRng(seed, 7);
-    const base = (githubData?.recentActivityCount ?? 0) > 8 ? 0.55 : 0.35;
-    const val  = raw > (1 - base) ? Math.floor(raw * 4) + 1 : 0;
-    return { date: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), count: val };
+    d.setDate(d.getDate() - ((days - 1) - i));
+    return {
+      key: d.toISOString().slice(0, 10),
+      date: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+      count: 0,
+    };
   });
+}
+
+function getHeatmapWeeks(cells = []) {
+  return Math.max(1, Math.ceil(cells.length / 7));
+}
+
+function buildHeatmapMonthLabels(cells = []) {
+  const seen = new Set();
+  return cells.reduce((labels, cell, index) => {
+    const date = new Date(`${cell.key}T00:00:00`);
+    const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+    if (seen.has(monthKey)) return labels;
+
+    seen.add(monthKey);
+    labels.push({
+      key: monthKey,
+      label: date.toLocaleDateString('en-US', { month: 'short' }),
+      column: Math.floor(index / 7) + 1,
+    });
+    return labels;
+  }, []);
+}
+
+function buildHeatmapFromDateCounts(counts = {}, days = 365) {
+  return buildNeutralHeatmap(days).map((cell) => ({
+    ...cell,
+    count: Number(counts[cell.key] || 0),
+  }));
+}
+
+function leetcodeCalendarToDateCounts(calendar = {}) {
+  return Object.entries(calendar).reduce((acc, [timestamp, count]) => {
+    const date = new Date(Number(timestamp) * 1000).toISOString().slice(0, 10);
+    acc[date] = (acc[date] || 0) + Number(count || 0);
+    return acc;
+  }, {});
+}
+
+function githubEventsToDateCounts(events = []) {
+  return events.reduce((acc, event) => {
+    const date = new Date(event.created_at).toISOString().slice(0, 10);
+    const commitCount = event.type === 'PushEvent' ? event.payload?.commits?.length || 1 : 1;
+    acc[date] = (acc[date] || 0) + commitCount;
+    return acc;
+  }, {});
+}
+
+function mergeDateCounts(...countMaps) {
+  return countMaps.reduce((merged, counts = {}) => {
+    Object.entries(counts).forEach(([date, count]) => {
+      merged[date] = (merged[date] || 0) + Number(count || 0);
+    });
+    return merged;
+  }, {});
+}
+
+function buildRecentDateKeys(days) {
+  const today = new Date();
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - ((days - 1) - i));
+    return d.toISOString().slice(0, 10);
+  });
+}
+
+function calculateDynamicCareerMetrics(activityCounts = {}, hasCodingIntegration, linkedinConnected) {
+  if (!hasCodingIntegration) {
+    return {
+      codingConsistency: null,
+      codingStatus: null,
+      careerMomentum: null,
+      momentumStatus: null,
+    };
+  }
+
+  const last90 = buildRecentDateKeys(90);
+  const activeDays = last90.filter((date) => Number(activityCounts[date] || 0) > 0).length;
+  const codingConsistency = clamp(Math.round((activeDays / 90) * 100), 0, 100);
+
+  const last60 = buildRecentDateKeys(60);
+  const previous30 = last60.slice(0, 30).reduce((sum, date) => sum + Number(activityCounts[date] || 0), 0);
+  const current30 = last60.slice(30).reduce((sum, date) => sum + Number(activityCounts[date] || 0), 0);
+  const growthPct = previous30 > 0
+    ? ((current30 - previous30) / previous30) * 100
+    : current30 > 0 ? 50 : -40;
+  const careerMomentum = clamp(Math.round(50 + (growthPct / 2) + (linkedinConnected ? 5 : 0)), 0, 100);
+
+  return {
+    codingConsistency,
+    codingStatus: getConsistencyStatus(codingConsistency),
+    careerMomentum,
+    momentumStatus: getMomentumStatus(careerMomentum),
+  };
+}
+
+function getConsistencyStatus(score) {
+  if (score >= 90) return 'Excellent';
+  if (score >= 75) return 'Consistent';
+  if (score >= 60) return 'Improving';
+  return 'Inconsistent';
+}
+
+function getMomentumStatus(score) {
+  if (score >= 90) return 'Excellent';
+  if (score >= 75) return 'Strong';
+  if (score >= 60) return 'Growing';
+  if (score >= 40) return 'Stable';
+  return 'Needs Attention';
+}
+
+function calculateProfessionalGrowthScore({ githubStats, leetcodeStats, linkedinConnected }) {
+  const hasSignal = Boolean(githubStats || leetcodeStats || linkedinConnected);
+  if (!hasSignal) {
+    return { score: null, status: null };
+  }
+
+  const githubScore = githubStats
+    ? (Math.min(Number(githubStats.repositories || 0), 50) / 50) * 15
+      + (Math.min(Number(githubStats.followers || 0), 100) / 100) * 15
+      + (Math.min(Number(githubStats.stars || 0), 100) / 100) * 10
+    : 0;
+
+  const leetcodeScore = leetcodeStats
+    ? (Math.min(Number(leetcodeStats.solved || 0), 1000) / 1000) * 20
+      + (Math.min(Number(leetcodeStats.contestRating || 0), 2500) / 2500) * 10
+      + (Math.min(Number(leetcodeStats.contests || 0), 50) / 50) * 10
+    : 0;
+
+  const linkedinScore = linkedinConnected ? 20 : 0;
+  const score = clamp(Math.round(githubScore + leetcodeScore + linkedinScore), 0, 100);
+
+  return {
+    score,
+    status: getProfessionalGrowthStatus(score),
+  };
+}
+
+function getProfessionalGrowthStatus(score) {
+  if (score >= 90) return 'All-Star';
+  if (score >= 75) return 'Advanced';
+  if (score >= 60) return 'Growing Fast';
+  if (score >= 40) return 'Growing';
+  if (score >= 20) return 'Early Stage';
+  return 'Getting Started';
+}
+
+function getHeatmapColor(count) {
+  if (count <= 0) return 'rgba(255,255,255,0.05)';
+  if (count <= 2) return 'rgba(123,97,255,0.25)';
+  if (count <= 5) return 'rgba(123,97,255,0.60)';
+  return 'rgba(123,97,255,1)';
+}
+
+function extractGithubUsernameFromUrl(value = '') {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+  try {
+    const url = new URL(trimmed.startsWith('http') ? trimmed : `https://github.com/${trimmed}`);
+    return url.pathname.split('/').filter(Boolean)[0] || '';
+  } catch {
+    return trimmed.replace(/^@/, '');
+  }
+}
+
+function extractLeetcodeUsernameFromUrl(value = '') {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+  try {
+    const url = new URL(trimmed.startsWith('http') ? trimmed : `https://leetcode.com/u/${trimmed}`);
+    const parts = url.pathname.split('/').filter(Boolean);
+    return parts[0] === 'u' ? parts[1] || '' : parts[0] || '';
+  } catch {
+    return trimmed.replace(/^@/, '');
+  }
+}
+
+async function fetchLeetcodeActivityCounts(profileUrl) {
+  const username = extractLeetcodeUsernameFromUrl(profileUrl);
+  if (!username) return {};
+
+  const response = await axios.get(`${API}/api/career-integrations/leetcode-activity`, {
+    params: { username },
+    headers: { Authorization: `Bearer ${token()}` },
+  });
+
+  return leetcodeCalendarToDateCounts(response.data?.data?.calendar || {});
+}
+
+async function fetchGithubActivityCounts(profileUrl) {
+  const username = extractGithubUsernameFromUrl(profileUrl);
+  if (!username) return {};
+
+  const responses = await Promise.allSettled([1, 2, 3].map((page) => (
+    axios.get(`https://api.github.com/users/${encodeURIComponent(username)}/events/public`, {
+      params: { per_page: 100, page },
+      timeout: 8000,
+    })
+  )));
+  const events = responses.flatMap((result) => (
+    result.status === 'fulfilled' && Array.isArray(result.value.data) ? result.value.data : []
+  ));
+
+  return githubEventsToDateCounts(events);
 }
 
 function buildBurnoutForecast(burnoutRisk, studyHours, sleepHours) {
@@ -450,33 +659,127 @@ function DomainSelector({ current, onChange }) {
 }
 
 // ─── Compact Heatmap ──────────────────────────────────────────────────────────
-function CompactHeatmap({ githubData }) {
-  const heatmap = useMemo(() => buildHeatmap(githubData), [githubData]);
+function CompactHeatmap({ careerIntegrations }) {
+  const leetcodeUrl = careerIntegrations.leetcode?.profileUrl || '';
+  const githubUrl = careerIntegrations.github?.profileUrl || '';
+  const source = leetcodeUrl ? 'leetcode' : githubUrl ? 'github' : 'none';
+  const [heatmap, setHeatmap] = useState(() => buildNeutralHeatmap());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const title = source === 'leetcode'
+    ? 'LeetCode Activity - Last 365 Days'
+    : source === 'github'
+      ? 'GitHub Activity - Last 365 Days'
+      : 'Coding Activity Calendar';
+
+  const subtitle = source === 'none'
+    ? 'Connect GitHub or LeetCode to view your coding activity.'
+    : '';
+
+  const loadActivity = async () => {
+    setError('');
+
+    if (source === 'none') {
+      setHeatmap(buildNeutralHeatmap());
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (source === 'leetcode') {
+        const username = extractLeetcodeUsernameFromUrl(leetcodeUrl);
+        const response = await axios.get(`${API}/api/career-integrations/leetcode-activity`, {
+          params: { username },
+          headers: { Authorization: `Bearer ${token()}` },
+        });
+        const counts = leetcodeCalendarToDateCounts(response.data?.data?.calendar || {});
+        setHeatmap(buildHeatmapFromDateCounts(counts));
+      } else {
+        const username = extractGithubUsernameFromUrl(githubUrl);
+        const responses = await Promise.allSettled([1, 2, 3].map((page) => (
+          axios.get(`https://api.github.com/users/${encodeURIComponent(username)}/events/public`, {
+            params: { per_page: 100, page },
+            timeout: 8000,
+          })
+        )));
+        const events = responses.flatMap((result) => (
+          result.status === 'fulfilled' && Array.isArray(result.value.data) ? result.value.data : []
+        ));
+        setHeatmap(buildHeatmapFromDateCounts(githubEventsToDateCounts(events)));
+      }
+    } catch (err) {
+      setError('Unable to load activity data.');
+      setHeatmap(buildNeutralHeatmap());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadActivity();
+  }, [source, leetcodeUrl, githubUrl]);
+
+  const visibleHeatmap = loading ? buildNeutralHeatmap() : heatmap;
+  const weekCount = getHeatmapWeeks(visibleHeatmap);
+  const gridColumns = `repeat(${weekCount}, minmax(10px, 1fr))`;
+  const monthLabels = buildHeatmapMonthLabels(visibleHeatmap);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-bold uppercase tracking-widest text-white/30">
-          Coding Activity · 35 days
-        </p>
-        {githubData?.connected && (
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-white/30">
+            {title}
+          </p>
+          {source === 'none' && (
+            <p className="mt-1 text-[10px] text-white/25">No Coding Activity Connected</p>
+          )}
+        </div>
+        {source !== 'none' && !error && (
           <span className="text-[10px] font-bold text-[#4ade80] bg-[#4ade80]/10 border border-[#4ade80]/20 px-2 py-0.5 rounded-full">
-            GitHub Live
+            {source === 'leetcode' ? 'LeetCode Live' : 'GitHub Live'}
           </span>
         )}
       </div>
-      <div className="grid grid-cols-7 gap-1">
-        {heatmap.map((cell, i) => (
-          <div key={i} title={`${cell.date}: ${cell.count} commit${cell.count !== 1 ? 's' : ''}`}
-            className="aspect-square rounded-sm cursor-pointer hover:scale-110 transition-transform"
-            style={{
-              backgroundColor: cell.count === 0 ? 'rgba(255,255,255,0.05)'
-                : cell.count === 1 ? 'rgba(123,97,255,0.25)'
-                : cell.count === 2 ? 'rgba(123,97,255,0.50)'
-                : cell.count === 3 ? 'rgba(123,97,255,0.75)'
-                : 'rgba(123,97,255,1)',
-            }} />
-        ))}
+      <div className="overflow-x-auto pb-1">
+        <div className="min-w-full" style={{ minWidth: `${weekCount * 13}px` }}>
+          <div className="mb-1 grid gap-[3px]" style={{ gridTemplateColumns: gridColumns }}>
+            {monthLabels.map((month) => (
+              <span key={month.key}
+                className="truncate text-[9px] font-semibold text-white/24"
+                style={{ gridColumn: `${month.column} / span 4` }}>
+                {month.label}
+              </span>
+            ))}
+          </div>
+          <div className="grid grid-flow-col gap-[3px]" style={{ gridTemplateColumns: gridColumns, gridTemplateRows: 'repeat(7, 12px)' }}>
+            {visibleHeatmap.map((cell, i) => (
+              <div key={i} title={`${cell.date}: ${cell.count} activit${cell.count === 1 ? 'y' : 'ies'}`}
+                className={`h-2.5 w-2.5 shrink-0 cursor-pointer rounded-[2px] transition-transform hover:scale-110 sm:h-3 sm:w-3 ${loading ? 'animate-pulse' : ''}`}
+                style={{
+                  backgroundColor: loading ? 'rgba(255,255,255,0.08)' : getHeatmapColor(cell.count),
+                }} />
+            ))}
+          </div>
+        </div>
       </div>
+      {loading && (
+        <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-white/25">Loading Activity...</p>
+      )}
+      {!loading && source === 'none' && (
+        <p className="mt-2 text-[10px] text-white/25">{subtitle}</p>
+      )}
+      {!loading && error && (
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <p className="text-[10px] text-[#ff8fbd]">{error}</p>
+          <button type="button" onClick={loadActivity}
+            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold text-white/50 hover:bg-white/10 hover:text-white">
+            Retry
+          </button>
+        </div>
+      )}
       <div className="flex items-center gap-1.5 justify-end mt-2">
         <span className="text-[9px] text-white/20">Less</span>
         {[0.05, 0.25, 0.5, 0.75, 1].map((o, i) => (
@@ -488,8 +791,161 @@ function CompactHeatmap({ githubData }) {
   );
 }
 
+function CareerLinkCard({ provider, label, icon: Icon, placeholder, integration, saving, onSave, onDisconnect }) {
+  const [input, setInput] = useState(integration.profileUrl || '');
+  const [editing, setEditing] = useState(!integration.connected);
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  useEffect(() => {
+    setInput(integration.profileUrl || '');
+    setEditing(!integration.connected);
+  }, [integration.profileUrl]);
+
+  const connected = Boolean(integration.connected);
+  const hasChanged = input.trim() !== (integration.profileUrl || '').trim();
+  const showEditor = editing || !connected;
+  const showSave = showEditor && (!connected || hasChanged);
+
+  useEffect(() => {
+    if (!connected || !['github', 'leetcode'].includes(provider)) {
+      setStats(null);
+      return;
+    }
+
+    let cancelled = false;
+    setStatsLoading(true);
+    fetchCareerIntegrationStats(provider, integration.profileUrl)
+      .then((nextStats) => {
+        if (!cancelled) setStats(nextStats);
+      })
+      .catch(() => {
+        if (!cancelled) setStats(null);
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [connected, integration.profileUrl, provider]);
+
+  const handleSave = async () => {
+    await onSave({ [provider]: input });
+    setEditing(false);
+  };
+
+  return (
+    <div className={`rounded-2xl border p-4 transition-all ${connected ? 'border-[#10c7a1]/25 bg-[#10c7a1]/5' : 'border-white/8 bg-white/2'}`}>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/6 text-[#c084fc]">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white/90">{label}</p>
+            <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-widest ${connected ? 'text-[#10c7a1]' : 'text-white/30'}`}>
+              {connected ? `${label} Connected` : 'Not connected'}
+            </p>
+          </div>
+        </div>
+        {connected && (
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[10px] font-bold text-white/50 transition hover:bg-white/10 hover:text-white">
+              <Pencil className="h-3 w-3" />
+              Edit
+            </button>
+            <button type="button" onClick={() => onDisconnect(provider)} disabled={saving}
+              className="rounded-lg border border-[#ff4d7d]/20 bg-[#ff4d7d]/8 px-2.5 py-1.5 text-[10px] font-bold text-[#ff4d7d] transition hover:bg-[#ff4d7d]/15 disabled:opacity-50">
+              Disconnect
+            </button>
+          </div>
+        )}
+      </div>
+
+      {connected && provider === 'github' && (
+        <CareerStatsChips
+          loading={statsLoading}
+          items={[
+            [stats?.repositories, 'Repos'],
+            [stats?.followers, 'Followers'],
+            [stats?.stars, 'Stars'],
+          ]}
+        />
+      )}
+
+      {connected && provider === 'leetcode' && (
+        <CareerStatsChips
+          loading={statsLoading}
+          items={[
+            [stats?.solved, 'Solved Questions'],
+            [stats?.contestRating, 'Rating'],
+            [stats?.contests, 'Contests Given'],
+            [stats?.rank, 'Rank'],
+          ]}
+        />
+      )}
+
+      {connected && integration.profileUrl && (
+        <a href={integration.profileUrl} target="_blank" rel="noreferrer"
+          className="mb-3 flex items-center gap-2 truncate rounded-xl border border-white/8 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-[#7df3cc]/80 hover:text-[#7df3cc]">
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{getCareerProfileLabel(provider, integration.profileUrl)}</span>
+        </a>
+      )}
+
+      {showEditor && (
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => event.key === 'Enter' && showSave && handleSave()}
+            placeholder={placeholder}
+            className="h-10 min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#7b61ff]/45"
+          />
+          {showSave && (
+            <button type="button" onClick={handleSave} disabled={saving}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#7b61ff]/35 bg-[#7b61ff]/15 px-3 text-xs font-bold text-[#c084fc] transition hover:bg-[#7b61ff]/22 disabled:opacity-50">
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              Save
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CareerStatsChips({ loading, items }) {
+  if (loading) {
+    return (
+      <div className="mb-3 flex flex-wrap gap-2">
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold text-white/40">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Fetching profile
+        </span>
+      </div>
+    );
+  }
+
+  const visible = items.filter(([value]) => value !== undefined && value !== null && value !== '');
+  if (!visible.length) return null;
+
+  return (
+    <div className="mb-3 flex flex-wrap gap-2">
+      {visible.map(([value, label]) => (
+        <span key={label} className="rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[10px] font-bold text-white/62">
+          {typeof value === 'number' ? value.toLocaleString() : value} {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Career() {
+  const dispatch = useDispatch();
+  const careerIntegrations = useSelector((state) => state.careerIntegrations);
   const [mounted, setMounted]               = useState(false);
   const [dashProfile, setDashProfile]       = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -497,6 +953,11 @@ export default function Career() {
   const [debriefText, setDebriefText]       = useState(null);
   const [debriefLoading, setDebriefLoading] = useState(false);
   const [debriefError, setDebriefError]     = useState('');
+  const [careerActivityCounts, setCareerActivityCounts] = useState({});
+  const [professionalGrowthStats, setProfessionalGrowthStats] = useState({
+    github: null,
+    leetcode: null,
+  });
   const [activeDomain, setActiveDomain]     = useState(
     () => localStorage.getItem('career_domain') || 'coding'
   );
@@ -504,7 +965,86 @@ export default function Career() {
   useEffect(() => {
     setMounted(true);
     fetchDashProfile();
+    dispatch(fetchCareerIntegrations());
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCareerActivityCounts = async () => {
+      const leetcodeUrl = careerIntegrations.leetcode?.profileUrl || '';
+      const githubUrl = careerIntegrations.github?.profileUrl || '';
+
+      if (!leetcodeUrl && !githubUrl) {
+        setCareerActivityCounts({});
+        return;
+      }
+
+      try {
+        const [leetcodeResult, githubResult] = await Promise.allSettled([
+          leetcodeUrl ? fetchLeetcodeActivityCounts(leetcodeUrl) : Promise.resolve({}),
+          githubUrl ? fetchGithubActivityCounts(githubUrl) : Promise.resolve({}),
+        ]);
+
+        if (cancelled) return;
+
+        setCareerActivityCounts(mergeDateCounts(
+          leetcodeResult.status === 'fulfilled' ? leetcodeResult.value : {},
+          githubResult.status === 'fulfilled' ? githubResult.value : {},
+        ));
+      } catch {
+        if (!cancelled) setCareerActivityCounts({});
+      }
+    };
+
+    loadCareerActivityCounts();
+
+    return () => { cancelled = true; };
+  }, [
+    careerIntegrations.github?.profileUrl,
+    careerIntegrations.leetcode?.profileUrl,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProfessionalGrowthStats = async () => {
+      const githubUrl = careerIntegrations.github?.profileUrl || '';
+      const leetcodeUrl = careerIntegrations.leetcode?.profileUrl || '';
+
+      if (!githubUrl && !leetcodeUrl) {
+        setProfessionalGrowthStats({ github: null, leetcode: null });
+        return;
+      }
+
+      const [githubResult, leetcodeResult] = await Promise.allSettled([
+        githubUrl ? fetchCareerIntegrationStats('github', githubUrl) : Promise.resolve(null),
+        leetcodeUrl ? fetchCareerIntegrationStats('leetcode', leetcodeUrl) : Promise.resolve(null),
+      ]);
+
+      if (cancelled) return;
+
+      setProfessionalGrowthStats({
+        github: githubResult.status === 'fulfilled' ? githubResult.value : null,
+        leetcode: leetcodeResult.status === 'fulfilled' ? leetcodeResult.value : null,
+      });
+    };
+
+    loadProfessionalGrowthStats();
+
+    return () => { cancelled = true; };
+  }, [
+    careerIntegrations.github?.profileUrl,
+    careerIntegrations.leetcode?.profileUrl,
+  ]);
+
+  const saveCareerLinks = async (links) => {
+    await dispatch(saveCareerIntegrations(links)).unwrap();
+  };
+
+  const disconnectCareerLink = async (provider) => {
+    await dispatch(disconnectCareerIntegration(provider)).unwrap();
+  };
 
   // Persist domain choice
   const handleDomainChange = (d) => {
@@ -585,15 +1125,40 @@ export default function Career() {
   const codingScore   = analytics?.codingConsistency   ?? null;
   const momentumScore = analytics?.careerMomentum      ?? null;
   const growthScore   = analytics?.professionalGrowthScore ?? null;
-
-  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
+  const hasCodingIntegration = Boolean(careerIntegrations.github?.connected || careerIntegrations.leetcode?.connected);
+  const dynamicCareerMetrics = useMemo(
+    () => calculateDynamicCareerMetrics(
+      careerActivityCounts,
+      hasCodingIntegration,
+      Boolean(careerIntegrations.linkedin?.connected),
+    ),
+    [
+      careerActivityCounts,
+      hasCodingIntegration,
+      careerIntegrations.linkedin?.connected,
+    ],
+  );
+  const dynamicCodingScore = hasCodingIntegration ? dynamicCareerMetrics.codingConsistency : null;
+  const dynamicMomentumScore = hasCodingIntegration ? dynamicCareerMetrics.careerMomentum : null;
+  const professionalGrowthMetric = useMemo(
+    () => calculateProfessionalGrowthScore({
+      githubStats: professionalGrowthStats.github,
+      leetcodeStats: professionalGrowthStats.leetcode,
+      linkedinConnected: Boolean(careerIntegrations.linkedin?.connected),
+    }),
+    [
+      professionalGrowthStats.github,
+      professionalGrowthStats.leetcode,
+      careerIntegrations.linkedin?.connected,
+    ],
+  );
 
   const careerMetrics = [
-    { key: 'momentum',    label: 'Career Momentum',    icon: TrendingUp, value: momentumScore, color: '#7b61ff',  status: momentumScore == null ? null : momentumScore >= 70 ? 'Strong' : momentumScore >= 45 ? 'Building' : 'Stalled' },
-    { key: 'coding',      label: 'Coding Consistency', icon: Code2,      value: codingScore,   color: '#10c7a1',  status: codingScore   == null ? null : codingScore   >= 70 ? 'Consistent' : codingScore >= 40 ? 'Irregular' : 'Weak Signal' },
+    { key: 'momentum',    label: 'Career Momentum',    icon: TrendingUp, value: dynamicMomentumScore, color: '#7b61ff',  status: dynamicCareerMetrics.momentumStatus },
+    { key: 'coding',      label: 'Coding Consistency', icon: Code2,      value: dynamicCodingScore,   color: '#10c7a1',  status: dynamicCareerMetrics.codingStatus },
     { key: 'productivity',label: 'Productivity',       icon: Zap,        value: prodScore,     color: '#fbbf24',  status: prodScore     == null ? null : prodScore     >= 75 ? 'High Output' : prodScore >= 50 ? 'Moderate' : 'Low' },
     { key: 'burnout',     label: 'Burnout Risk',       icon: Activity,   value: burnoutRisk,   color: burnoutRisk > 65 ? '#f87171' : burnoutRisk > 40 ? '#fbbf24' : '#4ade80', status: burnoutRisk == null ? null : burnoutRisk > 65 ? 'High Risk' : burnoutRisk > 40 ? 'Moderate' : 'Low Risk', inverted: true },
-    { key: 'growth',      label: 'Professional Growth',icon: Award,      value: growthScore,   color: '#c084fc',  status: growthScore   == null ? null : growthScore   >= 70 ? 'All-Star' : growthScore >= 40 ? 'Growing' : 'Early Stage' },
+    { key: 'growth',      label: 'Professional Growth',icon: Award,      value: professionalGrowthMetric.score,   color: '#c084fc',  status: professionalGrowthMetric.status },
   ];
 
   const forecast      = useMemo(() => buildBurnoutForecast(burnoutRisk, profile?.studyHours, profile?.sleepHours), [burnoutRisk, profile]);
@@ -612,7 +1177,6 @@ export default function Career() {
         {/* ── HEADER ── */}
         <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-white/40 mb-1">{greeting}</p>
             <h1 className="text-4xl font-semibold tracking-tight">Career Intelligence</h1>
             <p className="mt-2 max-w-2xl text-base leading-relaxed text-white/55">
               {profileLoading ? 'Loading your career signals…' :
@@ -635,7 +1199,7 @@ export default function Career() {
           {careerMetrics.map(m => (
             m.value != null
               ? <CareerMetricCard key={m.key} metric={m} mounted={mounted} />
-              : <NoSignalCard     key={m.key} label={m.label} icon={m.icon} />
+              : <NoSignalCard     key={m.key} label={m.label} icon={m.icon} hint={m.key === 'growth' ? 'Connect your professional profiles' : ['momentum', 'coding'].includes(m.key) ? 'Connect GitHub or LeetCode' : undefined} />
           ))}
         </section>
 
@@ -663,24 +1227,52 @@ export default function Career() {
             <div className="flex items-center gap-2 mb-4">
               <Link className="h-4 w-4 text-white/30" />
               <p className="text-xs font-bold uppercase tracking-widest text-white/30">
-                {domainConfig.label} · Connect your profiles
+                Career integrations · Connect your profiles
               </p>
             </div>
             <div className="space-y-3">
-              {domainConfig.platforms.map(platform => (
-                <PlatformCard
-                  key={platform.id}
-                  platform={platform}
-                  domainColor={domainConfig.color}
-                />
-              ))}
+              <CareerLinkCard
+                provider="github"
+                label="GitHub"
+                icon={GithubIcon}
+                placeholder="https://github.com/anjali"
+                integration={careerIntegrations.github}
+                saving={careerIntegrations.saving}
+                onSave={saveCareerLinks}
+                onDisconnect={disconnectCareerLink}
+              />
+              <CareerLinkCard
+                provider="leetcode"
+                label="LeetCode"
+                icon={Code2}
+                placeholder="https://leetcode.com/u/anjali"
+                integration={careerIntegrations.leetcode}
+                saving={careerIntegrations.saving}
+                onSave={saveCareerLinks}
+                onDisconnect={disconnectCareerLink}
+              />
+              <CareerLinkCard
+                provider="linkedin"
+                label="LinkedIn"
+                icon={Briefcase}
+                placeholder="https://linkedin.com/in/anjali"
+                integration={careerIntegrations.linkedin}
+                saving={careerIntegrations.saving}
+                onSave={saveCareerLinks}
+                onDisconnect={disconnectCareerLink}
+              />
             </div>
+            {careerIntegrations.error && (
+              <p className="mt-3 rounded-xl border border-[#ff4d7d]/20 bg-[#ff4d7d]/8 px-3 py-2 text-sm text-[#ff8fbd]">
+                {careerIntegrations.error}
+              </p>
+            )}
           </div>
 
           {/* Compact heatmap — only shown in coding domain */}
           {activeDomain === 'coding' && (
             <div className="mt-6 pt-5 border-t border-white/8">
-              <CompactHeatmap githubData={githubData} />
+              <CompactHeatmap careerIntegrations={careerIntegrations} />
             </div>
           )}
 
@@ -983,7 +1575,7 @@ function CareerRing({ value, color, mounted }) {
   );
 }
 
-function NoSignalCard({ label, icon: Icon }) {
+function NoSignalCard({ label, icon: Icon, hint = 'Complete onboarding' }) {
   return (
     <article className={`${card} p-5 text-center flex flex-col items-center justify-center gap-3 min-h-[140px]`}>
       <div className="h-14 w-14 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center">
@@ -991,7 +1583,7 @@ function NoSignalCard({ label, icon: Icon }) {
       </div>
       <div>
         <p className="text-xs font-bold uppercase tracking-widest text-white/25">{label}</p>
-        <p className="text-[11px] text-white/15 mt-0.5">Complete onboarding</p>
+        <p className="text-[11px] text-white/15 mt-0.5">{hint}</p>
       </div>
     </article>
   );
