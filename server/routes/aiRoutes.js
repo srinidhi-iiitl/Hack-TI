@@ -261,7 +261,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
     let xpEvent = '';
     if (domain === 'finance') {
       const fin = extractedData.financeData || {};
-      if (extractedData.subType === 'bank') {
+      if (extractedData.subType === 'bank' || extractedData.subType === 'generic' || !extractedData.subType) {
         xpEvent = 'AI_RECEIPT_LOGGED';
         dailyLog.finance.moneySpent += (fin.moneySpent || 0);
         dailyLog.finance.moneyCredited += (fin.moneyCredited || 0);

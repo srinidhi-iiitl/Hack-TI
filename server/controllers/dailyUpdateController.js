@@ -81,6 +81,60 @@ async function applyDailyUpdateEffects(userId, date, payload) {
   dailyLog.health.workouts = payload.health.exercised ? [{ type: 'Daily check-in', durationMinutes: 30 }] : [];
   dailyLog.finance.moneySpent = payload.finance.spending;
   dailyLog.finance.transactions = buildTransactions(payload.finance);
+
+  // Compile today's holdings from check-in
+  const newHoldings = [];
+  if (payload.finance.boughtShares && payload.finance.boughtShareDetails.amount > 0) {
+    newHoldings.push({
+      assetName: payload.finance.boughtShareDetails.stockName || 'Shares',
+      value: payload.finance.boughtShareDetails.amount,
+      shares: payload.finance.boughtShareDetails.quantity || 1
+    });
+  }
+  if (payload.finance.insurancePurchased && payload.finance.insuranceDetails.amount > 0) {
+    newHoldings.push({
+      assetName: payload.finance.insuranceDetails.providerName || 'LIC Insurance',
+      value: payload.finance.insuranceDetails.amount,
+      shares: 1
+    });
+  }
+
+  // Get previous holdings snapshot from latest log
+  const latestLogWithHoldings = await DailyTracking.findOne({
+    userId,
+    'finance.holdings.0': { $exists: true },
+    dateString: { $ne: date }
+  }).sort({ dateString: -1 });
+
+  let mergedHoldings = latestLogWithHoldings?.finance?.holdings ? [...latestLogWithHoldings.finance.holdings.map(h => h.toObject?.() || h)] : [];
+
+  // Merge bought holdings
+  newHoldings.forEach(h => {
+    const existingIdx = mergedHoldings.findIndex(m => m.assetName?.toLowerCase() === h.assetName?.toLowerCase());
+    if (existingIdx !== -1) {
+      mergedHoldings[existingIdx].shares += h.shares;
+      mergedHoldings[existingIdx].value += h.value;
+    } else {
+      mergedHoldings.push(h);
+    }
+  });
+
+  // Deduct sold holdings
+  if (payload.finance.soldShares && payload.finance.soldShareDetails.quantity > 0) {
+    const sellStock = payload.finance.soldShareDetails.stockName || 'Shares';
+    const sellQty = payload.finance.soldShareDetails.quantity;
+    const sellAmt = payload.finance.soldShareDetails.amount;
+    const existingIdx = mergedHoldings.findIndex(m => m.assetName?.toLowerCase() === sellStock.toLowerCase());
+    if (existingIdx !== -1) {
+      mergedHoldings[existingIdx].shares = Math.max(0, mergedHoldings[existingIdx].shares - sellQty);
+      mergedHoldings[existingIdx].value = Math.max(0, mergedHoldings[existingIdx].value - sellAmt);
+      if (mergedHoldings[existingIdx].shares === 0) {
+        mergedHoldings.splice(existingIdx, 1);
+      }
+    }
+  }
+
+  dailyLog.finance.holdings = mergedHoldings;
   await dailyLog.save();
 
   let goal = null;

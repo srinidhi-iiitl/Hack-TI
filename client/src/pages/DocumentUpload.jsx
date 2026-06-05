@@ -123,6 +123,7 @@ function DocumentUpload() {
     if (!extractedData) return null;
 
     if (domain === 'finance') {
+      const fin = extractedData.financeData || {};
       const isMF = extractedData.subType === 'mutual_fund';
       return (
         <div className="grid gap-4 sm:grid-cols-2 text-sm text-white/80">
@@ -130,13 +131,13 @@ function DocumentUpload() {
             <div className="text-white/40 text-xs font-bold uppercase tracking-wider mb-1">Financial Summary</div>
             {isMF ? (
               <div className="space-y-1">
-                <div>Portfolio Value: <span className="font-bold text-white">₹{(extractedData.portfolioValue || 0).toLocaleString()}</span></div>
-                <div>Returns: <span className="font-bold text-[#c8a84b]">{extractedData.returns}%</span></div>
+                <div>Portfolio Value: <span className="font-bold text-white">₹{(fin.portfolioValue || 0).toLocaleString()}</span></div>
+                <div>Returns: <span className="font-bold text-[#c8a84b]">{fin.returns}%</span></div>
               </div>
             ) : (
               <div className="space-y-1">
-                <div>Money Spent: <span className="font-bold text-[#ff4d7d]">₹{extractedData.moneySpent || 0}</span></div>
-                <div>Money Credited: <span className="font-bold text-emerald-400">₹{extractedData.moneyCredited || 0}</span></div>
+                <div>Money Spent: <span className="font-bold text-[#ff4d7d]">₹{fin.moneySpent || 0}</span></div>
+                <div>Money Credited: <span className="font-bold text-emerald-400">₹{fin.moneyCredited || 0}</span></div>
               </div>
             )}
           </div>
@@ -146,13 +147,13 @@ function DocumentUpload() {
             </div>
             {isMF ? (
               <div className="space-y-1">
-                {extractedData.holdings?.map((h, i) => (
+                {fin.holdings?.map((h, i) => (
                   <div key={i} className="truncate text-xs">• {h.assetName} ({h.shares} units) - ₹{h.value?.toLocaleString()}</div>
                 )) || <div className="text-white/30 text-xs">No holdings found</div>}
               </div>
             ) : (
               <div className="space-y-1">
-                {extractedData.transactions?.map((t, i) => (
+                {fin.transactions?.map((t, i) => (
                   <div key={i} className="truncate text-xs flex justify-between">
                     <span>• {t.category}</span>
                     <span className={t.type === 'income' ? 'text-emerald-400' : 'text-[#ff4d7d]'}>
@@ -168,14 +169,15 @@ function DocumentUpload() {
     }
 
     if (domain === 'health') {
+      const hl = extractedData.healthData || {};
       return (
         <div className="grid gap-4 sm:grid-cols-2 text-sm text-white/80">
           <div className="rounded-xl bg-white/[0.02] p-3 border border-white/5 space-y-2">
             <div>
               <div className="text-white/40 text-xs font-bold uppercase tracking-wider mb-1">Medications Prescribed</div>
-              {extractedData.medications?.length > 0 ? (
+              {hl.medications?.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5 mt-1">
-                  {extractedData.medications.map((m, i) => (
+                  {hl.medications.map((m, i) => (
                     <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs text-white/90">{m}</span>
                   ))}
                 </div>
@@ -183,9 +185,9 @@ function DocumentUpload() {
             </div>
             <div>
               <div className="text-white/40 text-xs font-bold uppercase tracking-wider mb-1">Detected Deficiencies</div>
-              {extractedData.deficiencies?.length > 0 ? (
+              {hl.deficiencies?.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5 mt-1">
-                  {extractedData.deficiencies.map((d, i) => (
+                  {hl.deficiencies.map((d, i) => (
                     <span key={i} className="px-2 py-0.5 rounded-md bg-[#ff4d7d]/10 border border-[#ff4d7d]/20 text-xs text-[#ffb3ca]">{d}</span>
                   ))}
                 </div>
@@ -194,12 +196,12 @@ function DocumentUpload() {
           </div>
           <div className="rounded-xl bg-white/[0.02] p-3 border border-white/5">
             <div className="text-white/40 text-xs font-bold uppercase tracking-wider mb-1">Health Vitals</div>
-            {extractedData.vitals ? (
+            {hl.vitals ? (
               <div className="space-y-1 text-xs">
-                {extractedData.vitals.systolic && <div>• Blood Pressure: <span className="font-semibold text-white">{extractedData.vitals.systolic}/{extractedData.vitals.diastolic} mmHg</span></div>}
-                {extractedData.vitals.heartRate && <div>• Heart Rate: <span className="font-semibold text-white">{extractedData.vitals.heartRate} bpm</span></div>}
-                {extractedData.vitals.bloodSugar && <div>• Blood Sugar: <span className="font-semibold text-white">{extractedData.vitals.bloodSugar} mg/dL</span></div>}
-                {extractedData.vitals.weight && <div>• Weight: <span className="font-semibold text-white">{extractedData.vitals.weight} kg</span></div>}
+                {hl.vitals.systolic && <div>• Blood Pressure: <span className="font-semibold text-white">{hl.vitals.systolic}/{hl.vitals.diastolic} mmHg</span></div>}
+                {hl.vitals.heartRate && <div>• Heart Rate: <span className="font-semibold text-white">{hl.vitals.heartRate} bpm</span></div>}
+                {hl.vitals.bloodSugar && <div>• Blood Sugar: <span className="font-semibold text-white">{hl.vitals.bloodSugar} mg/dL</span></div>}
+                {hl.vitals.weight && <div>• Weight: <span className="font-semibold text-white">{hl.vitals.weight} kg</span></div>}
               </div>
             ) : <div className="text-white/30 text-xs">No vitals extracted</div>}
           </div>
@@ -208,17 +210,18 @@ function DocumentUpload() {
     }
 
     if (domain === 'career') {
+      const car = extractedData.careerData || {};
       return (
         <div className="grid gap-4 sm:grid-cols-2 text-sm text-white/80">
           <div className="rounded-xl bg-white/[0.02] p-3 border border-white/5 space-y-1">
             <div className="text-white/40 text-xs font-bold uppercase tracking-wider mb-1">Academic / Learning Activity</div>
-            <div>Study Hours: <span className="font-bold text-white">{extractedData.studyHours || 0}h</span></div>
-            <div>Completed Courses: <span className="font-bold text-[#7b61ff]">{extractedData.completedCourses || 0}</span></div>
+            <div>Study Hours: <span className="font-bold text-white">{car.studyHours || 0}h</span></div>
+            <div>Completed Courses: <span className="font-bold text-[#7b61ff]">{car.completedCourses || 0}</span></div>
           </div>
           <div className="rounded-xl bg-white/[0.02] p-3 border border-white/5 space-y-1">
             <div className="text-white/40 text-xs font-bold uppercase tracking-wider mb-1">Development Activity</div>
-            <div>GitHub Commits: <span className="font-bold text-white">{extractedData.githubCommits || 0}</span></div>
-            <div>Projects Worked On: <span className="font-bold text-[#10c7a1]">{extractedData.projectsCompleted || 0}</span></div>
+            <div>GitHub Commits: <span className="font-bold text-white">{car.githubCommits || 0}</span></div>
+            <div>Projects Worked On: <span className="font-bold text-[#10c7a1]">{car.projectsCompleted || 0}</span></div>
           </div>
         </div>
       );

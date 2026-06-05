@@ -32,6 +32,10 @@ function Finance() {
   const [exchangeError, setExchangeError] = useState(null);
   const [lastExchangeUpdate, setLastExchangeUpdate] = useState(null);
 
+  // ── AI Macro Market Analysis state ──
+  const [marketData, setMarketData] = useState(null);
+  const [marketLoading, setMarketLoading] = useState(true);
+
   // ═════════════════════════════════════════════
   // 1. Check onboarding profile for bank connection + autonomous sync
   // ═════════════════════════════════════════════
@@ -157,6 +161,29 @@ function Finance() {
     const interval = setInterval(fetchExchangeRates, 60000);
     return () => clearInterval(interval);
   }, [fetchExchangeRates]);
+
+  // ═════════════════════════════════════════════
+  // 5. Fetch AI Macro Market Analysis
+  // ═════════════════════════════════════════════
+  useEffect(() => {
+    const fetchMarketAnalysis = async () => {
+      setMarketLoading(true);
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await axios.get(`${API_BASE_URL}/api/finance/market-analysis`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.success) {
+          setMarketData(response.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch market analysis:', err);
+      } finally {
+        setMarketLoading(false);
+      }
+    };
+    fetchMarketAnalysis();
+  }, []);
 
 
   // ═════════════════════════════════════════════
@@ -341,7 +368,7 @@ function Finance() {
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <MiniStat label="Avg. delivery cost" value="$42.50" delta="+12.40" />
+                <MiniStat label="Avg. delivery cost" value="₹3,500.00" delta="+₹1,020.00" />
                 <MiniStat label="Trigger window" value="11 PM - 1 AM" />
               </div>
             </div>
@@ -367,10 +394,19 @@ function Finance() {
               <p className="mt-1 text-sm text-white/80">Global catalysts: Political, Legal, Conflict, & Health updates</p>
           </div>
           <div className="flex-1 space-y-4 overflow-y-auto max-h-[280px] pr-1">
-            <MarketImpactRow title="Geopolitical Conflict / War Risks" detail="Supply chain disruptions detected in energy sectors. Expect minor inflationary spikes in regional utility and fuel costs." type="danger" />
-            <MarketImpactRow title="Tax Law Amendments" detail="New capital gains structural changes passed. Portfolio reassessment recommended prior to end-of-quarter cycles." type="warning" />
-            <MarketImpactRow title="Political / Policy Shifts" detail="Tech sector regulatory updates impacting high-growth assets. Shifting allocation safely toward defensive indexes." type="info" />
-            <MarketImpactRow title="Public Health / Pandemics" detail="Healthcare buffer thresholds optimized automatically following global biosurveillance warning models." type="info" />
+            {marketLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="finance-pulse-skeleton h-14 rounded-lg bg-white/5" />
+                ))}
+              </div>
+            ) : marketData?.impacts && marketData.impacts.length > 0 ? (
+              marketData.impacts.map((imp, idx) => (
+                <MarketImpactRow key={idx} title={imp.title} detail={imp.detail} type={imp.type} />
+              ))
+            ) : (
+              <p className="text-sm text-white/50 italic">Geopolitical updates compiling...</p>
+            )}
           </div>
         </article>
       </section>
@@ -449,7 +485,7 @@ function Finance() {
           </div>
           <div className="mt-6 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-sm text-white/80">Projected difference in 24 months:</p>
-            <span className="text-xl font-semibold text-[#c8a84b]">+$18,450.00</span>
+            <span className="text-xl font-semibold text-[#c8a84b]">+₹1,50,000.00</span>
           </div>
         </article>
       </section>
@@ -464,21 +500,26 @@ function Finance() {
 function buildOverviewMetrics(financeData, loading, error) {
   if (loading) {
     return [
-      { label: 'Current Balance', value: null, detail: 'Loading...', tone: 'primary', loading: true },
-      { label: 'Savings Rate', value: null, detail: 'Loading...', tone: 'primary', loading: true },
-      { label: 'Credit Score', value: null, detail: 'Loading...', tone: 'neutral', loading: true },
+      { label: 'Total Salary', value: null, detail: 'Loading...', tone: 'primary', loading: true },
+      { label: 'Monthly Expenses', value: null, detail: 'Loading...', tone: 'primary', loading: true },
+      { label: 'LIC & Share Holdings', value: null, detail: 'Loading...', tone: 'neutral', loading: true },
       { label: 'Financial Health', value: null, detail: 'Loading...', tone: 'primary', loading: true },
     ];
   }
 
   if (error || !financeData) {
     return [
-      { label: 'Current Balance', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
-      { label: 'Savings Rate', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
-      { label: 'Credit Score', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
+      { label: 'Total Salary', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
+      { label: 'Monthly Expenses', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
+      { label: 'LIC & Share Holdings', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
       { label: 'Financial Health', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
     ];
   }
+
+  const holdings = financeData.holdings || [];
+  const sharesCount = holdings.filter(h => h.assetName?.toLowerCase() !== 'lic' && !h.assetName?.toLowerCase().includes('insurance')).reduce((sum, h) => sum + (h.shares || 0), 0);
+  const licCount = holdings.filter(h => h.assetName?.toLowerCase() === 'lic' || h.assetName?.toLowerCase().includes('insurance')).length;
+  const holdingsValue = holdings.reduce((sum, h) => sum + (h.value || 0), 0);
 
   // Compute financial health from composite signals
   const creditNorm = Math.min(((financeData.creditScore - 300) / 550) * 100, 100);
@@ -488,31 +529,31 @@ function buildOverviewMetrics(financeData, loading, error) {
 
   return [
     {
-      label: 'Current Balance',
-      value: `$${financeData.accountBalance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}`,
-      detail: `Synced via ${financeData.source}`,
+      label: 'Total Salary',
+      value: `₹${financeData.totalSalary?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '0.00'}`,
+      detail: `Base + Monthly Credits`,
       tone: 'primary',
-      bar: Math.min((financeData.accountBalance / 10000) * 100, 100),
+      bar: 100
     },
     {
-      label: 'Savings Rate',
-      value: financeData.metrics?.monthlySavingsRate || '0%',
-      detail: `${savingsNum >= 15 ? '✅ On track' : '⚠️ Below target'} this month`,
-      tone: savingsNum >= 15 ? 'primary' : 'warm',
-      icon: ShieldIcon,
-      ring: savingsNum * 5,
+      label: 'Monthly Expenses',
+      value: `₹${financeData.monthlyExpenses?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '0.00'}`,
+      detail: `Out of limit: ₹${(financeData.accountBalance < 0 ? 'Exceeded' : 'Under control')}`,
+      tone: financeData.metrics?.unusualSpikeDetected ? 'warm' : 'primary',
+      bar: financeData.totalSalary > 0 ? Math.min((financeData.monthlyExpenses / financeData.totalSalary) * 100, 100) : 0,
     },
     {
-      label: 'Credit Score',
-      value: financeData.creditScore?.toString() || '—',
-      detail: financeData.creditScore >= 750 ? '🟢 Excellent' : financeData.creditScore >= 670 ? '🟡 Good' : '🔴 Needs work',
-      tone: financeData.creditScore >= 750 ? 'primary' : 'neutral',
-      segments: true,
+      label: 'LIC & Share Holdings',
+      value: `${sharesCount} Shares, ${licCount} LIC`,
+      detail: `Portfolio Value: ₹${holdingsValue.toLocaleString('en-IN')}`,
+      tone: 'primary',
+      ring: Math.min((holdingsValue / 50000) * 100, 100),
+      icon: ShieldIcon
     },
     {
       label: 'Financial Health',
       value: `${clampedHealth}%`,
-      detail: clampedHealth >= 70 ? '+Composite score healthy' : 'Review spending patterns',
+      detail: clampedHealth >= 70 ? '🟢 Stable digital twin score' : '🔴 Budget variance detected',
       tone: clampedHealth >= 70 ? 'primary' : 'warm',
       spark: [18, 42, 34, 66, 78, clampedHealth],
     },

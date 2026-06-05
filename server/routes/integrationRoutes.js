@@ -15,6 +15,7 @@ import {
   getHackerrankIntegration,   // NEW
   getCodeforcesIntegration,   // NEW
 } from '../controllers/integrationController.js';
+import OnboardingProfile from '../models/OnboardingProfile.js';
 import DailyTracking from '../models/DailyTracking.js';
 import { todayKey } from '../services/domainDataService.js';
 
@@ -71,45 +72,65 @@ router.get('/health', authenticateToken, async (req, res) => {
 
 // ── /finance — UNCHANGED ──────────────────────────────────────────────────────
 router.get('/finance', authenticateToken, async (req, res) => {
-  await simulateNetwork(2000);
-
-  const mockFinanceData = {
-    source: 'Plaid Banking', lastSync: new Date().toISOString(),
-    creditScore: Math.floor(Math.random() * (850 - 650) + 650),
-    accountBalance: 4250.75,
-    metrics: { monthlySavingsRate: '12%', unusualSpikeDetected: true },
-    recentTransactions: [
-      { id: 'txn_1', vendor: 'Starbucks',        amount: 5.40,    category: 'food',          timestamp: new Date(Date.now() - 86400000).toISOString() },
-      { id: 'txn_2', vendor: 'Netflix',           amount: 15.99,   category: 'entertainment', timestamp: new Date(Date.now() - 172800000).toISOString() },
-      { id: 'txn_3', vendor: 'Tech Corp Salary',  amount: 2500.00, category: 'income',        timestamp: new Date(Date.now() - 432000000).toISOString() },
-      { id: 'txn_4', vendor: 'UberEats Delivery', amount: 45.50,   category: 'food',          timestamp: new Date(Date.now() - 4000000).toISOString() },
-    ],
-  };
-
   try {
-    const todayStr = todayKey();
-    const todayISO = new Date().toISOString().split('T')[0];
-    const todayExpenses = mockFinanceData.recentTransactions
-      .filter(t => t.category !== 'income' && t.timestamp.startsWith(todayISO))
-      .reduce((sum, t) => sum + t.amount, 0);
+    await simulateNetwork(1000);
+    const userId = req.user.userId;
 
-    if (todayExpenses > 0) {
-      let daily = await DailyTracking.findOne({ userId: req.user.userId, dateString: todayStr });
-      if (!daily) daily = new DailyTracking({ userId: req.user.userId, dateString: todayStr });
+    // 1. Get onboarding profile for monthly baseline salary/spending
+    const onboarding = await OnboardingProfile.findOne({ userId }).sort({ updatedAt: -1 }).lean();
+    const baseSalary = onboarding?.monthlyIncome || 0;
+    const baseExpenditure = onboarding?.monthlyExpenditure || 0;
 
-      daily._prevSnapshot = {
-        health:  { caloriesConsumed: daily.health.caloriesConsumed||0, proteinConsumed: daily.health.proteinConsumed||0, waterLiters: daily.health.waterLiters||0, sleepHours: daily.health.sleepHours||0, workouts: [] },
-        finance: { moneySpent: daily.finance.moneySpent||0, moneyCredited: daily.finance.moneyCredited||0 },
-      };
+    // 2. Fetch current month's DailyTracking logs to aggregate spent & credited
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    const dateStringPrefix = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}`;
 
-      const delta = todayExpenses - (daily.finance.moneySpent || 0);
-      if (delta > 0) { daily.finance.moneySpent = todayExpenses; await daily.save(); }
-    }
-  } catch (syncErr) {
-    console.error('Integration finance sync error:', syncErr.message);
+    const logsThisMonth = await DailyTracking.find({
+      userId,
+      dateString: { $regex: new RegExp('^' + dateStringPrefix) }
+    }).lean();
+
+    const actualSpentThisMonth = logsThisMonth.reduce((sum, log) => sum + (log.finance?.moneySpent || 0), 0);
+    const actualCreditedThisMonth = logsThisMonth.reduce((sum, log) => sum + (log.finance?.moneyCredited || 0), 0);
+
+    // 3. Fetch latest holdings
+    const latestLogWithHoldings = await DailyTracking.findOne({
+      userId,
+      'finance.holdings.0': { $exists: true }
+    }).sort({ dateString: -1 }).lean();
+
+    const holdings = latestLogWithHoldings?.finance?.holdings || [];
+    const portfolioValue = holdings.reduce((sum, h) => sum + (h.value || 0), 0);
+
+    // 4. Calculate total salary & monthly expenses
+    const totalSalary = baseSalary + actualCreditedThisMonth;
+    const monthlyExpenses = actualSpentThisMonth;
+
+    // Calculate savings rate
+    const savingsRate = totalSalary > 0 ? Math.round(((totalSalary - monthlyExpenses) / totalSalary) * 100) : 0;
+
+    const dynamicFinanceData = {
+      source: 'Plaid Sync & Twin DB',
+      lastSync: new Date().toISOString(),
+      creditScore: onboarding?.creditScore || 725,
+      accountBalance: Math.max(0, totalSalary - monthlyExpenses),
+      totalSalary,
+      monthlyExpenses,
+      portfolioValue,
+      holdings,
+      metrics: {
+        monthlySavingsRate: `${savingsRate}%`,
+        unusualSpikeDetected: monthlyExpenses > baseExpenditure * 1.15
+      },
+      recentTransactions: logsThisMonth.flatMap(log => log.finance?.transactions || []).slice(0, 15)
+    };
+
+    res.status(200).json({ success: true, data: dynamicFinanceData });
+  } catch (error) {
+    console.error('Integration Finance Sync Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error synchronizing finance integration' });
   }
-
-  res.status(200).json({ success: true, data: mockFinanceData });
 });
 
 // ── /career — UNCHANGED ───────────────────────────────────────────────────────
