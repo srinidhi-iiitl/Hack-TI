@@ -1119,6 +1119,19 @@ export default function Career() {
   const recommendations = (dashProfile?.recommendations || []).filter(r => r.category === 'career');
   const githubData    = dashProfile?.githubData  || {};
   const leetcodeData  = dashProfile?.leetcodeData || {};
+  const displayedLeetcodeData = careerIntegrations.leetcode?.connected
+    ? {
+        connected: true,
+        totalSolved: professionalGrowthStats.leetcode?.solved ?? leetcodeData.totalSolved ?? 0,
+        hardSolved: leetcodeData.hardSolved ?? 0,
+        acceptanceRate: leetcodeData.acceptanceRate ?? 0,
+      }
+    : {
+        connected: false,
+        totalSolved: 0,
+        hardSolved: 0,
+        acceptanceRate: 0,
+      };
 
   const burnoutRisk   = analytics?.burnoutRisk         ?? null;
   const prodScore     = analytics?.productivityScore   ?? null;
@@ -1269,20 +1282,18 @@ export default function Career() {
             )}
           </div>
 
-          {/* Compact heatmap — only shown in coding domain */}
-          {activeDomain === 'coding' && (
-            <div className="mt-6 pt-5 border-t border-white/8">
-              <CompactHeatmap careerIntegrations={careerIntegrations} />
-            </div>
-          )}
+          {/* Compact heatmap */}
+          <div className="mt-6 pt-5 border-t border-white/8">
+            <CompactHeatmap careerIntegrations={careerIntegrations} />
+          </div>
 
           {/* LeetCode quick stats if connected — coding domain */}
-          {activeDomain === 'coding' && leetcodeData?.connected && (
+          {activeDomain === 'coding' && (
             <div className="mt-4 pt-4 border-t border-white/8 grid grid-cols-3 gap-3">
               {[
-                { label: 'Total Solved', value: leetcodeData.totalSolved  ?? 0, color: '#10c7a1' },
-                { label: 'Hard',         value: leetcodeData.hardSolved   ?? 0, color: '#f87171' },
-                { label: 'Acceptance',   value: `${leetcodeData.acceptanceRate ?? 0}%`, color: '#fbbf24' },
+                { label: 'Total Solved', value: displayedLeetcodeData.totalSolved, color: '#10c7a1' },
+                { label: 'Hard',         value: displayedLeetcodeData.hardSolved, color: '#f87171' },
+                { label: 'Acceptance',   value: `${displayedLeetcodeData.acceptanceRate}%`, color: '#fbbf24' },
               ].map(s => (
                 <div key={s.label} className="rounded-xl bg-white/4 border border-white/8 p-3 text-center">
                   <p className="text-xl font-bold" style={{ color: s.color }}>{s.value}</p>
