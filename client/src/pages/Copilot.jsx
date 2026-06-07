@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Loader2, Sparkles, BrainCircuit, Volume2, StopCircle, Mic, MicOff,
+  Loader2, BrainCircuit, Volume2, StopCircle, Mic, MicOff,
   AlertTriangle, Zap, X, User, Bot, ChevronRight, Target, Send,
   RefreshCw, Paperclip, FileText, Activity, DollarSign
 } from 'lucide-react';
@@ -154,7 +154,7 @@ export default function Copilot() {
         if (res.data.success) {
           setActiveGoals(res.data.data.filter(g => g.currentMetric < g.targetMetric));
         }
-      } catch (e) { /* silent */ }
+    } catch { /* silent */ }
     };
     fetchGoals();
   }, []);
@@ -311,7 +311,7 @@ export default function Copilot() {
       );
 
       if (res.data.success) {
-        const parsed = typeof res.data.advice === 'string' ? JSON.parse(res.data.advice) : res.data.advice;
+        const parsed = parseOracleAdvice(res.data.advice);
         setChatHistory(prev => [...prev, { role: 'assistant', content: parsed }]);
       }
     } catch (e) {
@@ -523,4 +523,28 @@ export default function Copilot() {
       </div>
     </div>
   );
+}
+
+function parseOracleAdvice(advice) {
+  if (advice && typeof advice === 'object') return normalizeOracleAdvice(advice);
+
+  try {
+    return normalizeOracleAdvice(JSON.parse(String(advice || '{}')));
+  } catch {
+    return normalizeOracleAdvice({
+      verdict: String(advice || 'Copilot could not read the AI response.'),
+      riskLevel: 'Medium',
+      impacts: [],
+      action: 'Please retry your question in a shorter sentence.',
+    });
+  }
+}
+
+function normalizeOracleAdvice(advice = {}) {
+  return {
+    verdict: advice.verdict || 'Copilot could not generate a verdict.',
+    riskLevel: ['Low', 'Medium', 'High'].includes(advice.riskLevel) ? advice.riskLevel : 'Medium',
+    impacts: Array.isArray(advice.impacts) ? advice.impacts : [],
+    action: advice.action || 'Please retry your question.',
+  };
 }

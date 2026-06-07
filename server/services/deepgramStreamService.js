@@ -1,15 +1,17 @@
 import WebSocket from 'ws';
 
 const deepgramUrl = 'wss://api.deepgram.com/v1/listen?model=nova-2-general&language=multi&interim_results=true&smart_format=true&vad_events=true&endpointing=1200';
-
 export function createDeepgramStream({ socket }) {
   let deepgramSocket = null;
   let isOpen = false;
   let manuallyStopped = false;
   let reconnectTimer = null;
   let keepAliveTimer = null;
+  let stableOpenTimer = null;
   let droppedAudioWarningShown = false;
   let reconnecting = false;
+  let consecutiveDisconnects = 0;
+  let audioChunksReceived = 0;
 
   function start() {
     manuallyStopped = false;
@@ -32,6 +34,10 @@ export function createDeepgramStream({ socket }) {
       isOpen = true;
       droppedAudioWarningShown = false;
       startKeepAlive();
+      clearTimeout(stableOpenTimer);
+      stableOpenTimer = setTimeout(() => {
+        consecutiveDisconnects = 0;
+      }, 5000);
       emitVoiceConnected(socket);
     });
 
@@ -39,14 +45,23 @@ export function createDeepgramStream({ socket }) {
       handleDeepgramMessage(socket, payload);
     });
 
-    deepgramSocket.on('close', () => {
-      console.warn('[VOICE ERROR] Deepgram Disconnected');
+    deepgramSocket.on('close', (code, reasonBuffer) => {
+      const reason = reasonBuffer?.toString?.() || '';
+      console.warn(`[VOICE ERROR] Deepgram Disconnected (${code}${reason ? `: ${reason}` : ''})`);
       isOpen = false;
+      consecutiveDisconnects += 1;
+      clearTimeout(stableOpenTimer);
       stopKeepAlive();
       deepgramSocket = null;
       if (!manuallyStopped) {
         emitVoiceDisconnected(socket);
-        scheduleReconnect();
+        if (code === 1000 && audioChunksReceived > 0) {
+          emitVoiceError(socket, 'Deepgram closed the live audio stream. Switching to browser speech recognition.');
+        } else if (consecutiveDisconnects >= 3) {
+          emitVoiceError(socket, 'Deepgram repeatedly disconnected. Switching to browser speech recognition.');
+        } else {
+          scheduleReconnect();
+        }
       }
     });
 
@@ -64,17 +79,19 @@ export function createDeepgramStream({ socket }) {
   function sendAudio(chunk) {
     if (!isOpen || !deepgramSocket || deepgramSocket.readyState !== WebSocket.OPEN) {
       if (!droppedAudioWarningShown) {
-        console.warn('[VOICE] Dropping audio chunk because Deepgram is not connected.');
+        console.warn('[VOICE] Waiting for Deepgram before sending audio chunks.');
         droppedAudioWarningShown = true;
       }
       return;
     }
+    audioChunksReceived += 1;
     deepgramSocket.send(chunk);
   }
 
   function stop() {
     manuallyStopped = true;
     clearTimeout(reconnectTimer);
+    clearTimeout(stableOpenTimer);
     stopKeepAlive();
     isOpen = false;
     if (!deepgramSocket) return;
@@ -83,6 +100,7 @@ export function createDeepgramStream({ socket }) {
     }
     deepgramSocket.close();
     deepgramSocket = null;
+    audioChunksReceived = 0;
   }
 
   return { start, sendAudio, stop };

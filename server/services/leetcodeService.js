@@ -130,6 +130,8 @@ function normalizeGraphqlResponse(username, matchedUser) {
   const easy = findSolvedCount(submissions, 'Easy');
   const medium = findSolvedCount(submissions, 'Medium');
   const hard = findSolvedCount(submissions, 'Hard');
+  const totalSubmissions = findSubmissionCount(submissions, 'All');
+  const acceptanceRate = totalSubmissions > 0 ? Math.round((total / totalSubmissions) * 100) : 0;
 
   return {
     source: 'leetcode',
@@ -144,7 +146,8 @@ function normalizeGraphqlResponse(username, matchedUser) {
     easySolved: easy,
     mediumSolved: medium,
     hardSolved: hard,
-    acceptanceRate: 0,
+    submissions: totalSubmissions,
+    acceptanceRate,
     solvedPercentage: 0,
     avatarUrl: matchedUser.profile?.userAvatar || '',
     realName: matchedUser.profile?.realName || '',
@@ -156,6 +159,11 @@ function normalizeGraphqlResponse(username, matchedUser) {
 function findSolvedCount(submissions, difficulty) {
   const item = submissions.find((entry) => entry.difficulty === difficulty);
   return Number(item?.count || 0);
+}
+
+function findSubmissionCount(submissions, difficulty) {
+  const item = submissions.find((entry) => entry.difficulty === difficulty);
+  return Number(item?.submissions || 0);
 }
 
 function sanitizeLeetcodeUsername(username) {

@@ -99,7 +99,9 @@ async function applyDailyUpdateEffects(userId, date, payload) {
   } : {};
 
   dailyLog.health.waterLiters = payload.health.waterIntake;
-  dailyLog.health.sleepHours = payload.health.sleepHours;
+  if (payload.health.sleepHours > 0) {
+    dailyLog.health.sleepHours = payload.health.sleepHours;
+  }
   dailyLog.health.workouts = payload.health.exercised ? [{ type: 'Daily check-in', durationMinutes: 30 }] : [];
   dailyLog.finance.moneySpent = payload.finance.spending;
   dailyLog.finance.transactions = buildTransactions(payload.finance);
@@ -175,12 +177,18 @@ async function applyDailyUpdateEffects(userId, date, payload) {
 
   if (selectedGoalIds.length && payload.goal.goalCompleted) {
     const goals = await SmartGoal.find({ _id: { $in: selectedGoalIds }, userId });
+    const autoSyncedGoalIds = new Set(goalsUpdated.map((item) => String(item.goalId)));
     for (const goal of goals) {
+      if (autoSyncedGoalIds.has(String(goal._id))) continue;
+
       const before = goal.currentMetric;
-      goal.currentMetric = Math.min(Number(goal.currentMetric || 0) + 1, Number(goal.targetMetric || 1));
+      const addedByCheckIn = calculateManualGoalIncrement(goal);
+      if (addedByCheckIn <= 0) continue;
+
+      goal.currentMetric = Math.min(Number(goal.currentMetric || 0) + addedByCheckIn, Number(goal.targetMetric || 1));
       goal.lastLoggedAt = new Date();
       goal.streak = Number(goal.streak || 0) + 1;
-      goal.progressLogs.push({ value: 1, note: 'Daily Twin Check-In', loggedAt: new Date() });
+      goal.progressLogs.push({ value: addedByCheckIn, note: 'Daily Twin Check-In', loggedAt: new Date() });
       await goal.save();
 
       const added = goal.currentMetric - before;
@@ -191,14 +199,14 @@ async function applyDailyUpdateEffects(userId, date, payload) {
       const eventName = goal.status === 'completed' ? 'GOAL_COMPLETED' : 'GOAL_PROGRESS_LOGGED';
       const gamificationResult = await GamificationEngine.logEvent(userId, eventName, {
         goalId: goal._id,
-        addedValue: added || 1
+        addedValue: added || addedByCheckIn
       });
 
       goalsUpdated.push({
         goalId: goal._id,
         title: goal.title,
         domain: goal.domain,
-        added: added || 1,
+        added: added || addedByCheckIn,
         current: goal.currentMetric,
         target: goal.targetMetric,
         unit: goal.unit,
@@ -327,6 +335,7 @@ function normalizePayload(body = {}) {
     health: {
       waterIntake: num(body.health?.waterIntake),
       exercised: Boolean(body.health?.exercised),
+      ateProperly: Boolean(body.health?.ateProperly),
       sleepHours: num(body.health?.sleepHours),
       healthConcern: Boolean(body.health?.healthConcern),
       concernTypes: Array.isArray(body.health?.concernTypes) ? body.health.concernTypes : [],
@@ -368,12 +377,32 @@ function getSelectedGoalIds(goal = {}) {
   return normalizeGoalIds(goal);
 }
 
+function calculateManualGoalIncrement(goal) {
+  const target = Number(goal.targetMetric || 1);
+  const current = Number(goal.currentMetric || 0);
+  const remaining = Math.max(target - current, 0);
+  if (remaining <= 0) return 0;
+
+  const now = new Date();
+  const deadline = goal.deadline ? new Date(goal.deadline) : null;
+  const daysLeft = deadline && Number.isFinite(deadline.getTime())
+    ? Math.max(Math.ceil((deadline - now) / 86400000), 1)
+    : 30;
+
+  const dailySlice = Math.ceil(remaining / Math.min(daysLeft, 30));
+  return Math.max(1, Math.min(dailySlice, remaining));
+}
+
 function calculateScoreDelta(payload) {
   const concernPenalty = payload.health.healthConcern ? -8 : 2;
+  const sleepDelta = payload.health.sleepHours > 0
+    ? payload.health.sleepHours >= 7 ? 5 : payload.health.sleepHours < 5 ? -6 : 1
+    : 0;
   const health = clamp(
     (payload.health.waterIntake >= 2 ? 3 : -2)
     + (payload.health.exercised ? 5 : -1)
-    + (payload.health.sleepHours >= 7 ? 5 : payload.health.sleepHours < 5 ? -6 : 1)
+    + (payload.health.ateProperly ? 3 : -2)
+    + sleepDelta
     + concernPenalty,
     -12,
     12,
@@ -395,7 +424,7 @@ function calculateScoreDelta(payload) {
     12,
   );
 
-  return { health, finance, career, burnout: payload.health.sleepHours < 5 || payload.health.healthConcern ? 5 : -3 };
+  return { health, finance, career, burnout: (payload.health.sleepHours > 0 && payload.health.sleepHours < 5) || payload.health.healthConcern ? 5 : -3 };
 }
 
 function buildTransactions(finance) {

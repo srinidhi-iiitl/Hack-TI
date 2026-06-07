@@ -300,17 +300,36 @@ export const forgotPassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (user) {
-      const resetToken = crypto.randomBytes(24).toString('hex');
-      user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-      user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
-      await user.save();
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "You don't have account with this mail",
+        code: 'EMAIL_NOT_FOUND',
+      });
+    }
+
+    const otp = generateOtp();
+    user.passwordResetToken = hashOtp(otp);
+    user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    const emailResult = await sendPasswordResetOtpEmail(user.email, otp);
+
+    if (!emailResult.sent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Unable to send OTP email. Please check mail configuration and try again.',
+        code: 'OTP_EMAIL_FAILED',
+      });
     }
 
     return res.status(200).json({
       success: true,
-      message: 'If an account exists for this email, a reset link has been generated.',
+      message: 'OTP sent to your registered email.',
+      data: { email: maskEmail(user.email), expiresInMinutes: 10 },
     });
   } catch (error) {
     next(error);
@@ -319,24 +338,28 @@ export const forgotPassword = async (req, res, next) => {
 
 export const resetPassword = async (req, res, next) => {
   try {
-    const { token, password, confirmPassword } = req.body;
+    const { email, otp, password, confirmPassword } = req.body;
 
-    if (!token || !password || !confirmPassword) {
-      return res.status(400).json({ success: false, message: 'Token and password fields are required' });
+    if (!email || !otp || !password || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Email, OTP, and password fields are required' });
     }
 
     if (password !== confirmPassword) {
       return res.status(400).json({ success: false, message: 'Passwords do not match' });
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
     const user = await User.findOne({
-      passwordResetToken: hashedToken,
+      email: email.toLowerCase().trim(),
+      passwordResetToken: hashOtp(otp),
       passwordResetExpires: { $gt: new Date() },
-    });
+    }).select('+passwordResetToken +passwordResetExpires +password');
 
     if (!user) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
     user.password = password;
@@ -351,6 +374,98 @@ export const resetPassword = async (req, res, next) => {
 };
 
 export default { signup, login, logout, getProfile, updateProfile, changePassword, forgotPassword, resetPassword };
+
+function generateOtp() {
+  return String(crypto.randomInt(100000, 1000000));
+}
+
+function hashOtp(otp) {
+  return crypto.createHash('sha256').update(String(otp).trim()).digest('hex');
+}
+
+async function sendPasswordResetOtpEmail(to, otp) {
+  const subject = '[DigitalTwin] Password reset OTP';
+  const text = [
+    'DigitalTwin password reset',
+    '',
+    `Your OTP is ${otp}.`,
+    'This OTP expires in 10 minutes.',
+    '',
+    'If you did not request this, you can ignore this email.',
+  ].join('\n');
+  const html = `
+    <div style="font-family:Inter,Arial,sans-serif;background:#05070d;color:#f8fafc;padding:28px;">
+      <div style="max-width:520px;margin:0 auto;border:1px solid rgba(255,255,255,0.12);border-radius:18px;background:#0b111a;padding:24px;">
+        <p style="margin:0 0 10px;color:#7df3cc;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:800;">DigitalTwin Security</p>
+        <h1 style="margin:0 0 14px;font-size:24px;line-height:1.2;">Reset your password</h1>
+        <p style="margin:0;color:rgba(248,250,252,0.74);line-height:1.6;">Use this OTP to reset your DigitalTwin password.</p>
+        <div style="margin:22px 0;border-radius:16px;background:rgba(123,97,255,0.16);border:1px solid rgba(123,97,255,0.34);padding:18px;text-align:center;">
+          <div style="font-size:34px;letter-spacing:10px;font-weight:900;color:#ffffff;">${otp}</div>
+        </div>
+        <p style="margin:0;color:rgba(248,250,252,0.58);line-height:1.5;">This OTP expires in 10 minutes. If you did not request it, ignore this email.</p>
+      </div>
+    </div>
+  `;
+
+  const resendResult = await sendOtpWithResend(to, subject, text, html);
+  if (resendResult.sent) return resendResult;
+  return sendOtpWithSmtp(to, subject, text, html);
+}
+
+async function sendOtpWithResend(to, subject, text, html) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || /your-|example|api-key/i.test(apiKey)) {
+    return { sent: false, provider: 'resend', error: 'RESEND_API_KEY missing or placeholder.' };
+  }
+
+  try {
+    const { Resend } = await import('resend');
+    const resend = new Resend(apiKey);
+    const from = process.env.RESEND_FROM || process.env.SMTP_FROM || 'DigitalTwin <onboarding@resend.dev>';
+    const result = await resend.emails.send({ from, to, subject, text, html });
+    if (result.error) return { sent: false, provider: 'resend', error: result.error.message || String(result.error) };
+    return { sent: true, provider: 'resend' };
+  } catch (error) {
+    return { sent: false, provider: 'resend', error: error.message };
+  }
+}
+
+async function sendOtpWithSmtp(to, subject, text, html) {
+  const smtpPassword = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !smtpPassword) {
+    return { sent: false, provider: 'smtp', error: 'SMTP configuration missing.' };
+  }
+
+  try {
+    const { default: nodemailer } = await import('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: String(smtpPassword).replace(/\s+/g, ''),
+      },
+    });
+
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to,
+      subject,
+      text,
+      html,
+    });
+    return { sent: true, provider: 'smtp' };
+  } catch (error) {
+    return { sent: false, provider: 'smtp', error: error.message };
+  }
+}
+
+function maskEmail(email = '') {
+  const [name = '', domain = ''] = String(email).split('@');
+  if (!domain) return '';
+  return `${name.slice(0, 2)}***@${domain}`;
+}
 
 function sanitizeProfileText(value) {
   if (value === undefined || value === null) return '';

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
@@ -15,7 +16,8 @@ export function DashboardSyncProvider({ children }) {
     }
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [socket, setSocket] = useState(null);
+  const socketRef = useRef(null);
+  const fetchSequenceRef = useRef(0);
 
   const fetchDashboard = useCallback(async () => {
     const token = localStorage.getItem('authToken');
@@ -23,24 +25,33 @@ export function DashboardSyncProvider({ children }) {
       setIsLoading(false);
       return;
     }
+    const requestId = fetchSequenceRef.current + 1;
+    fetchSequenceRef.current = requestId;
+    setIsLoading(true);
+
     try {
       const response = await axios.get(`${API_BASE_URL}/api/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+        params: { _t: Date.now() },
       });
-      if (response.data.success) {
+      if (requestId === fetchSequenceRef.current && response.data.success) {
         setDashboardData(response.data.data);
         localStorage.setItem('digitalTwinDashboardData', JSON.stringify(response.data.data));
       }
     } catch (e) {
       console.error('DashboardSyncContext fetch error:', e);
     } finally {
-      setIsLoading(false);
+      if (requestId === fetchSequenceRef.current) setIsLoading(false);
     }
   }, []);
 
   // Sync when notifications or updates occur
   useEffect(() => {
-    fetchDashboard();
+    const initialFetchTimer = window.setTimeout(fetchDashboard, 0);
 
     const handleUpdate = () => {
       fetchDashboard();
@@ -51,6 +62,7 @@ export function DashboardSyncProvider({ children }) {
     window.addEventListener('gamification-updated', handleUpdate);
 
     return () => {
+      window.clearTimeout(initialFetchTimer);
       window.removeEventListener('daily-update-completed', handleUpdate);
       window.removeEventListener('upload-history-updated', handleUpdate);
       window.removeEventListener('dashboard-data-updated', handleUpdate);
@@ -80,10 +92,11 @@ export function DashboardSyncProvider({ children }) {
       window.dispatchEvent(new CustomEvent('dashboard-synced', { detail: data }));
     });
 
-    setSocket(newSocket);
+    socketRef.current = newSocket;
 
     return () => {
       newSocket.disconnect();
+      socketRef.current = null;
     };
   }, []);
 
@@ -92,7 +105,6 @@ export function DashboardSyncProvider({ children }) {
     setDashboardData,
     isLoading,
     refreshDashboard: fetchDashboard,
-    socket
   };
 
   return (

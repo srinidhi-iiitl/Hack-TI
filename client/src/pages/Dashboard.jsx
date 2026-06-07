@@ -44,15 +44,69 @@ const fallbackProfile = {
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
 function Dashboard() {
   const navigate = useNavigate();
-  const { dashboardData, isLoading: isLoadingDashboard } = useDashboardSync();
+  const { dashboardData, isLoading: isLoadingDashboard, refreshDashboard } = useDashboardSync();
+  const [liveFinanceData, setLiveFinanceData] = useState(null);
   const user = getStoredUser();
   const firstName = user?.firstName || 'Anjali';
   const profile = useMemo(() => normalizeProfile(dashboardData?.profile || getStoredProfile()), [dashboardData]);
   const { integrations } = useIntegrations();
-  const insights = useMemo(() => buildInsights(profile, dashboardData, integrations), [profile, dashboardData, integrations]);
+  const insights = useMemo(() => buildInsights(profile, dashboardData, integrations, liveFinanceData), [profile, dashboardData, integrations, liveFinanceData]);
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   const { totalXP = 0, level = 1, history = [], unlockedBadges = [], availableBadges = [] } = useGamification();
+
+  useEffect(() => {
+    const refreshTimer = window.setTimeout(() => refreshDashboard?.(), 0);
+    return () => window.clearTimeout(refreshTimer);
+  }, [refreshDashboard]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refreshDashboard?.();
+    };
+
+    window.addEventListener('focus', refreshDashboard);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
+    return () => {
+      window.removeEventListener('focus', refreshDashboard);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [refreshDashboard]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchLiveFinance = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/integrations/finance`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!cancelled && response.data?.success) {
+          setLiveFinanceData(response.data.data);
+        }
+      } catch (error) {
+        console.warn('[Dashboard] Failed to load live finance data:', error.message);
+      }
+    };
+
+    fetchLiveFinance();
+
+    window.addEventListener('daily-update-completed', fetchLiveFinance);
+    window.addEventListener('upload-history-updated', fetchLiveFinance);
+    window.addEventListener('dashboard-data-updated', fetchLiveFinance);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('daily-update-completed', fetchLiveFinance);
+      window.removeEventListener('upload-history-updated', fetchLiveFinance);
+      window.removeEventListener('dashboard-data-updated', fetchLiveFinance);
+    };
+  }, []);
 
   return (
     <div className="flex min-h-screen min-w-0 flex-1 overflow-hidden bg-[#05070c] text-white" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
@@ -1060,7 +1114,6 @@ function normalizeColorState(cs = 'green') {
 function alignmentColorState(v) { return v <= 33 ? 'red' : v <= 66 ? 'orange' : 'green'; }
 
 function getStoredProfile() { try { const s = localStorage.getItem('lifetwinOnboardingProfile'); return s ? JSON.parse(s) : fallbackProfile; } catch { return fallbackProfile; } }
-function getStoredDashboardData() { try { const s = localStorage.getItem('digitalTwinDashboardData'); return s ? JSON.parse(s) : null; } catch { return null; } }
 function getStoredUser() { try { const s = localStorage.getItem('user'); return s ? JSON.parse(s) : null; } catch { return null; } }
 
 function normalizeProfile(r) {
@@ -1082,18 +1135,21 @@ function normalizeProfile(r) {
   };
 }
 
-function buildInsights(profile, dashboardData = null, liveIntegrations = null) {
+function buildInsights(profile, dashboardData = null, liveIntegrations = null, liveFinanceData = null) {
   const sleepHours = Number(profile.lifestyle.sleepHours || 7);
   const studyHours = Number(profile.lifestyle.studyHours || 4);
   const exerciseFrequency = Number(profile.lifestyle.exerciseFrequency || 2);
   const stressLevel = Number(profile.financialPatterns.financialStressLevel || 4);
-  const income = Number(profile.financialPatterns.monthlyIncome || 0);
-  const expenditure = Number(profile.financialPatterns.monthlyExpenditure || 0);
+  const liveIncome = Number(liveFinanceData?.totalSalary);
+  const liveExpenditure = Number(liveFinanceData?.monthlyExpenses);
+  const liveAccountBalance = Number(liveFinanceData?.accountBalance);
+  const income = Number.isFinite(liveIncome) && liveIncome > 0 ? liveIncome : Number(profile.financialPatterns.monthlyIncome || 0);
+  const expenditure = Number.isFinite(liveExpenditure) && liveExpenditure >= 0 ? liveExpenditure : Number(profile.financialPatterns.monthlyExpenditure || 0);
   const rawSavingsRate = income > 0 ? Math.round(((income - expenditure) / income) * 100) : 0;
   const savingsRate = income > 0 ? Math.max(0, rawSavingsRate) : 28;
   const integrationSnapshot = liveIntegrations || profile.integrations || {};
   const connectedCount = Object.values(integrationSnapshot).filter(i => i.status === 'connected').length;
-  const monthlyBufferValue = income > 0 ? income - expenditure : null;
+  const monthlyBufferValue = Number.isFinite(liveAccountBalance) ? liveAccountBalance : income > 0 ? income - expenditure : null;
   const monthlyBuffer = monthlyBufferValue !== null ? formatMoney(monthlyBufferValue) : 'Add data';
   const hasGithub = integrationSnapshot.github?.status === 'connected';
   const hasLeetcode = integrationSnapshot.leetcode?.status === 'connected';
@@ -1219,11 +1275,9 @@ function iconForCategory(cat = '') {
 function buildFinanceRanges({ income, expenditure, stressLevel, savingsRate, financeScore }) {
   const weekly = buildFinanceSeries({ income, expenditure, stressLevel, savingsRate, financeScore, points: 7, volatility: 7, rangeWeight: 0.65 });
   const monthly = buildFinanceSeries({ income, expenditure, stressLevel, savingsRate, financeScore, points: 12, volatility: 4.5, rangeWeight: 1 });
-  const pressure = income > 0 && expenditure > income;
-  const stable = savingsRate >= 20;
   return {
-    '1W': { bars: weekly, linePoints: buildLinePoints(weekly), pointData: buildPointData(weekly), labels: ['Mon', 'Thu', 'Today'], summary: pressure ? 'Weekly cashflow under spending pressure' : stable ? 'Weekly cashflow holding surplus' : 'Weekly cashflow stabilizing' },
-    '1M': { bars: monthly, linePoints: buildLinePoints(monthly), pointData: buildPointData(monthly), labels: ['Last Month', 'Baseline', 'Today'], summary: pressure ? '-3.8% monthly spending pressure' : stable ? '+2.4% monthly growth' : '+0.6% stabilizing' },
+    '1W': { bars: weekly, linePoints: buildLinePoints(weekly), pointData: buildPointData(weekly), labels: ['Start', 'Mid', 'Today'], summary: 'Estimated weekly cashflow pattern from current income, spending, and savings signals' },
+    '1M': { bars: monthly, linePoints: buildLinePoints(monthly), pointData: buildPointData(monthly), labels: ['Low', 'Baseline', 'Current'], summary: 'Estimated monthly finance trajectory based on current income, expenses, savings, and financial health' },
   };
 }
 

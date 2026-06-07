@@ -938,12 +938,49 @@ function buildDomainRisk(domain, changes = []) {
   return {
     domain,
     status,
-    analysis: status === 'Low'
-      ? 'The simulated values point toward a manageable risk profile.'
-      : status === 'Medium'
-        ? 'The simulated values introduce some pressure that should be monitored.'
-        : 'The simulated values create a meaningful downside risk in this domain.',
+    analysis: buildRiskExplanation(domain, changes, status, scoreDelta),
   };
+}
+
+function buildRiskExplanation(domain, changes = [], status, scoreDelta) {
+  const domainName = domain.replace(' Risk', '');
+  const changed = [...changes].filter((change) => change.delta !== 0);
+  const positive = changed
+    .filter((change) => change.scoreImpact > 0)
+    .sort((a, b) => b.scoreImpact - a.scoreImpact);
+  const negative = changed
+    .filter((change) => change.scoreImpact < 0)
+    .sort((a, b) => a.scoreImpact - b.scoreImpact);
+  const strongestPositive = positive[0];
+  const strongestNegative = negative[0];
+  const netCopy = `Net score impact ${signedMagnitude(scoreDelta)}.`;
+
+  if (!changed.length) {
+    return `${domainName} risk stays ${status.toLowerCase()} because no ${domainName.toLowerCase()} inputs changed. ${netCopy}`;
+  }
+
+  if (status === 'Low') {
+    if (strongestPositive && strongestNegative) {
+      return `${domainName} risk is low because ${strongestPositive.label} ${formatChangeDelta(strongestPositive)} offsets pressure from ${strongestNegative.label} ${formatChangeDelta(strongestNegative)}. ${netCopy}`;
+    }
+    if (strongestPositive) {
+      return `${domainName} risk is low because ${strongestPositive.label} ${formatChangeDelta(strongestPositive)} improves the simulated scenario. ${netCopy}`;
+    }
+    return `${domainName} risk is low because the changed inputs do not create a negative score impact. ${netCopy}`;
+  }
+
+  if (status === 'Medium') {
+    if (strongestPositive && strongestNegative) {
+      return `${domainName} risk is medium because ${strongestNegative.label} ${formatChangeDelta(strongestNegative)} adds pressure, partly balanced by ${strongestPositive.label} ${formatChangeDelta(strongestPositive)}. ${netCopy}`;
+    }
+    return `${domainName} risk is medium because ${strongestNegative?.label || 'the simulated inputs'} ${strongestNegative ? formatChangeDelta(strongestNegative) : ''} weakens the scenario. ${netCopy}`;
+  }
+
+  if (strongestPositive && strongestNegative) {
+    return `${domainName} risk is high because ${strongestNegative.label} ${formatChangeDelta(strongestNegative)} creates the largest downside, even after ${strongestPositive.label} ${formatChangeDelta(strongestPositive)}. ${netCopy}`;
+  }
+
+  return `${domainName} risk is high because ${strongestNegative?.label || 'the simulated inputs'} ${strongestNegative ? formatChangeDelta(strongestNegative) : ''} creates a strong negative score impact. ${netCopy}`;
 }
 
 function normalizeRiskStatus(status) {

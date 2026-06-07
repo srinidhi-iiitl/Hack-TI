@@ -25,6 +25,7 @@ const dailyUpdateSchema = new mongoose.Schema(
       waterIntake: { type: Number, default: 0 },
       exercised: { type: Boolean, default: false },
       sleepHours: { type: Number, default: 0 },
+      ateProperly: { type: Boolean, default: false },
       healthConcern: { type: Boolean, default: false },
       concernTypes: [{ type: String, trim: true }],
       concernDescription: { type: String, trim: true, default: '' },

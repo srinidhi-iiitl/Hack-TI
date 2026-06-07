@@ -180,6 +180,7 @@ async function fetchLeetcodeStats(username) {
           acSubmissionNum {
             difficulty
             count
+            submissions
           }
         }
       }
@@ -212,6 +213,11 @@ async function fetchLeetcodeStats(username) {
       return {
         username,
         solved: 0,
+        easySolved: 0,
+        mediumSolved: 0,
+        hardSolved: 0,
+        submissions: 0,
+        acceptanceRate: 0,
         rank: null,
         contestRating: null,
         contests: 0,
@@ -219,11 +225,22 @@ async function fetchLeetcodeStats(username) {
     }
 
     const solvedStats = matchedUser.submitStatsGlobal?.acSubmissionNum || [];
-    const solved = solvedStats.find((item) => item.difficulty === 'All')?.count ?? 0;
+    const allStats = solvedStats.find((item) => item.difficulty === 'All') || {};
+    const easyStats = solvedStats.find((item) => item.difficulty === 'Easy') || {};
+    const mediumStats = solvedStats.find((item) => item.difficulty === 'Medium') || {};
+    const hardStats = solvedStats.find((item) => item.difficulty === 'Hard') || {};
+    const solved = allStats.count ?? 0;
+    const submissions = allStats.submissions ?? 0;
+    const acceptanceRate = submissions > 0 ? Math.round((solved / submissions) * 100) : 0;
 
     return {
       username: matchedUser.username || username,
       solved,
+      easySolved: easyStats.count ?? 0,
+      mediumSolved: mediumStats.count ?? 0,
+      hardSolved: hardStats.count ?? 0,
+      submissions,
+      acceptanceRate,
       rank: matchedUser.profile?.ranking ?? contest?.globalRanking ?? null,
       contestRating: contest?.rating ? Math.round(contest.rating) : null,
       contests: contest?.attendedContestsCount ?? 0,
@@ -233,6 +250,11 @@ async function fetchLeetcodeStats(username) {
     return {
       username,
       solved: 0,
+      easySolved: 0,
+      mediumSolved: 0,
+      hardSolved: 0,
+      submissions: 0,
+      acceptanceRate: 0,
       rank: null,
       contestRating: null,
       contests: 0,

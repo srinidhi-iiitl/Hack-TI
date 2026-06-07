@@ -70,6 +70,64 @@ const voiceStatusText = {
   error: 'Disconnected',
 };
 
+const busyStates = new Set(['processing', 'executing', 'responding', 'speaking']);
+
+function getReadinessState(assistantState, voiceStatus) {
+  if (assistantState === 'listening' && voiceStatus === 'listening') {
+    return {
+      title: 'Speak now',
+      detail: 'Mic is active and waiting for your command.',
+      icon: Mic,
+      tone: 'border-[#10c7a1]/35 bg-[#071d19]/95 text-[#7df3cc] shadow-[0_18px_45px_-24px_rgba(16,199,161,0.95)]',
+      iconTone: 'bg-[#10c7a1] text-white',
+      pulseTone: 'bg-[#10c7a1]',
+      showWave: true,
+    };
+  }
+
+  if (busyStates.has(assistantState)) {
+    const busyCopy = {
+      processing: ['Please wait', 'Processing your command.'],
+      executing: ['Please wait', 'Executing your request.'],
+      responding: ['Please wait', 'Speaking response.'],
+      speaking: ['Please wait', 'Speaking response.'],
+    };
+    const [title, detail] = busyCopy[assistantState] || ['Please wait', 'Assistant is busy.'];
+
+    return {
+      title,
+      detail,
+      icon: stateConfig[assistantState]?.icon || Zap,
+      tone: 'border-[#fb923c]/35 bg-[#24150b]/95 text-[#fed7aa] shadow-[0_18px_45px_-24px_rgba(251,146,60,0.8)]',
+      iconTone: 'bg-[#ea580c] text-white',
+      pulseTone: 'bg-[#fb923c]',
+      showWave: false,
+    };
+  }
+
+  if (voiceStatus === 'connecting' || assistantState === 'ready' || assistantState === 'ready_for_next_command') {
+    return {
+      title: 'Wait',
+      detail: 'Connecting microphone...',
+      icon: CheckCircle2,
+      tone: 'border-[#60a5fa]/30 bg-[#081527]/95 text-[#bfdbfe] shadow-[0_18px_45px_-24px_rgba(96,165,250,0.75)]',
+      iconTone: 'bg-[#2563eb] text-white',
+      pulseTone: 'bg-[#60a5fa]',
+      showWave: false,
+    };
+  }
+
+  return {
+    title: 'Not listening',
+    detail: voiceStatus === 'error' ? 'Voice connection failed. Retry before speaking.' : 'Enable voice or wait for connection.',
+    icon: MicOff,
+    tone: 'border-white/12 bg-[#121822]/95 text-white/70 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.8)]',
+    iconTone: 'bg-white/10 text-white/70',
+    pulseTone: 'bg-white/40',
+    showWave: false,
+  };
+}
+
 export default function TwinAssistantButton() {
   const assistant = useTwinAssistant();
   const [typedCommand, setTypedCommand] = useState('');
@@ -90,6 +148,9 @@ export default function TwinAssistantButton() {
   const config = stateConfig[assistantState] || stateConfig.disabled;
   const displayLabel = config.label;
   const Icon = config.icon;
+  const readiness = getReadinessState(assistantState, voiceStatus);
+  const ReadinessIcon = readiness.icon;
+  const canSpeakNow = assistantState === 'listening' && voiceStatus === 'listening';
 
   useEffect(() => {
     latestMessageRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
@@ -115,7 +176,7 @@ export default function TwinAssistantButton() {
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#7df3cc]/70">Twin Assistant</p>
               <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white/56">
                 <span className="relative flex h-2.5 w-2.5">
-                  {speechActive && (
+                  {canSpeakNow && (
                     <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${config.dotClass} opacity-75`} />
                   )}
                   <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${config.dotClass}`} />
@@ -183,7 +244,7 @@ export default function TwinAssistantButton() {
                 </div>
                 {assistantState === 'processing' && <ThinkingDots />}
               </div>
-              {speechActive && <Waveform />}
+              {(canSpeakNow || speechActive) && <Waveform />}
               {voiceStatus === 'error' && (
                 <button
                   type="button"
@@ -215,13 +276,31 @@ export default function TwinAssistantButton() {
         </div>
       )}
 
+      <div className={`w-[min(21rem,calc(100vw-3rem))] rounded-2xl border px-4 py-3 backdrop-blur-xl ${readiness.tone}`}>
+        <div className="flex items-center gap-3">
+          <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${readiness.iconTone}`}>
+            {canSpeakNow && (
+              <span className={`absolute inset-0 animate-ping rounded-2xl ${readiness.pulseTone} opacity-35`} />
+            )}
+            <ReadinessIcon className={`relative h-5 w-5 ${canSpeakNow ? 'animate-pulse' : ''}`} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-black uppercase tracking-[0.16em]">{readiness.title}</p>
+            <p className="mt-0.5 text-xs font-semibold text-white/58">{readiness.detail}</p>
+          </div>
+        </div>
+        {readiness.showWave && <Waveform compact />}
+      </div>
+
       <button
         type="button"
         onClick={toggleListening}
-        className={`inline-flex h-16 w-16 items-center justify-center rounded-2xl border shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${config.buttonClass}`}
+        className={`inline-flex h-16 w-16 items-center justify-center rounded-2xl border shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+          canSpeakNow ? 'ring-4 ring-[#10c7a1]/25' : ''
+        } ${config.buttonClass}`}
         aria-label={`Twin Assistant ${displayLabel}`}
       >
-        <Icon className={`h-7 w-7 ${speechActive ? 'animate-pulse' : ''}`} />
+        <Icon className={`h-7 w-7 ${canSpeakNow || speechActive ? 'animate-pulse' : ''}`} />
       </button>
     </div>
   );
@@ -247,15 +326,15 @@ function ThinkingDots() {
   );
 }
 
-function Waveform() {
+function Waveform({ compact = false }) {
   return (
-    <div className="mt-3 flex h-8 items-end gap-1.5">
+    <div className={`mt-3 flex items-end gap-1.5 ${compact ? 'h-5 pl-14' : 'h-8'}`}>
       {[0, 1, 2, 3, 4].map((bar) => (
         <span
           key={bar}
-          className="w-1.5 rounded-full bg-[#10c7a1]"
+          className={`${compact ? 'w-1' : 'w-1.5'} rounded-full bg-[#10c7a1]`}
           style={{
-            height: `${12 + (bar % 3) * 6}px`,
+            height: `${compact ? 7 + (bar % 3) * 4 : 12 + (bar % 3) * 6}px`,
             animation: `twin-wave 0.8s ease-in-out ${bar * 0.08}s infinite alternate`,
           }}
         />

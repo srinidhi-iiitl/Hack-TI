@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { useGamification } from '../context/GamificationContext';
@@ -14,9 +14,6 @@ function Finance() {
   const { triggerReward, history = [], unlockedBadges = [], availableBadges = [] } = useGamification();
 
   // ── Bank connection state ──
-  const [isSyncingBank, setIsSyncingBank] = useState(false);
-  const [isBankConnected, setIsBankConnected] = useState(false);
-
   // ── Backend finance data state ──
   const [financeData, setFinanceData] = useState(null);
   const [financeLoading, setFinanceLoading] = useState(true);
@@ -29,11 +26,6 @@ function Finance() {
   const [careerLoading, setCareerLoading] = useState(true);
 
   // ── Live exchange rate state ──
-  const [exchangeRates, setExchangeRates] = useState(null);
-  const [exchangeLoading, setExchangeLoading] = useState(true);
-  const [exchangeError, setExchangeError] = useState(null);
-  const [lastExchangeUpdate, setLastExchangeUpdate] = useState(null);
-
   // ── AI Macro Market Analysis state ──
   const [marketData, setMarketData] = useState(null);
   const [marketLoading, setMarketLoading] = useState(true);
@@ -51,7 +43,6 @@ function Finance() {
 
     if (isConnected && !hasAutonomousSyncedRef.current) {
       hasAutonomousSyncedRef.current = true;
-      setIsBankConnected(true);
 
       // AUTONOMOUS GAMIFICATION TRIGGER
       const runAutonomousSync = async () => {
@@ -104,38 +95,11 @@ function Finance() {
         if (response.data.success) {
           setFinanceData(response.data.data);
           // ✅ Mark bank as connected if backend successfully returns valid integration data
-          setIsBankConnected(true);
         }
       } catch (err) {
         console.error('Failed to fetch finance data:', err);
-        // Fallback to high-fidelity mock data directly in the frontend
-        const mockData = {
-          source: 'Plaid (Mock Fallback)',
-          lastSync: new Date().toISOString(),
-          creditScore: 745,
-          accountBalance: 46500,
-          totalSalary: 75000,
-          monthlyExpenses: 28500,
-          portfolioValue: 124000,
-          holdings: [
-            { assetName: 'Google (Alphabet)', shares: 15, value: 37500 },
-            { assetName: 'LIC Premium Plan', shares: 1, value: 50000 },
-            { assetName: 'Tesla Inc', shares: 10, value: 36500 }
-          ],
-          metrics: {
-            monthlySavingsRate: '62%',
-            unusualSpikeDetected: false
-          },
-          recentTransactions: [
-            { id: 't1', date: new Date(Date.now() - 86400000).toISOString().split('T')[0], merchant: 'Swiggy Delivery', amount: 850, category: 'food', type: 'expense' },
-            { id: 't2', date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0], merchant: 'TCS Monthly Salary', amount: 75000, category: 'income', type: 'credit' },
-            { id: 't3', date: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0], merchant: 'Netflix India', amount: 649, category: 'entertainment', type: 'expense' },
-            { id: 't4', date: new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0], merchant: 'Starbucks Coffee', amount: 450, category: 'food', type: 'expense' }
-          ]
-        };
-        setFinanceData(mockData);
-        setIsBankConnected(true);
-        setFinanceError(null);
+        setFinanceData(null);
+        setFinanceError('Unable to load finance data');
       } finally {
         setFinanceLoading(false);
       }
@@ -189,32 +153,6 @@ function Finance() {
   // ═════════════════════════════════════════════
   // 4. Fetch live exchange rates (auto-refresh every 60s)
   // ═════════════════════════════════════════════
-  const fetchExchangeRates = useCallback(async () => {
-    try {
-      setExchangeLoading(true);
-      const response = await fetch('https://open.er-api.com/v6/latest/USD');
-      const data = await response.json();
-      if (data.result === 'success') {
-        setExchangeRates({
-          usdInr: data.rates.INR,
-          eurInr: (data.rates.INR / data.rates.EUR),
-        });
-        setLastExchangeUpdate(new Date());
-        setExchangeError(null);
-      }
-    } catch (err) {
-      console.error('Exchange rate fetch failed:', err);
-      setExchangeError('Market data unavailable');
-    } finally {
-      setExchangeLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    Promise.resolve().then(fetchExchangeRates);
-    const interval = setInterval(fetchExchangeRates, 60000);
-    return () => clearInterval(interval);
-  }, [fetchExchangeRates]);
 
   // ═════════════════════════════════════════════
   // 5. Fetch AI Macro Market Analysis
@@ -273,58 +211,6 @@ function Finance() {
   // ═════════════════════════════════════════════
   // Bank Sync handler
   // ═════════════════════════════════════════════
-  const handleBankSync = async () => {
-    setIsSyncingBank(true);
-    try {
-      const token = localStorage.getItem('authToken');
-      const response = await axios.get(`${API_BASE_URL}/api/integrations/finance`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.data.success) {
-        const data = response.data.data;
-        triggerReward(50, [], 50);
-        setFinanceData(data);
-        toast.success(`Successfully synced via ${data.source}! Credit Score: ${data.creditScore}`, { icon: '🏦' });
-        setIsBankConnected(true);
-        window.dispatchEvent(new Event('dashboard-data-updated'));
-        window.dispatchEvent(new Event('gamification-updated'));
-      }
-    } catch (error) {
-      console.error('Failed to sync bank:', error);
-      // Fallback to high-fidelity mock data directly in the frontend
-      const mockData = {
-        source: 'Plaid (Mock Connection)',
-        lastSync: new Date().toISOString(),
-        creditScore: 745,
-        accountBalance: 46500,
-        totalSalary: 75000,
-        monthlyExpenses: 28500,
-        portfolioValue: 124000,
-        holdings: [
-          { assetName: 'Google (Alphabet)', shares: 15, value: 37500 },
-          { assetName: 'LIC Premium Plan', shares: 1, value: 50000 },
-          { assetName: 'Tesla Inc', shares: 10, value: 36500 }
-        ],
-        metrics: {
-          monthlySavingsRate: '62%',
-          unusualSpikeDetected: false
-        },
-        recentTransactions: [
-          { id: 't1', date: new Date(Date.now() - 86400000).toISOString().split('T')[0], merchant: 'Swiggy Delivery', amount: 850, category: 'food', type: 'expense' },
-          { id: 't2', date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0], merchant: 'TCS Monthly Salary', amount: 75000, category: 'income', type: 'credit' },
-          { id: 't3', date: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0], merchant: 'Netflix India', amount: 649, category: 'entertainment', type: 'expense' },
-          { id: 't4', date: new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0], merchant: 'Starbucks Coffee', amount: 450, category: 'food', type: 'expense' }
-        ]
-      };
-      setFinanceData(mockData);
-      setIsBankConnected(true);
-      triggerReward(50, 'Bank Account Connected', '🏦');
-      toast.success('Successfully connected via Plaid (Demo Mode)!', { icon: '🏦' });
-    } finally {
-      setIsSyncingBank(false);
-    }
-  };
 
   const financeHistory = history.filter(log => ['🏦', '💰', '📉', '🛡️', '💳'].includes(log.emoji)).slice(0, 4);
   
@@ -339,7 +225,6 @@ function Finance() {
 
   // Derived metrics
   const overviewMetrics = buildOverviewMetrics(financeData, financeLoading, financeError);
-  const retailAlert = computeRetailTherapyAlert(healthData, financeData, healthLoading, financeLoading);
 
   // ═══════════════════════════════════════════════
   // RENDER
@@ -349,47 +234,15 @@ function Finance() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(200,168,75,0.16),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(123,97,255,0.10),transparent_26%),radial-gradient(circle_at_center,rgba(15,143,132,0.08),transparent_30%)]" />
       <div className="relative">
 
-      {/* ── Header Section ── */}
-      <section className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      {/* Header Section */}
+      <section className="mb-6">
         <div>
           <h1 className="text-4xl font-semibold tracking-tight text-white">Finance Intelligence</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/90">
             Autonomous tracking of behavioral spending metrics, global macroeconomic factors, and AI-powered financial projections.
           </p>
         </div>
-        
-        {/* ✅ FIXED: Now matches the exact layout & visual toggle from the Health page */}
-        {isBankConnected ? (
-          <div className="flex items-center gap-2 rounded-xl border border-[#16a34a]/30 bg-[#16a34a]/10 px-5 py-2.5 text-sm font-bold text-[#16a34a]">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#16a34a] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#16a34a]"></span>
-            </span>
-            Banking Sync Active
-          </div>
-        ) : (
-          <button
-            onClick={handleBankSync}
-            disabled={isSyncingBank}
-            className="flex items-center justify-center gap-2 rounded-xl border border-[#c8a84b]/50 bg-[#c8a84b]/10 px-5 py-2.5 text-sm font-bold text-[#c8a84b] transition-all hover:bg-[#c8a84b]/20 disabled:opacity-50"
-          >
-            {isSyncingBank ? 'Establishing Secure Connection...' : '🏦 Sync Banking API (Plaid)'}
-          </button>
-        )}
       </section>
-
-      {/* ── DEV TOOLBAR ── */}
-      {import.meta.env.DEV && (
-        <section className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/2 px-5 py-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Demo controls</span>
-          <div className="flex flex-wrap gap-2 ml-2">
-            <button onClick={handleBankSync} disabled={isSyncingBank}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/35 hover:bg-white/8 transition-all disabled:opacity-40">
-              🏦 Re-sync Mock Bank Data
-            </button>
-          </div>
-        </section>
-      )}
 
       {/* ── 🏆 Autonomous Achievements ── */}
       <section className="mb-6">
@@ -452,71 +305,14 @@ function Finance() {
       </section>
 
       {/* ── ⚠️ Retail Therapy Alert + 📈 Live Market Snapshot ── */}
-      <section className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <article className={`${glassCardClass} p-6 xl:col-span-7`}>
-          <RetailTherapyAlert alert={retailAlert} />
-        </article>
-
-        <article className={`${glassCardClass} p-6 xl:col-span-5`}>
-          <LiveMarketSnapshot
-            rates={exchangeRates}
-            loading={exchangeLoading}
-            error={exchangeError}
-            lastUpdate={lastExchangeUpdate}
-            onRefresh={fetchExchangeRates}
-          />
-        </article>
-      </section>
 
       {/* ── Unusual Spending Spike Detector + Macro Market Analysis ── */}
       <section className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <article className={`${glassCardClass} p-6 xl:col-span-7`}>
+        <article className={`${glassCardClass} p-6 xl:col-span-8`}>
           <SpendingSpikeDetector intelligence={documentIntelligence} loading={documentIntelligenceLoading} />
-          <div className="hidden">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Unusual Spending Spike Detector</h2>
-              <p className="mt-1 text-sm text-white/80">AI behavioral anomaly detection</p>
-            </div>
-            <span className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#c8a84b]">
-              Action recommended
-            </span>
-          </div>
-
-          <div className="hidden">
-            <div className="space-y-4">
-              <div className="rounded-2xl border-l-4 border-[#c8a84b] bg-white/5 p-4">
-                <div className="flex items-start gap-3">
-                  <WarningIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#c8a84b]" />
-                  <div>
-                    <p className="text-base font-semibold text-white">Weekend food delivery spending increased 28%</p>
-                    <p className="mt-1 text-sm leading-6 text-white/90">
-                      This spike correlates with a 15% reduction in sleep consistency during high-stress windows.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <MiniStat label="Avg. delivery cost" value="₹3,500.00" delta="+₹1,020.00" />
-                <MiniStat label="Trigger window" value="11 PM - 1 AM" />
-              </div>
-            </div>
-
-            <div className="relative flex h-48 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-              <div className="absolute inset-4 flex items-end justify-between gap-2">
-                {[40, 35, 45, 85, 38].map((height, index) => (
-                  <div
-                    key={height + index}
-                    className={`w-full rounded-sm ${index === 3 ? 'bg-[#c8a84b]' : 'bg-[#7b61ff]/25'}`}
-                    style={{ height: `${height}%` }}
-                  />
-                ))}
-              </div>
-              <p className="absolute bottom-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white/70">Activity variance</p>
-            </div>
-          </div>
         </article>
 
-        <article className={`${glassCardClass} flex flex-col p-6 xl:col-span-5`}>
+        <article className={`${glassCardClass} flex flex-col p-6 xl:col-span-4`}>
           <div className="mb-5">
               <h2 className="text-xl font-semibold text-white">Macro Market Analysis</h2>
               <p className="mt-1 text-sm text-white/80">Global catalysts: Political, Legal, Conflict, & Health updates</p>
@@ -624,8 +420,8 @@ function buildOverviewMetrics(financeData, loading, error) {
     return [
       { label: 'Total Salary', value: null, detail: 'Loading...', tone: 'primary', loading: true },
       { label: 'Monthly Expenses', value: null, detail: 'Loading...', tone: 'primary', loading: true },
-      { label: 'LIC & Share Holdings', value: null, detail: 'Loading...', tone: 'neutral', loading: true },
-      { label: 'Financial Health', value: null, detail: 'Loading...', tone: 'primary', loading: true },
+      { label: 'Share Holdings', value: null, detail: 'Loading...', tone: 'neutral', loading: true },
+      { label: 'LIC / Insurance', value: null, detail: 'Loading...', tone: 'neutral', loading: true },
     ];
   }
 
@@ -633,21 +429,23 @@ function buildOverviewMetrics(financeData, loading, error) {
     return [
       { label: 'Total Salary', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
       { label: 'Monthly Expenses', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
-      { label: 'LIC & Share Holdings', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
-      { label: 'Financial Health', value: '—', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
+      { label: 'Share Holdings', value: '-', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
+      { label: 'LIC / Insurance', value: '-', detail: error || 'Data unavailable', tone: 'neutral', bar: 0 },
     ];
   }
 
   const holdings = financeData.holdings || [];
-  const sharesCount = holdings.filter(h => h.assetName?.toLowerCase() !== 'lic' && !h.assetName?.toLowerCase().includes('insurance')).reduce((sum, h) => sum + (h.shares || 0), 0);
-  const licCount = holdings.filter(h => h.assetName?.toLowerCase() === 'lic' || h.assetName?.toLowerCase().includes('insurance')).length;
-  const holdingsValue = holdings.reduce((sum, h) => sum + (h.value || 0), 0);
-
-  // Compute financial health from composite signals
-  const creditNorm = Math.min(((financeData.creditScore - 300) / 550) * 100, 100);
-  const savingsNum = parseFloat(financeData.metrics?.monthlySavingsRate) || 0;
-  const healthScore = Math.round((creditNorm * 0.5) + (savingsNum * 2.5) + (financeData.metrics?.unusualSpikeDetected ? 0 : 20));
-  const clampedHealth = Math.min(healthScore, 100);
+  const isInsuranceHolding = (holding) => {
+    const name = String(holding.assetName || '').toLowerCase();
+    return name === 'lic' || name.includes('lic') || name.includes('insurance');
+  };
+  const shareHoldings = holdings.filter(h => !isInsuranceHolding(h));
+  const insuranceHoldings = holdings.filter(isInsuranceHolding);
+  const sharesCount = shareHoldings.reduce((sum, h) => sum + Number(h.shares || 0), 0);
+  const shareValue = shareHoldings.reduce((sum, h) => sum + Number(h.value || 0), 0);
+  const insuranceCount = insuranceHoldings.length;
+  const insuranceValue = insuranceHoldings.reduce((sum, h) => sum + Number(h.value || 0), 0);
+  const expenseDetail = buildMonthlyExpenseDetail(financeData);
 
   return [
     {
@@ -660,24 +458,25 @@ function buildOverviewMetrics(financeData, loading, error) {
     {
       label: 'Monthly Expenses',
       value: `₹${financeData.monthlyExpenses?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '0.00'}`,
-      detail: `Out of limit: ₹${(financeData.accountBalance < 0 ? 'Exceeded' : 'Under control')}`,
+      detail: expenseDetail,
       tone: financeData.metrics?.unusualSpikeDetected ? 'warm' : 'primary',
       bar: financeData.totalSalary > 0 ? Math.min((financeData.monthlyExpenses / financeData.totalSalary) * 100, 100) : 0,
     },
     {
-      label: 'LIC & Share Holdings',
-      value: `${sharesCount} Shares, ${licCount} LIC`,
-      detail: `Portfolio Value: ₹${holdingsValue.toLocaleString('en-IN')}`,
+      label: 'Share Holdings',
+      value: `${sharesCount.toLocaleString('en-IN')} Shares`,
+      detail: `Updated from Daily Update buys/sells - Rs ${shareValue.toLocaleString('en-IN')}`,
       tone: 'primary',
-      ring: Math.min((holdingsValue / 50000) * 100, 100),
-      icon: ShieldIcon
+      ring: Math.min((shareValue / 50000) * 100, 100),
+      icon: ShareIcon
     },
     {
-      label: 'Financial Health',
-      value: `${clampedHealth}%`,
-      detail: clampedHealth >= 70 ? '🟢 Stable digital twin score' : '🔴 Budget variance detected',
-      tone: clampedHealth >= 70 ? 'primary' : 'warm',
-      spark: [18, 42, 34, 66, 78, clampedHealth],
+      label: 'LIC / Insurance',
+      value: `${insuranceCount} Plan${insuranceCount === 1 ? '' : 's'}`,
+      detail: `Updated from Daily Update insurance - Rs ${insuranceValue.toLocaleString('en-IN')}`,
+      tone: insuranceValue > 0 ? 'primary' : 'neutral',
+      ring: Math.min((insuranceValue / 50000) * 100, 100),
+      icon: ShieldIcon
     },
   ];
 }
@@ -685,155 +484,29 @@ function buildOverviewMetrics(financeData, loading, error) {
 /* ═══════════════════════════════════════════════
    HELPER: Compute Retail Therapy Alert
    ═══════════════════════════════════════════════ */
-function computeRetailTherapyAlert(healthData, financeData, healthLoading, financeLoading) {
-  if (healthLoading || financeLoading) {
-    return { loading: true };
-  }
-
-  if (!healthData || !financeData) {
-    return { show: false, noData: true };
-  }
-
-  const hrv = healthData.metrics?.hrv || 60;
-  const sleepHours = parseFloat(healthData.metrics?.sleepHours) || 7;
-  const restingHR = healthData.metrics?.restingHeartRate || 65;
-  const spikeDetected = financeData.metrics?.unusualSpikeDetected || false;
-
-  // Stress detection logic
-  const isHighStress = hrv < 45 || sleepHours < 6 || restingHR > 72;
-
-  // Spending analysis
-  const discretionaryTxns = (financeData.recentTransactions || []).filter(
-    t => t.category === 'food' || t.category === 'entertainment'
-  );
-  const totalDiscretionary = discretionaryTxns.reduce((sum, t) => sum + t.amount, 0);
-  const spendingChangePct = spikeDetected ? Math.round(20 + Math.random() * 30) : Math.round(Math.random() * 10);
-
-  // Risk Level calculation
-  let riskLevel = 'Low';
-  let riskColor = '#10c7a1';
-  if (isHighStress && spikeDetected) {
-    riskLevel = 'High';
-    riskColor = '#ff4d7d';
-  } else if (isHighStress || spikeDetected) {
-    riskLevel = 'Moderate';
-    riskColor = '#c8a84b';
-  }
-
-  // AI Confidence based on data completeness
-  let confidence = 50;
-  if (healthData.metrics?.hrv) confidence += 15;
-  if (healthData.metrics?.sleepHours) confidence += 15;
-  if (financeData.metrics?.unusualSpikeDetected !== undefined) confidence += 10;
-  if (financeData.recentTransactions?.length > 0) confidence += 10;
-
-  const shouldShow = isHighStress && spikeDetected;
-
-  return {
-    show: shouldShow,
-    loading: false,
-    riskLevel,
-    riskColor,
-    spendingChange: spendingChangePct,
-    suggestedAction: shouldShow
-      ? 'Implement a 24-hour cooling period before non-essential purchases'
-      : 'Continue current spending patterns',
-    confidence: Math.min(confidence, 97),
-    hrv,
-    sleepHours,
-    totalDiscretionary,
-  };
-}
 
 /* ═══════════════════════════════════════════════
    COMPONENT: Retail Therapy Alert
    ═══════════════════════════════════════════════ */
-function RetailTherapyAlert({ alert }) {
-  if (alert.loading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">⚠️</span>
-          <h2 className="text-xl font-semibold text-white">Retail Therapy Alert</h2>
-        </div>
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="finance-pulse-skeleton h-12 rounded-xl bg-white/5" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">⚠️</span>
-          <div>
-            <h2 className="text-xl font-semibold text-white">Retail Therapy Alert</h2>
-            <p className="mt-1 text-sm text-white/80">Cross-domain AI analysis: Health × Finance</p>
-          </div>
-        </div>
-        <span
-          className="w-fit rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.12em]"
-          style={{
-            borderColor: `${alert.riskColor}40`,
-            backgroundColor: `${alert.riskColor}15`,
-            color: alert.riskColor
-          }}
-        >
-          {alert.riskLevel} Risk
-        </span>
-      </div>
-
-      {alert.show ? (
-        <>
-          <div className="finance-alert-glow rounded-2xl border-l-4 border-[#ff4d7d] bg-gradient-to-r from-[#ff4d7d]/8 to-transparent p-4">
-            <div className="flex items-start gap-3">
-              <WarningIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#ff4d7d]" />
-              <div>
-                <p className="text-base font-semibold text-white">Stress-Driven Spending Pattern Detected</p>
-                <p className="mt-1 text-sm leading-6 text-white/90">
-                  Your stress levels were elevated this week (HRV: {alert.hrv}ms, Sleep: {alert.sleepHours}h) and discretionary spending increased by {alert.spendingChange}%. Consider a 24-hour pause before making non-essential purchases.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <AlertMetricChip label="Risk Level" value={alert.riskLevel} color={alert.riskColor} />
-            <AlertMetricChip label="Spending Change" value={`+${alert.spendingChange}%`} color="#c8a84b" />
-            <AlertMetricChip label="Suggested Action" value="24h Pause" color="#7b61ff" />
-            <AlertMetricChip label="AI Confidence" value={`${alert.confidence}%`} color="#10c7a1" />
-          </div>
-        </>
-      ) : (
-        <div className="rounded-2xl border border-[#10c7a1]/20 bg-[#10c7a1]/5 p-5">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#10c7a1]/15">
-              <ShieldIcon className="h-5 w-5 text-[#10c7a1]" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[#10c7a1]">All Clear — No Alerts</p>
-              <p className="mt-0.5 text-xs text-white/80">Stress-spending correlation within healthy bounds. Keep it up!</p>
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <AlertMetricChip label="Risk Level" value={alert.riskLevel} color={alert.riskColor} />
-            <AlertMetricChip label="Spending Change" value={`+${alert.spendingChange}%`} color="#c8a84b" />
-            <AlertMetricChip label="Status" value="Healthy" color="#10c7a1" />
-            <AlertMetricChip label="AI Confidence" value={`${alert.confidence}%`} color="#10c7a1" />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ═══════════════════════════════════════════════
    COMPONENT: Alert Metric Chip
    ═══════════════════════════════════════════════ */
+function buildMonthlyExpenseDetail(financeData) {
+  const breakdown = financeData?.expenseBreakdown || {};
+  const daily = Number(breakdown.dailyUpdateSpending || 0);
+  const uploaded = Number(breakdown.uploadedDocumentSpending || 0);
+
+  if (daily > 0 || uploaded > 0) {
+    const parts = [];
+    if (daily > 0) parts.push(`daily updates Rs ${daily.toLocaleString('en-IN')}`);
+    if (uploaded > 0) parts.push(`uploaded bills Rs ${uploaded.toLocaleString('en-IN')}`);
+    return `Onboarding baseline + ${parts.join(' + ')}`;
+  }
+
+  return 'From onboarding monthly expenditure baseline';
+}
+
 function SpendingSpikeDetector({ intelligence, loading }) {
   const status = intelligence?.status;
   const spikes = intelligence?.spikes || [];
@@ -1051,110 +724,14 @@ function formatRs(value) {
   return `Rs ${Number(value || 0).toLocaleString('en-IN')}`;
 }
 
-function AlertMetricChip({ label, value, color }) {
-  return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 transition-all hover:bg-white/[0.06]">
-      <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/70">{label}</p>
-      <p className="text-sm font-bold" style={{ color }}>{value}</p>
-    </div>
-  );
-}
 
 /* ═══════════════════════════════════════════════
    COMPONENT: Live Market Snapshot
    ═══════════════════════════════════════════════ */
-function LiveMarketSnapshot({ rates, loading, error, lastUpdate, onRefresh }) {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">📈</span>
-          <div>
-            <h2 className="text-xl font-semibold text-white">Live Market Snapshot</h2>
-            <p className="mt-1 text-sm text-white/80">Real-time forex exchange rates</p>
-          </div>
-        </div>
-        <button
-          onClick={onRefresh}
-          className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 hover:text-white"
-          title="Refresh rates"
-        >
-          <RefreshIcon className="h-4 w-4" />
-        </button>
-      </div>
-
-      {loading && !rates ? (
-        <div className="flex-1 space-y-4">
-          {[1, 2].map(i => (
-            <div key={i} className="finance-pulse-skeleton h-20 rounded-xl bg-white/5" />
-          ))}
-        </div>
-      ) : error && !rates ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-sm text-white/80">{error}</p>
-            <button
-              onClick={onRefresh}
-              className="mt-3 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/90 hover:bg-white/10"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      ) : rates ? (
-        <div className="flex-1 space-y-4">
-          <ExchangeRateRow
-            pair="USD / INR"
-            flag1="🇺🇸"
-            flag2="🇮🇳"
-            rate={rates.usdInr}
-            color="#10c7a1"
-          />
-          <ExchangeRateRow
-            pair="EUR / INR"
-            flag1="🇪🇺"
-            flag2="🇮🇳"
-            rate={rates.eurInr}
-            color="#7b61ff"
-          />
-
-          {/* Last updated */}
-          <div className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2.5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10c7a1] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10c7a1]"></span>
-            </span>
-            <span className="text-[11px] font-medium text-white/70">
-              Last Updated: {lastUpdate ? lastUpdate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
-            </span>
-            <span className="ml-auto text-[10px] text-white/60">Auto-refresh: 60s</span>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 /* ═══════════════════════════════════════════════
    COMPONENT: Exchange Rate Row
    ═══════════════════════════════════════════════ */
-function ExchangeRateRow({ pair, flag1, flag2, rate, color }) {
-  return (
-    <div className="flex items-center gap-4 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-all hover:bg-white/[0.06]">
-      <div className="flex items-center gap-1.5 text-xl">
-        <span>{flag1}</span>
-        <ArrowRightIcon className="h-3 w-3 text-white/50" />
-        <span>{flag2}</span>
-      </div>
-      <div className="flex-1">
-        <p className="text-xs font-bold uppercase tracking-wider text-white/70">{pair}</p>
-      </div>
-      <p className="text-xl font-bold tabular-nums" style={{ color }}>
-        {rate?.toFixed(2) || '—'}
-      </p>
-    </div>
-  );
-}
 
 /* ═══════════════════════════════════════════════
    SUB-COMPONENTS (preserved from original)
@@ -1284,6 +861,10 @@ function ShieldIcon({ className, style }) {
 }
 
 // ✅ Rest of your teammate's SVG icons remain unmodified down here...
+function ShareIcon({ className, style }) {
+  return <IconBase className={className} style={style}><path d="M4 19V5M4 19h16M8 15l3-3 3 2 5-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M16 7h3v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></IconBase>;
+}
+
 function ArrowUpIcon({ className }) {
   return <IconBase className={className}><path d="M12 19V5M6 11l6-6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></IconBase>;
 }
@@ -1292,9 +873,6 @@ function WarningIcon({ className, style }) {
   return <IconBase className={className} style={style}><path d="M12 9v4M12 17h.01M10.3 4.4 2.7 18a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.4a2 2 0 0 0-3.4 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></IconBase>;
 }
 
-function ArrowRightIcon({ className }) {
-  return <IconBase className={className}><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></IconBase>;
-}
 
 // ... Keep everything exactly the same to protect execution stability!
 function BoltIcon({ className }) {
@@ -1305,8 +883,5 @@ function VerifiedIcon({ className }) {
   return <IconBase className={className}><path d="M20 7 9 18l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></IconBase>;
 }
 
-function RefreshIcon({ className }) {
-  return <IconBase className={className}><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></IconBase>;
-}
 
 export default Finance;

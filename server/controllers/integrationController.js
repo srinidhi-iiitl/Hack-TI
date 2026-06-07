@@ -116,11 +116,12 @@ export const connectIntegration = async (req, res, next) => {
         if (!username) {
           return res.status(400).json({ success: false, message: 'GitHub username is required' });
         }
-        op.githubUsername = username.trim();
+        const githubRef = parseGitHubReference(username.trim());
+        op.githubUsername = githubRef.username || username.trim();
         const ghData = await fetchGitHubStats(username.trim());
         op.githubData = ghData;
-        user.links = { ...user.links, github: `https://github.com/${username.trim()}` };
-        responseData = { ...responseData, username: username.trim(), data: ghData };
+        user.links = { ...user.links, github: githubRef.url || `https://github.com/${op.githubUsername}` };
+        responseData = { ...responseData, username: op.githubUsername, data: ghData };
         break;
       }
 
@@ -313,20 +314,30 @@ export const disconnectIntegration = async (req, res, next) => {
 };
 
 // ─── GitHub public stats fetcher — UNCHANGED ─────────────────────────────────
-async function fetchGitHubStats(username) {
+async function fetchGitHubStats(input) {
   try {
+    const githubRef = parseGitHubReference(input);
+    const username = githubRef.username;
+    if (!username) return { name: input, publicRepos: 0, totalStars: 0, languages: [], fetchedAt: new Date().toISOString() };
+
     const headers = { 'User-Agent': 'DigitalTwin-App' };
-    const [userRes, reposRes] = await Promise.allSettled([
+    const [userRes, reposRes, selectedRepoRes] = await Promise.allSettled([
       axios.get(`https://api.github.com/users/${username}`, { headers, timeout: 6000 }),
       axios.get(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated`, { headers, timeout: 6000 }),
+      githubRef.repo
+        ? axios.get(`https://api.github.com/repos/${username}/${githubRef.repo}`, { headers, timeout: 6000 })
+        : Promise.resolve(null),
     ]);
 
     const userData  = userRes.status  === 'fulfilled' ? userRes.value.data  : {};
     const reposData = reposRes.status === 'fulfilled' ? reposRes.value.data : [];
+    const selectedRepo = selectedRepoRes.status === 'fulfilled' ? selectedRepoRes.value?.data : null;
 
-    const totalStars = Array.isArray(reposData)
-      ? reposData.reduce((sum, r) => sum + (r.stargazers_count || 0), 0)
-      : 0;
+    const totalStars = selectedRepo
+      ? Number(selectedRepo.stargazers_count || 0)
+      : Array.isArray(reposData)
+        ? reposData.reduce((sum, r) => sum + Number(r.stargazers_count || 0), 0)
+        : 0;
 
     const languages = Array.isArray(reposData)
       ? [...new Set(reposData.map(r => r.language).filter(Boolean))].slice(0, 5)
@@ -336,16 +347,41 @@ async function fetchGitHubStats(username) {
       name:        userData.name         || username,
       bio:         userData.bio          || '',
       publicRepos: userData.public_repos || 0,
+      selectedRepo: selectedRepo?.name || githubRef.repo || '',
       followers:   userData.followers    || 0,
       following:   userData.following    || 0,
       totalStars,
       languages,
       avatarUrl:   userData.avatar_url   || '',
-      htmlUrl:     userData.html_url     || `https://github.com/${username}`,
+      htmlUrl:     githubRef.url || userData.html_url || `https://github.com/${username}`,
       fetchedAt:   new Date().toISOString(),
     };
   } catch {
     return { name: username, publicRepos: 0, totalStars: 0, languages: [], fetchedAt: new Date().toISOString() };
+  }
+}
+
+function parseGitHubReference(value = '') {
+  const trimmed = String(value || '').trim().replace(/^@/, '');
+  if (!trimmed) return { username: '', repo: '', url: '' };
+
+  try {
+    const url = new URL(trimmed.startsWith('http') ? trimmed : `https://github.com/${trimmed}`);
+    const hostname = url.hostname.replace(/^www\./, '').toLowerCase();
+    if (hostname !== 'github.com') return { username: trimmed, repo: '', url: '' };
+    const [username = '', repo = ''] = url.pathname.split('/').filter(Boolean);
+    return {
+      username,
+      repo,
+      url: username ? `https://github.com/${username}${repo ? `/${repo}` : ''}` : '',
+    };
+  } catch {
+    const [username = '', repo = ''] = trimmed.split('/').filter(Boolean);
+    return {
+      username,
+      repo,
+      url: username ? `https://github.com/${username}${repo ? `/${repo}` : ''}` : '',
+    };
   }
 }
 
@@ -376,7 +412,10 @@ async function fetchLeetCodeStats(username) {
     const easy   = stats.find(s => s.difficulty === 'Easy')?.count   || 0;
     const medium = stats.find(s => s.difficulty === 'Medium')?.count || 0;
     const hard   = stats.find(s => s.difficulty === 'Hard')?.count   || 0;
-    const total  = stats.find(s => s.difficulty === 'All')?.count    || easy + medium + hard;
+    const allStats = stats.find(s => s.difficulty === 'All') || {};
+    const total  = allStats.count || easy + medium + hard;
+    const submissions = allStats.submissions || 0;
+    const acceptanceRate = submissions > 0 ? Math.round((total / submissions) * 100) : 0;
 
     return {
       username,
@@ -386,6 +425,8 @@ async function fetchLeetCodeStats(username) {
       easySolved:   easy,
       mediumSolved: medium,
       hardSolved:   hard,
+      submissions,
+      acceptanceRate,
       streak:       user.userCalendar?.streak       || 0,
       activeDays:   user.userCalendar?.totalActiveDays || 0,
       fetchedAt:    new Date().toISOString(),
@@ -482,6 +523,8 @@ function buildMockLeetCodeData(username = 'user') {
     easySolved:   Math.floor(Math.random() * 120) + 30,
     mediumSolved: Math.floor(Math.random() * 130) + 15,
     hardSolved:   Math.floor(Math.random() * 50),
+    submissions:   0,
+    acceptanceRate: 0,
     streak:       Math.floor(Math.random() * 30),
     activeDays:   Math.floor(Math.random() * 200) + 30,
     isMock:       true,

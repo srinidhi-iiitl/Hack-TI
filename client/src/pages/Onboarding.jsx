@@ -226,19 +226,12 @@ function Onboarding() {
     try {
       const token = localStorage.getItem('authToken');
       
-      // 2. Prepare the FormData for Multer
+      // 2. Prepare the FormData for the document extraction route
       const formData = new FormData();
-      formData.append('image', file);
-      
-      // Map the onboarding document type to the backend context types
-      let contextMap = 'medical';
-      if (documentType === 'bankStatement') contextMap = 'finance';
-      if (documentType === 'resume') contextMap = 'career'; // Assuming you add this to your VisionAIService
-      
-      formData.append('contextType', contextMap);
+      formData.append('file', file);
 
-      // 3. Send to your actual backend AI route
-      const response = await axios.post(`${API_BASE_URL}/api/ai/analyze`, formData, {
+      // 3. Send to the full document extraction route. It supports resumes, PDFs, Word files, images, and statements.
+      const response = await axios.post(`${API_BASE_URL}/api/ai/upload`, formData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -252,7 +245,7 @@ function Onboarding() {
           dataVault: {
             ...current.dataVault,
             [documentType]: file.name,
-            [`${documentType}_extracted`]: response.data.data // Save the AI's parsed JSON!
+            [`${documentType}_extracted`]: response.data.data?.extractedData || response.data.data // Save the AI's parsed JSON!
           },
         }));
         
@@ -913,7 +906,13 @@ function Onboarding() {
 function UploadCard({ id, title, description, icon, uploadedFile, onUpload }) {
   return (
     <div className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-colors ${uploadedFile ? 'border-[#b8d8c5] bg-[#f4fbf6]' : 'border-[#c8dbe2] bg-white hover:border-[#5f8fa0] hover:bg-[#f7fbfc]'}`}>
-      <input type="file" id={id} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" onChange={(e) => onUpload(e.target.files[0])} accept=".pdf,.png,.jpg,.jpeg" />
+      <input
+        type="file"
+        id={id}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        onChange={(e) => onUpload(e.target.files[0])}
+        accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      />
       <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full ${uploadedFile ? 'bg-[#e6f4ea] text-[#22c55e]' : 'bg-[#e5f0f4] text-[#416f82]'}`}>
         {uploadedFile ? <VerifiedIcon className="h-6 w-6" /> : icon}
       </div>

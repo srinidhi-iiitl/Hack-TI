@@ -11,7 +11,7 @@ const initialForm = {
   health: {
     waterIntake: '',
     exercised: false,
-    sleepHours: '',
+    ateProperly: false,
     healthConcern: false,
     concernTypes: [],
     concernDescription: '',
@@ -113,9 +113,9 @@ function DailyUpdate() {
 
         <Section icon={Activity} title="Health Check-In">
           <div className="grid gap-4 md:grid-cols-3">
-            <NumberField label="Water today (liters)" value={form.health.waterIntake} onChange={(value) => update('health.waterIntake', value, setForm)} />
+            <NumberField label="Water intake today (liters)" value={form.health.waterIntake} onChange={(value) => update('health.waterIntake', value, setForm)} />
             <ToggleField label="Did you exercise today?" value={form.health.exercised} onChange={(value) => update('health.exercised', value, setForm)} />
-            <NumberField label="Sleep last night (hours)" value={form.health.sleepHours} onChange={(value) => update('health.sleepHours', value, setForm)} />
+            <ToggleField label="Did you eat properly today?" value={form.health.ateProperly} onChange={(value) => update('health.ateProperly', value, setForm)} />
           </div>
           <ToggleField label="Any health concerns today?" value={form.health.healthConcern} onChange={(value) => update('health.healthConcern', value, setForm)} />
           {form.health.healthConcern && (
@@ -364,7 +364,7 @@ function normalizeForm(form) {
     health: {
       ...form.health,
       waterIntake: Number(form.health.waterIntake || 0),
-      sleepHours: Number(form.health.sleepHours || 0),
+      ateProperly: Boolean(form.health.ateProperly),
     },
     finance: {
       ...form.finance,

@@ -27,21 +27,28 @@ export function getCareerProfileLabel(provider, profileUrl) {
 }
 
 async function fetchGithubStats(profileUrl) {
-  const username = extractGithubUsername(profileUrl);
-  if (!username) return null;
+  const githubRef = extractGithubReference(profileUrl);
+  if (!githubRef.username) return null;
 
-  const [userResult, repoResult] = await Promise.allSettled([
-    axios.get(`https://api.github.com/users/${encodeURIComponent(username)}`, { timeout: 7000 }),
-    axios.get(`https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=100`, { timeout: 7000 }),
+  const [userResult, repoListResult, singleRepoResult] = await Promise.allSettled([
+    axios.get(`https://api.github.com/users/${encodeURIComponent(githubRef.username)}`, { timeout: 7000 }),
+    axios.get(`https://api.github.com/users/${encodeURIComponent(githubRef.username)}/repos?per_page=100`, { timeout: 7000 }),
+    githubRef.repo
+      ? axios.get(`https://api.github.com/repos/${encodeURIComponent(githubRef.username)}/${encodeURIComponent(githubRef.repo)}`, { timeout: 7000 })
+      : Promise.resolve(null),
   ]);
 
   const user = userResult.status === 'fulfilled' ? userResult.value.data : {};
-  const repos = repoResult.status === 'fulfilled' && Array.isArray(repoResult.value.data) ? repoResult.value.data : [];
-  const totalStars = repos.reduce((sum, repo) => sum + (repo.stargazers_count || 0), 0);
+  const repos = repoListResult.status === 'fulfilled' && Array.isArray(repoListResult.value.data) ? repoListResult.value.data : [];
+  const selectedRepo = singleRepoResult.status === 'fulfilled' ? singleRepoResult.value?.data : null;
+  const totalStars = selectedRepo
+    ? Number(selectedRepo.stargazers_count || 0)
+    : repos.reduce((sum, repo) => sum + Number(repo.stargazers_count || 0), 0);
 
   return {
-    username,
-    repositories: user.public_repos ?? repos.length,
+    username: githubRef.username,
+    repository: selectedRepo?.name || githubRef.repo || '',
+    repositories: githubRef.repo ? 1 : user.public_repos ?? repos.length,
     followers: user.followers ?? 0,
     following: user.following ?? 0,
     stars: totalStars,
@@ -63,20 +70,27 @@ async function fetchLeetcodeStats(profileUrl) {
   return {
     username: stats.username || username,
     solved: stats.solved ?? 0,
+    easySolved: stats.easySolved ?? 0,
+    mediumSolved: stats.mediumSolved ?? 0,
+    hardSolved: stats.hardSolved ?? 0,
+    submissions: stats.submissions ?? 0,
+    acceptanceRate: stats.acceptanceRate ?? 0,
     rank: stats.rank ?? null,
     contestRating: stats.contestRating ?? null,
     contests: stats.contests ?? 0,
   };
 }
 
-function extractGithubUsername(value = '') {
+function extractGithubReference(value = '') {
   const trimmed = String(value || '').trim();
-  if (!trimmed) return '';
+  if (!trimmed) return { username: '', repo: '' };
   try {
     const url = new URL(trimmed.startsWith('http') ? trimmed : `https://github.com/${trimmed}`);
-    return url.pathname.split('/').filter(Boolean)[0] || '';
+    const [username = '', repo = ''] = url.pathname.split('/').filter(Boolean);
+    return { username: username.replace(/^@/, ''), repo };
   } catch {
-    return trimmed.replace(/^@/, '');
+    const [username = '', repo = ''] = trimmed.replace(/^@/, '').split('/').filter(Boolean);
+    return { username, repo };
   }
 }
 

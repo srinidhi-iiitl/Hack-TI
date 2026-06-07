@@ -4,7 +4,8 @@ const GITHUB_API_URL = 'https://api.github.com';
 const REQUEST_TIMEOUT_MS = Number(process.env.INTEGRATION_TIMEOUT_MS) || 4500;
 
 export async function fetchGithubProfile(username) {
-  const cleanUsername = sanitizeGithubUsername(username);
+  const githubRef = parseGithubReference(username);
+  const cleanUsername = sanitizeGithubUsername(githubRef.username);
 
   if (!cleanUsername) {
     return buildGithubFallback(username, 'GitHub username is missing or invalid');
@@ -20,12 +21,12 @@ export async function fetchGithubProfile(username) {
       },
     });
 
-    const [profileResponse, reposResponse, eventsResponse] = await Promise.allSettled([
+    const [profileResponse, reposResponse, eventsResponse, selectedRepoResponse] = await Promise.allSettled([
       client.get(`/users/${cleanUsername}`),
       client.get(`/users/${cleanUsername}/repos`, {
         params: {
           sort: 'updated',
-          per_page: 10,
+          per_page: 100,
         },
       }),
       client.get(`/users/${cleanUsername}/events/public`, {
@@ -33,6 +34,7 @@ export async function fetchGithubProfile(username) {
           per_page: 30,
         },
       }),
+      githubRef.repo ? client.get(`/repos/${cleanUsername}/${githubRef.repo}`) : Promise.resolve(null),
     ]);
 
     if (profileResponse.status !== 'fulfilled') {
@@ -41,18 +43,24 @@ export async function fetchGithubProfile(username) {
 
     const profile = profileResponse.value.data;
     const repos = reposResponse.status === 'fulfilled' ? reposResponse.value.data : [];
+    const selectedRepo = selectedRepoResponse.status === 'fulfilled' ? selectedRepoResponse.value?.data : null;
     const events = eventsResponse.status === 'fulfilled' ? eventsResponse.value.data : [];
     const languages = summarizeLanguages(repos);
     const recentActivityCount = countRecentEvents(events, 14);
+    const totalStars = selectedRepo
+      ? Number(selectedRepo.stargazers_count || 0)
+      : repos.reduce((sum, repo) => sum + Number(repo.stargazers_count || 0), 0);
 
     return {
       source: 'github',
       connected: true,
       username: cleanUsername,
       name: profile.name || '',
-      profileUrl: profile.html_url || '',
+      profileUrl: githubRef.url || profile.html_url || '',
+      selectedRepo: selectedRepo?.name || githubRef.repo || '',
       avatarUrl: profile.avatar_url || '',
-      publicRepos: profile.public_repos || 0,
+      publicRepos: githubRef.repo ? 1 : profile.public_repos || 0,
+      totalStars,
       followers: profile.followers || 0,
       following: profile.following || 0,
       accountCreatedAt: profile.created_at || null,
@@ -82,20 +90,33 @@ function sanitizeGithubUsername(username) {
 }
 
 function extractGithubUsername(input) {
-  const value = String(input || '').trim();
+  return parseGithubReference(input).username;
+}
 
-  if (!value) return '';
+function parseGithubReference(input) {
+  const value = String(input || '').trim().replace(/^@/, '');
+
+  if (!value) return { username: '', repo: '', url: '' };
 
   try {
-    const url = new URL(value.startsWith('http') ? value : `https://${value}`);
+    const url = new URL(value.startsWith('http') ? value : `https://github.com/${value}`);
     const hostname = url.hostname.replace(/^www\./, '').toLowerCase();
 
-    if (hostname !== 'github.com') return value;
+    if (hostname !== 'github.com') return { username: value, repo: '', url: '' };
 
-    const [username] = url.pathname.split('/').filter(Boolean);
-    return username || '';
+    const [username = '', repo = ''] = url.pathname.split('/').filter(Boolean);
+    return {
+      username,
+      repo,
+      url: username ? `https://github.com/${username}${repo ? `/${repo}` : ''}` : '',
+    };
   } catch {
-    return value;
+    const [username = '', repo = ''] = value.split('/').filter(Boolean);
+    return {
+      username,
+      repo,
+      url: username ? `https://github.com/${username}${repo ? `/${repo}` : ''}` : '',
+    };
   }
 }
 
@@ -138,6 +159,7 @@ function buildGithubFallback(username, error) {
     profileUrl: '',
     avatarUrl: '',
     publicRepos: 0,
+    totalStars: 0,
     followers: 0,
     following: 0,
     accountCreatedAt: null,

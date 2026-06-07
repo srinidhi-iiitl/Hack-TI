@@ -3,8 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
+import axios from 'axios';
 import DigitalTwinLogo from '../components/DigitalTwinLogo';
 import { loginUser } from '../features/auth/authThunks';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const activeSignals = [
   {
@@ -113,6 +116,11 @@ function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [activeSignalIndex, setActiveSignalIndex] = useState(0);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState('email');
+  const [forgotForm, setForgotForm] = useState({ email: '', otp: '', password: '', confirmPassword: '' });
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
   const { stats: signalStats, animatedStats } = useAnimatedSignalStats();
 
   useEffect(() => {
@@ -123,6 +131,70 @@ function Login() {
   }, []);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const openForgotModal = () => {
+    setForgotForm({ email: formData.email, otp: '', password: '', confirmPassword: '' });
+    setForgotStep('email');
+    setForgotMessage('');
+    setForgotOpen(true);
+  };
+
+  const closeForgotModal = () => {
+    if (forgotLoading) return;
+    setForgotOpen(false);
+    setForgotMessage('');
+  };
+
+  const handleForgotChange = (e) => {
+    setForgotForm((current) => ({ ...current, [e.target.name]: e.target.value }));
+  };
+
+  const getForgotErrorMessage = (error, fallback) => error?.response?.data?.message || fallback;
+
+  const handleForgotEmailSubmit = async (e) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    setForgotMessage('');
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/forgot-password`, {
+        email: forgotForm.email,
+      });
+      setForgotStep('reset');
+      setForgotMessage(response.data?.message || 'OTP sent to your registered email.');
+      toast.success('OTP sent to your email.');
+    } catch (error) {
+      const message = getForgotErrorMessage(error, "You don't have account with this mail");
+      setForgotMessage(message);
+      toast.error(message);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    setForgotMessage('');
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/reset-password`, {
+        email: forgotForm.email,
+        otp: forgotForm.otp,
+        password: forgotForm.password,
+        confirmPassword: forgotForm.confirmPassword,
+      });
+      toast.success(response.data?.message || 'Password reset successfully.');
+      setFormData((current) => ({ ...current, email: forgotForm.email, password: '' }));
+      setForgotOpen(false);
+    } catch (error) {
+      const message = getForgotErrorMessage(error, 'Invalid or expired OTP');
+      setForgotMessage(message);
+      toast.error(message);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -208,7 +280,7 @@ function Login() {
                   
                   <div className="flex items-center justify-between pt-2 text-sm text-white/65">
                     <label className="flex items-center gap-2 cursor-pointer hover:text-white transition"><input type="checkbox" className="h-4 w-4 rounded border-white/20 bg-white/10 text-[#7b61ff]" /> Remember me</label>
-                    <a href="#forgot" className="font-medium text-[#8fd9ff] hover:text-[#b7f7d4]">Forgot password?</a>
+                    <button type="button" onClick={openForgotModal} className="font-medium text-[#8fd9ff] transition hover:text-[#b7f7d4]">Forgot password?</button>
                   </div>
 
                   <motion.button whileHover={{ y: -2, scale: 1.01 }} whileTap={{ scale: 0.98 }} type="submit" disabled={isLoading} className="mt-2 w-full rounded-[1rem] bg-gradient-to-r from-[#1a2b4c] via-[#2a3f6a] to-[#1d463d] px-4 py-4 text-sm font-semibold text-white ring-1 ring-white/20 transition hover:ring-white/40">
@@ -232,6 +304,129 @@ function Login() {
           </div>
         </div>
       </section>
+
+      <AnimatePresence>
+        {forgotOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/62 px-4 backdrop-blur-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="forgot-password-title"
+              className="w-full max-w-md overflow-hidden rounded-[1.5rem] border border-white/12 bg-[#0a0e17] p-5 shadow-[0_28px_90px_-34px_rgba(0,0,0,0.92)] ring-1 ring-white/5 sm:p-6"
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            >
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#7df3cc]/75">Account recovery</p>
+                  <h2 id="forgot-password-title" className="mt-2 text-2xl font-semibold tracking-tight text-white">
+                    {forgotStep === 'email' ? 'Reset password' : 'Enter OTP'}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-white/60">
+                    {forgotStep === 'email'
+                      ? 'Enter your registered email to receive a password reset OTP.'
+                      : 'Enter the OTP sent to your email and create a new password.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeForgotModal}
+                  disabled={forgotLoading}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                  aria-label="Close password reset popup"
+                >
+                  X
+                </button>
+              </div>
+
+              {forgotStep === 'email' ? (
+                <form className="space-y-4" onSubmit={handleForgotEmailSubmit}>
+                  <label className="block space-y-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/48">Registered email</span>
+                    <input
+                      name="email"
+                      type="email"
+                      required
+                      value={forgotForm.email}
+                      onChange={handleForgotChange}
+                      disabled={forgotLoading}
+                      className="w-full rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#7b61ff]/50 focus:bg-white/[0.08] disabled:opacity-60"
+                    />
+                  </label>
+
+                  {forgotMessage && <p className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/75">{forgotMessage}</p>}
+
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" onClick={closeForgotModal} disabled={forgotLoading} className="flex-1 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition hover:bg-white/[0.08] disabled:opacity-50">Cancel</button>
+                    <button type="submit" disabled={forgotLoading} className="flex-1 rounded-[1rem] bg-gradient-to-r from-[#1a2b4c] via-[#2a3f6a] to-[#1d463d] px-4 py-3 text-sm font-semibold text-white ring-1 ring-white/20 transition hover:ring-white/40 disabled:opacity-60">
+                      {forgotLoading ? 'Sending...' : 'Send OTP'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form className="space-y-4" onSubmit={handleResetPasswordSubmit}>
+                  <label className="block space-y-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/48">OTP</span>
+                    <input
+                      name="otp"
+                      type="text"
+                      inputMode="numeric"
+                      required
+                      maxLength={6}
+                      value={forgotForm.otp}
+                      onChange={handleForgotChange}
+                      disabled={forgotLoading}
+                      className="w-full rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#7df3cc]/50 focus:bg-white/[0.08] disabled:opacity-60"
+                    />
+                  </label>
+                  <label className="block space-y-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/48">New password</span>
+                    <input
+                      name="password"
+                      type="password"
+                      required
+                      minLength={6}
+                      value={forgotForm.password}
+                      onChange={handleForgotChange}
+                      disabled={forgotLoading}
+                      className="w-full rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#7b61ff]/50 focus:bg-white/[0.08] disabled:opacity-60"
+                    />
+                  </label>
+                  <label className="block space-y-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/48">Confirm password</span>
+                    <input
+                      name="confirmPassword"
+                      type="password"
+                      required
+                      minLength={6}
+                      value={forgotForm.confirmPassword}
+                      onChange={handleForgotChange}
+                      disabled={forgotLoading}
+                      className="w-full rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#10c7a1]/50 focus:bg-white/[0.08] disabled:opacity-60"
+                    />
+                  </label>
+
+                  {forgotMessage && <p className="rounded-[1rem] border border-[#10c7a1]/20 bg-[#10c7a1]/10 px-4 py-3 text-sm text-white/78">{forgotMessage}</p>}
+
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" onClick={() => setForgotStep('email')} disabled={forgotLoading} className="flex-1 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition hover:bg-white/[0.08] disabled:opacity-50">Back</button>
+                    <button type="submit" disabled={forgotLoading} className="flex-1 rounded-[1rem] bg-gradient-to-r from-[#1a2b4c] via-[#2a3f6a] to-[#1d463d] px-4 py-3 text-sm font-semibold text-white ring-1 ring-white/20 transition hover:ring-white/40 disabled:opacity-60">
+                      {forgotLoading ? 'Updating...' : 'Update password'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

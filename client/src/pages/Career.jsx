@@ -40,12 +40,12 @@ const DOMAINS = {
         name:        'GitHub',
         color:       '#c084fc',
         icon:        GithubIcon,
-        placeholder: 'your-username',
+        placeholder: 'your-username or owner/repo',
         endpoint:    (u) => `/api/integrations/github/${u}`,
         statsMap:    (d) => [
           { label: 'Public Repos',  value: d.publicRepos   ?? d.public_repos   ?? '—', icon: BookOpen },
           { label: 'Followers',     value: d.followers                          ?? '—', icon: Users   },
-          { label: 'Total Stars',   value: d.totalStars    ?? d.public_gists    ?? '—', icon: Star    },
+          { label: 'Total Stars',   value: d.totalStars ?? d.stars ?? 0, icon: Star    },
           { label: 'Recent Commits',value: d.recentActivityCount ?? d.contributions ?? '—', icon: GitCommit },
         ],
         profileUrl: (u) => `https://github.com/${u}`,
@@ -1353,13 +1353,15 @@ export default function Career() {
     ? {
         connected: true,
         totalSolved: professionalGrowthStats.leetcode?.solved ?? leetcodeData.totalSolved ?? 0,
-        hardSolved: leetcodeData.hardSolved ?? 0,
-        acceptanceRate: leetcodeData.acceptanceRate ?? 0,
+        hardSolved: professionalGrowthStats.leetcode?.hardSolved ?? leetcodeData.hardSolved ?? 0,
+        acceptanceRate: professionalGrowthStats.leetcode?.acceptanceRate ?? leetcodeData.acceptanceRate ?? 0,
+        easySolved: professionalGrowthStats.leetcode?.easySolved ?? leetcodeData.easySolved ?? 0,
       }
     : {
         connected: false,
         totalSolved: 0,
         hardSolved: 0,
+        easySolved: 0,
         acceptanceRate: 0,
       };
 
@@ -1426,6 +1428,7 @@ export default function Career() {
   ]);
   const domainConfig  = DOMAINS[activeDomain] || DOMAINS.coding;
   const activeIntegrationRows = CAREER_LINK_ROWS[normalizedActiveDomain] || CAREER_LINK_ROWS.software;
+  const showCodingActivity = normalizedActiveDomain === 'software';
 
   const productivityInsight = aiInsights.find(i => i.label === 'Productivity');
   const burnoutInsight      = aiInsights.find(i => i.label === 'Burnout Risk');
@@ -1514,17 +1517,19 @@ export default function Career() {
           </div>
 
           {/* Compact heatmap */}
-          <div className="mt-6 pt-5 border-t border-white/8">
-            <CompactHeatmap careerIntegrations={normalizedActiveDomain === 'software' ? careerIntegrations : activeDomainIntegrations} />
-          </div>
+          {showCodingActivity && (
+            <div className="mt-6 pt-5 border-t border-white/8">
+              <CompactHeatmap careerIntegrations={careerIntegrations} />
+            </div>
+          )}
 
           {/* LeetCode quick stats if connected — coding domain */}
-          {activeDomain === 'coding' && (
+          {showCodingActivity && (
             <div className="mt-4 pt-4 border-t border-white/8 grid grid-cols-3 gap-3">
               {[
                 { label: 'Total Solved', value: displayedLeetcodeData.totalSolved, color: '#10c7a1' },
                 { label: 'Hard',         value: displayedLeetcodeData.hardSolved, color: '#f87171' },
-                { label: 'Acceptance',   value: `${displayedLeetcodeData.acceptanceRate}%`, color: '#fbbf24' },
+                { label: 'Easy Solved',  value: displayedLeetcodeData.easySolved, color: '#fbbf24' },
               ].map(s => (
                 <div key={s.label} className="rounded-xl bg-white/4 border border-white/8 p-3 text-center">
                   <p className="text-xl font-bold" style={{ color: s.color }}>{s.value}</p>

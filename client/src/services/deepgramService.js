@@ -10,6 +10,7 @@ export function createDeepgramAssistantStream({ onListening, onTranscript, onErr
   let audioChunkCount = 0;
   let started = false;
   let microphoneActive = false;
+  let microphoneStarting = false;
 
   async function start() {
     if (started || socket?.connected || socket?.active) return;
@@ -35,6 +36,9 @@ export function createDeepgramAssistantStream({ onListening, onTranscript, onErr
       console.log('[VOICE] Deepgram listening:', Boolean(payload.active));
       onStatus?.(payload.active ? 'listening' : 'connecting');
       onListening?.(Boolean(payload.active));
+      if (payload.active) {
+        void startMicrophone();
+      }
     };
 
     const handleTranscript = (payload) => {
@@ -51,13 +55,12 @@ export function createDeepgramAssistantStream({ onListening, onTranscript, onErr
       console.log('[VOICE] Deepgram connected');
       onStatus?.('listening');
       onListening?.(true);
+      void startMicrophone();
     });
     socket.on('voice:disconnected', () => {
       console.error('[VOICE ERROR] Deepgram disconnected');
       if (!manuallyStopped) {
-        onStatus?.('error');
-        onListening?.(false);
-        onError?.('Deepgram disconnected');
+        onStatus?.('connecting');
       }
     });
     socket.on('voice:listening', handleListening);
@@ -71,24 +74,23 @@ export function createDeepgramAssistantStream({ onListening, onTranscript, onErr
     socket.on('disconnect', (reason) => {
       console.error('[VOICE ERROR] Deepgram websocket disconnect:', reason);
       if (!manuallyStopped) {
-        onStatus?.('error');
+        onStatus?.('connecting');
         onListening?.(false);
-        onError?.('Deepgram disconnected');
       }
     });
     socket.on('connect', async () => {
       console.log('[VOICE] Deepgram socket connected');
       onStatus?.('connecting');
       socket.emit('voice:start');
-      await startMicrophone();
     });
   }
 
   async function startMicrophone() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
+    if (microphoneStarting || microphoneActive || (mediaRecorder && mediaRecorder.state !== 'inactive')) return;
     if (!socket?.connected) return;
 
     try {
+      microphoneStarting = true;
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = pickMimeType();
       mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined);
@@ -112,6 +114,8 @@ export function createDeepgramAssistantStream({ onListening, onTranscript, onErr
       console.error('[VOICE ERROR] Microphone permission denied/unavailable:', error.message);
       onStatus?.('error');
       onError?.(`Microphone access failed: ${error.message}`);
+    } finally {
+      microphoneStarting = false;
     }
   }
 
@@ -125,6 +129,7 @@ export function createDeepgramAssistantStream({ onListening, onTranscript, onErr
     mediaStream?.getTracks().forEach((track) => track.stop());
     mediaRecorder = null;
     mediaStream = null;
+    microphoneStarting = false;
     console.log('[VOICE] Microphone capture paused');
     onListening?.(false);
   }
@@ -150,6 +155,7 @@ export function createDeepgramAssistantStream({ onListening, onTranscript, onErr
     mediaStream = null;
     socket = null;
     microphoneActive = false;
+    microphoneStarting = false;
     onStatus?.('offline');
     onListening?.(false);
   }

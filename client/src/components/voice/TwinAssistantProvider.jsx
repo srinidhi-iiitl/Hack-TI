@@ -16,6 +16,23 @@ import TwinAssistantButton from './TwinAssistantButton';
 import { TwinAssistantContext } from './twinAssistantContext';
 import { logoutUser } from '../../features/auth/authThunks';
 
+const VOICE_TOAST_DURATION_MS = 2500;
+
+function voiceToast(message, options = {}) {
+  const id = options.id || `voice-${normalizeToastId(message)}`;
+  return toast(message, { duration: VOICE_TOAST_DURATION_MS, ...options, id });
+}
+
+voiceToast.success = (message, options = {}) => {
+  const id = options.id || `voice-${normalizeToastId(message)}`;
+  return toast.success(message, { duration: VOICE_TOAST_DURATION_MS, ...options, id });
+};
+
+voiceToast.error = (message, options = {}) => {
+  const id = options.id || `voice-${normalizeToastId(message)}`;
+  return toast.error(message, { duration: VOICE_TOAST_DURATION_MS, ...options, id });
+};
+
 export default function TwinAssistantProvider({ children }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -48,6 +65,7 @@ export default function TwinAssistantProvider({ children }) {
   const lastProcessedTranscript = useRef('');
   const lastProcessedAt = useRef(0);
   const transcriptSubmitTimerRef = useRef(null);
+  const pendingTranscriptRef = useRef('');
   const handleTranscriptPayloadRef = useRef(null);
   const enabledRef = useRef(false);
   const preferencesRef = useRef(preferences);
@@ -148,7 +166,7 @@ export default function TwinAssistantProvider({ children }) {
     console.warn('[VOICE] Deepgram unavailable');
     console.warn(`[VOICE] Fallback reason: ${reason}`);
     console.warn('[VOICE] Switching to Web Speech API');
-    toast('Fallback Activated');
+    voiceToast('Fallback Activated');
     setVoiceStatus('connecting');
     setAssistantMessage('Fallback activated. Starting Web Speech API...');
 
@@ -228,7 +246,7 @@ export default function TwinAssistantProvider({ children }) {
       try {
         console.log('[VOICE] Navigation execution:', action.target);
         navigate(action.target, action.options || undefined);
-        toast('Navigation Complete');
+        voiceToast('Navigation Complete');
         console.log('[VOICE] Navigation complete');
       } catch (error) {
         console.error('[VOICE ERROR] Navigation failed:', error.message);
@@ -242,7 +260,7 @@ export default function TwinAssistantProvider({ children }) {
         console.log('[VOICE] Refresh Dashboard');
         navigate('/dashboard', { state: { assistantRefreshAt: Date.now() } });
         window.dispatchEvent(new Event('dashboard-refresh-requested'));
-        toast('Navigation Complete');
+        voiceToast('Navigation Complete');
         console.log('[VOICE] Navigation complete');
       } catch (error) {
         console.error('[VOICE ERROR] Navigation failed:', error.message);
@@ -334,6 +352,8 @@ export default function TwinAssistantProvider({ children }) {
       return;
     }
 
+    pendingTranscriptRef.current = '';
+
     if (!command || processingRef.current || (commandKey === lastProcessedTranscript.current && now - lastProcessedAt.current < 3000)) {
       if (commandKey === lastProcessedTranscript.current) {
         console.log('[Twin Assistant] Duplicate transcript ignored:', command);
@@ -345,7 +365,7 @@ export default function TwinAssistantProvider({ children }) {
     console.log(`[VOICE] Transcript: ${command}`);
     console.log('[VOICE] Command received');
     console.log('[VOICE] Listening paused');
-    toast('Command Detected');
+    voiceToast('Command Detected');
     processingRef.current = true;
     commandCycleActiveRef.current = true;
     console.log('[VOICE] Processing');
@@ -410,6 +430,9 @@ export default function TwinAssistantProvider({ children }) {
     }
 
     if (!liveText.trim()) return;
+    const previousPending = pendingTranscriptRef.current;
+    const nextPending = chooseBestTranscript(previousPending, liveText);
+    pendingTranscriptRef.current = nextPending;
 
     window.clearTimeout(providerTranscriptTimeoutRef.current);
     console.log(`[VOICE] Provider: ${source === 'deepgram' ? 'Deepgram' : source === 'web-speech' ? 'Web Speech API' : source}`);
@@ -421,12 +444,24 @@ export default function TwinAssistantProvider({ children }) {
 
     window.clearTimeout(transcriptSubmitTimerRef.current);
     if (isFinal || speechFinal) {
+      const commandToSubmit = isIncompleteVoiceCommand(normalizedTranscript)
+        ? pendingTranscriptRef.current
+        : liveText;
+      if (isIncompleteVoiceCommand(normalizeCommandText(commandToSubmit))) {
+        console.log('[Twin Assistant] Waiting for complete final command:', commandToSubmit);
+        return;
+      }
       pauseVoiceInput();
-      submitTranscript(liveText);
+      submitTranscript(commandToSubmit);
     } else {
       transcriptSubmitTimerRef.current = window.setTimeout(() => {
+        const commandToSubmit = pendingTranscriptRef.current || liveText;
+        if (isIncompleteVoiceCommand(normalizeCommandText(commandToSubmit))) {
+          console.log('[Twin Assistant] Waiting for complete command:', commandToSubmit);
+          return;
+        }
         pauseVoiceInput();
-        submitTranscript(liveText);
+        submitTranscript(commandToSubmit);
       }, 900);
     }
   }, [enabled, submitTranscript]);
@@ -443,7 +478,7 @@ export default function TwinAssistantProvider({ children }) {
     if (!SpeechRecognition) {
       console.error('[VOICE] Web Speech API unavailable');
       console.error('[VOICE ERROR] SpeechRecognition unavailable');
-      toast.error('Voice recognition unavailable');
+      voiceToast.error('Voice recognition unavailable');
       setVoiceStatus('error');
       transitionVoiceState('disabled');
       setAssistantMessage('Voice recognition unavailable');
@@ -466,7 +501,7 @@ export default function TwinAssistantProvider({ children }) {
         setVoiceStatus('listening');
         transitionVoiceState('listening');
         setAssistantMessage('Listening...');
-        toast('Listening Started');
+        voiceToast('Listening Started');
       };
 
       recognition.onresult = (event) => {
@@ -495,10 +530,10 @@ export default function TwinAssistantProvider({ children }) {
         if (message === 'not-allowed' || message === 'service-not-allowed') {
           console.error('[VOICE ERROR] Permission denied');
           webSpeechBlockedRef.current = true;
-          toast.error('Voice recognition unavailable');
+          voiceToast.error('Voice recognition unavailable');
         }
         setVoiceStatus('error');
-        toast.error('Speech Recognition Failed');
+        voiceToast.error('Speech Recognition Failed');
       };
 
       recognition.onend = () => {
@@ -511,7 +546,7 @@ export default function TwinAssistantProvider({ children }) {
       recognition.start();
     } catch (error) {
       console.error('[VOICE ERROR] Web Speech API unavailable:', error.message);
-      toast.error('Voice recognition unavailable');
+      voiceToast.error('Voice recognition unavailable');
       setVoiceStatus('error');
       transitionVoiceState('disabled');
       setAssistantMessage('Voice recognition unavailable');
@@ -548,7 +583,7 @@ export default function TwinAssistantProvider({ children }) {
         transitionVoiceState('listening');
         setAssistantMessage('Listening...');
         if (active) {
-          toast('Listening Started');
+          voiceToast('Listening Started');
         }
       },
       onTranscript: ({ transcript, isFinal, speechFinal }) => {
@@ -611,7 +646,7 @@ export default function TwinAssistantProvider({ children }) {
       setAssistantMessage(nextEnabled ? 'Voice Assistant activated. Waiting for your command.' : 'Twin Assistant is disabled. Enable it in Settings.');
       if (nextEnabled) {
         console.log('[VOICE] Assistant enabled');
-        toast.success('Voice Assistant Enabled');
+        voiceToast.success('Voice Assistant Enabled');
         if (!wasEnabled && nextPreferences.backgroundListening) {
           await speakAssistantResponse('Voice Assistant activated. Waiting for your command.', { force: true });
           restartVoiceInput();
@@ -846,6 +881,25 @@ function normalizeText(value) {
 
 function normalizeCommandText(value) {
   return normalizeText(value);
+}
+
+function chooseBestTranscript(previous = '', next = '') {
+  const previousText = String(previous || '').trim();
+  const nextText = String(next || '').trim();
+  if (!previousText) return nextText;
+  if (!nextText) return previousText;
+
+  const previousCommand = normalizeCommandText(previousText);
+  const nextCommand = normalizeCommandText(nextText);
+  if (isIncompleteVoiceCommand(nextCommand) && !isIncompleteVoiceCommand(previousCommand)) {
+    return previousText;
+  }
+  if (nextCommand.length >= previousCommand.length) return nextText;
+  return previousText;
+}
+
+function normalizeToastId(value) {
+  return String(value || 'message').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'message';
 }
 
 function isIncompleteVoiceCommand(command) {
