@@ -15,6 +15,7 @@ import {
 
 const LS_WOMEN_HEALTH = 'ltWomenHealth';
 const LS_PREGNANCY = 'ltPregnancy';
+const DEFAULT_HEALTH_DEVICE_NAME = 'Health Device';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const card = 'rounded-2xl border border-white/10 bg-[#11131a]/84 shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl';
@@ -105,6 +106,37 @@ function readJsonStorage(key) {
     return null;
   }
 }
+
+function formatHealthDeviceName(integrationLink = '', provider = '') {
+  const providerValue = provider === 'gargi_fitband' ? '' : provider;
+  const rawValue = String(integrationLink || providerValue || '').trim();
+  if (!rawValue) return DEFAULT_HEALTH_DEVICE_NAME;
+
+  const candidates = [];
+  try {
+    const parsedUrl = new URL(rawValue.includes('://') ? rawValue : `https://${rawValue}`);
+    candidates.push(...parsedUrl.pathname.split('/').filter(Boolean).reverse());
+    candidates.push(parsedUrl.hostname.replace(/^www\./i, '').split('.')[0]);
+  } catch {
+    candidates.push(rawValue);
+  }
+  candidates.push(rawValue);
+
+  const bestMatch = candidates.find((candidate) => /fit(bit|band)/i.test(candidate)) || candidates[0] || rawValue;
+  const readable = decodeURIComponent(bestMatch)
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/[^a-z0-9 ]+/gi, ' ')
+    .replace(/\b(https?|www|com|in|user|profile|api)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!readable) return DEFAULT_HEALTH_DEVICE_NAME;
+  return readable
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
 // ─── Empty state card when device not connected ───────────────────────────────
 // onConnect is only passed when the user has NOT yet dismissed/connected — never nag.
 function NoDataCell({ label, icon: Icon, onConnect }) {
@@ -134,6 +166,7 @@ export default function Health() {
   const dispatch = useDispatch();
   const healthIntegration = useSelector((state) => state.healthIntegration);
   const authUser = useSelector((state) => state.auth?.user);
+  const connectedDeviceName = formatHealthDeviceName(healthIntegration.integrationLink, healthIntegration.provider);
   const hasWearableFetchedRef = useRef(false);
   const [mounted, setMounted]               = useState(false);
   const [syncStatus, setSyncStatus]         = useState('idle'); // idle|syncing|connected|error
@@ -307,6 +340,7 @@ export default function Health() {
   const [connectError, setConnectError]     = useState('');
   const [healthLinkDraft, setHealthLinkDraft] = useState('');
   const [healthPageError, setHealthPageError] = useState('');
+  const modalDeviceName = formatHealthDeviceName(connectInput || healthIntegration.integrationLink, healthIntegration.provider);
 
   useEffect(() => {
     setHealthLinkDraft(healthIntegration.integrationLink || '');
@@ -550,7 +584,7 @@ export default function Health() {
                 <div>
                   <h2 className="text-base font-bold text-white">Health API Integration</h2>
                   <p className={`mt-1 text-[11px] font-bold uppercase tracking-[0.16em] ${healthIntegration.connected ? 'text-[#10c7a1]' : 'text-white/35'}`}>
-                    {healthIntegration.connected ? 'Gargi Fitband Connected' : 'Connect Gargi Fitband'}
+                    {healthIntegration.connected ? `${connectedDeviceName} Connected` : 'Connect Health Device'}
                   </p>
                 </div>
               </div>
@@ -574,7 +608,7 @@ export default function Health() {
                     Connected Link
                   </p>
                   <p className="w-full truncate rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-white/65">
-                    {healthIntegration.integrationLink || 'Gargi Fitband connected'}
+                    {healthIntegration.integrationLink || `${connectedDeviceName} connected`}
                   </p>
                 </div>
                 <button
@@ -597,7 +631,7 @@ export default function Health() {
                     value={healthLinkDraft}
                     onChange={(event) => setHealthLinkDraft(event.target.value)}
                     onKeyDown={(event) => event.key === 'Enter' && saveHealthFromPage()}
-                    placeholder="https://gargi-fitband/user/12345"
+                    placeholder="anjali_fitband or https://fitband-provider/user/12345"
                     className="w-full rounded-xl border border-white/10 bg-black/30 px-3.5 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/20 focus:border-[#34d399]/50"
                   />
                   {healthPageError && <p className="mt-2 text-xs font-semibold text-[#ea580c]">{healthPageError}</p>}
@@ -617,7 +651,7 @@ export default function Health() {
 
             {healthIntegration.connected && (
               <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-white/50">
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">Provider: Gargi Fitband</span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">Provider: {connectedDeviceName}</span>
                 <span className="rounded-full border border-[#10c7a1]/20 bg-[#10c7a1]/10 px-3 py-1.5 text-[#10c7a1]">Status: Synced</span>
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
                   Last sync: {healthIntegration.lastSync ? new Date(healthIntegration.lastSync).toLocaleString() : 'Just now'}
@@ -1040,7 +1074,7 @@ export default function Health() {
           <article className={`${iCard} p-6 xl:col-span-5`}>
             <div className="mb-5 flex items-center justify-between border-b border-[#d8e5ea] pb-4">
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-[#1b1c1c]">Cross-Signal Insights</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-white">Cross-Signal Insights</h2>
                 <p className="text-sm text-[#596467] mt-1">
                   {wearableReady
                     ? `From live Fitbit data · ${weather ? weather.temp + '°C outside' : ''}`
@@ -1151,7 +1185,7 @@ export default function Health() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-white">Connect Health Device</h3>
-                <p className="text-xs text-white/40">Provider · Gargi Fitband</p>
+                <p className="text-xs text-white/40">Provider: {modalDeviceName}</p>
               </div>
             </div>
             <p className="text-sm text-white/60 leading-relaxed mb-5">
@@ -1161,7 +1195,7 @@ export default function Health() {
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-[#ff4d7d] mb-2">Health Integration Link</label>
                 <input type="text"
-                  placeholder="https://gargi-fitband/user/12345"
+                  placeholder="anjali_fitband or https://fitband-provider/user/12345"
                   value={connectInput}
                   onChange={e => setConnectInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && submitConnect()}
