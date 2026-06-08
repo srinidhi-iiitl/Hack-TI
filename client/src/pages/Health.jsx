@@ -13,6 +13,9 @@ import {
   Cigarette, TrendingDown, CheckCircle2, Flame, Wind,
 } from 'lucide-react';
 
+const LS_WOMEN_HEALTH = 'ltWomenHealth';
+const LS_PREGNANCY = 'ltPregnancy';
+
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const card = 'rounded-2xl border border-white/10 bg-[#11131a]/84 shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl';
 const iCard = `${card} transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#ff7a00]/30 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5)] cursor-pointer active:scale-[0.98]`;
@@ -77,6 +80,31 @@ function computeSmokingStreak(lastCigaretteStr) {
   return Math.floor((Date.now() - new Date(lastCigaretteStr)) / 86400000);
 }
 
+function getUserStorageIdentity(user) {
+  if (user?._id || user?.id || user?.email) {
+    return user._id || user.id || user.email;
+  }
+  try {
+    const storedUser = JSON.parse(localStorage.getItem('user') || 'null') || {};
+    return storedUser._id || storedUser.id || storedUser.email || null;
+  } catch {
+    return null;
+  }
+}
+
+function getScopedStorageKey(baseKey, user) {
+  const identity = getUserStorageIdentity(user);
+  return identity ? `${baseKey}:${encodeURIComponent(String(identity).toLowerCase())}` : null;
+}
+
+function readJsonStorage(key) {
+  if (!key) return null;
+  try {
+    return JSON.parse(localStorage.getItem(key) || 'null');
+  } catch {
+    return null;
+  }
+}
 // ─── Empty state card when device not connected ───────────────────────────────
 // onConnect is only passed when the user has NOT yet dismissed/connected — never nag.
 function NoDataCell({ label, icon: Icon, onConnect }) {
@@ -105,6 +133,7 @@ function NoDataCell({ label, icon: Icon, onConnect }) {
 export default function Health() {
   const dispatch = useDispatch();
   const healthIntegration = useSelector((state) => state.healthIntegration);
+  const authUser = useSelector((state) => state.auth?.user);
   const hasWearableFetchedRef = useRef(false);
   const [mounted, setMounted]               = useState(false);
   const [syncStatus, setSyncStatus]         = useState('idle'); // idle|syncing|connected|error
@@ -125,16 +154,24 @@ export default function Health() {
   );
   // showConnectBanner: true only for brand-new users who haven't connected or dismissed
   const showConnectBanner = !healthIntegration.connected && !promptDismissed && syncStatus !== 'connected';
+  const womenHealthStorageKey = getScopedStorageKey(LS_WOMEN_HEALTH, authUser);
+  const pregnancyStorageKey = getScopedStorageKey(LS_PREGNANCY, authUser);
+  const savedPeriodState = readJsonStorage(womenHealthStorageKey);
+  const savedPregnancyState = readJsonStorage(pregnancyStorageKey);
 
   // Women's health
-  const [womenMode, setWomenMode]   = useState('period_setup');
-  const [periodSetup, setPeriodSetup] = useState({ lastPeriod:'', condition:'none' });
+  const [womenMode, setWomenMode]   = useState(() => {
+    if (savedPregnancyState?.weeks) return 'preg_dashboard';
+    if (savedPeriodState?.lastPeriod) return 'period';
+    return 'period_setup';
+  });
+  const [periodSetup, setPeriodSetup] = useState(() => savedPeriodState?.lastPeriod ? savedPeriodState : { lastPeriod:'', condition:'none' });
   const [setupStep, setSetupStep]   = useState(0);
   const [symptoms, setSymptoms]     = useState([]);
   const [blurred, setBlurred]       = useState(false);
-  const [pregWeeks, setPregWeeks]   = useState('');
-  const [pregDue, setPregDue]       = useState('');
-  const [phase, setPhase]           = useState(null);
+  const [pregWeeks, setPregWeeks]   = useState(() => savedPregnancyState?.weeks || '');
+  const [pregDue, setPregDue]       = useState(() => savedPregnancyState?.dueDate || '');
+  const [phase, setPhase]           = useState(() => savedPeriodState?.lastPeriod ? computePhase(savedPeriodState.lastPeriod, savedPeriodState.condition) : null);
 
   // Smoking tracker
   const [smokingMode, setSmokingMode]       = useState('view');
@@ -146,32 +183,15 @@ export default function Health() {
   const API   = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
   const token = () => localStorage.getItem('authToken');
 
-  // ── Bootstrap ──────────────────────────────────────────────────────────────
+  // Bootstrap
   useEffect(() => {
     setMounted(true);
     dispatch(fetchHealthIntegration());
     fetchDashProfile();
 
-    // Women's health — localStorage only
-    const savedPeriod = JSON.parse(localStorage.getItem('ltWomenHealth') || 'null');
-    if (savedPeriod?.lastPeriod) {
-      setPeriodSetup(savedPeriod);
-      setPhase(computePhase(savedPeriod.lastPeriod, savedPeriod.condition));
-      setWomenMode('period');
-    }
-    const savedPreg = JSON.parse(localStorage.getItem('ltPregnancy') || 'null');
-    if (savedPreg?.weeks) {
-      setPregWeeks(savedPreg.weeks);
-      setPregDue(savedPreg.dueDate || '');
-      setWomenMode('preg_dashboard');
-    }
-
-    // Smoking
     const savedSmoke = JSON.parse(localStorage.getItem('ltSmoking') || 'null');
     if (savedSmoke) setSmokingData(savedSmoke);
 
-    // ── KEY FIX: if the user already connected before, silently re-sync.
-    // No modal, no banner, no prompt — just fetch data in the background.
     fetchWeather();
   }, []);
 
@@ -367,17 +387,17 @@ export default function Health() {
 
   // ── Women's health helpers ──────────────────────────────────────────────────
   function savePeriod() {
-    localStorage.setItem('ltWomenHealth', JSON.stringify(periodSetup));
+    if (womenHealthStorageKey) localStorage.setItem(womenHealthStorageKey, JSON.stringify(periodSetup));
     setPhase(computePhase(periodSetup.lastPeriod, periodSetup.condition));
     setWomenMode('period');
   }
   function savePreg() {
-    localStorage.setItem('ltPregnancy', JSON.stringify({ weeks: pregWeeks, dueDate: pregDue }));
+    if (pregnancyStorageKey) localStorage.setItem(pregnancyStorageKey, JSON.stringify({ weeks: pregWeeks, dueDate: pregDue }));
     setWomenMode('preg_dashboard');
   }
   function resetWomen() {
-    localStorage.removeItem('ltWomenHealth');
-    localStorage.removeItem('ltPregnancy');
+    if (womenHealthStorageKey) localStorage.removeItem(womenHealthStorageKey);
+    if (pregnancyStorageKey) localStorage.removeItem(pregnancyStorageKey);
     setPeriodSetup({ lastPeriod:'', condition:'none' });
     setPregWeeks(''); setPregDue('');
     setSetupStep(0); setPhase(null); setWomenMode('period_setup');
@@ -385,7 +405,7 @@ export default function Health() {
   function handleRestartPeriod(newDate) {
     const updatedSetup = { ...periodSetup, lastPeriod: newDate };
     setPeriodSetup(updatedSetup);
-    localStorage.setItem('ltWomenHealth', JSON.stringify(updatedSetup));
+    if (womenHealthStorageKey) localStorage.setItem(womenHealthStorageKey, JSON.stringify(updatedSetup));
     setPhase(computePhase(newDate, periodSetup.condition));
     triggerReward(100, 'Period Cycle Restarted 🌸', '🧬');
   }
@@ -473,9 +493,7 @@ export default function Health() {
                 ? `HRV ${wearable.hrv}ms, ${wearable.steps?.toLocaleString()} steps, ${wearable.sleepHours}h sleep. Your Twin says: you're in good shape today.`
                : burnoutRisk !== null && burnoutRisk > 65
                 ? `Your profile puts burnout risk at ${burnoutRisk}%. Protecting sleep and reducing stress are the two highest-leverage moves right now.`
-               : wellnessScore !== null
-                ? `Wellness score: ${wellnessScore}/100 — driven by your sleep, exercise, and stress patterns from onboarding.`
-               : `Your Digital Twin is ready. Add a wearable and it'll start reading your body in real time.`}
+               : ''}
             </p>
           </div>
 
@@ -1570,3 +1588,5 @@ function AutoIcon({className}){return <IB className={className}><path d="m12 3 1
 function FemaleIcon({className}){return <IB className={className}><path d="M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10ZM12 13v8M8.5 17h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></IB>;}
 function SparkIcon({className}){return <IB className={className}><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></IB>;}
 function TrophyIcon({className}){return <IB className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></IB>;}
+
+

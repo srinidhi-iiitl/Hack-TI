@@ -188,12 +188,24 @@ export const updateProfile = async (req, res, next) => {
       });
     }
 
+    if (email) {
+      const normalizedEmail = email.toLowerCase().trim();
+      const existingUser = await User.findOne({ email: normalizedEmail, _id: { $ne: user._id } });
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already registered',
+          code: 'EMAIL_EXISTS',
+        });
+      }
+      user.email = normalizedEmail;
+    }
+
     // Update allowed fields
     if (firstName) user.firstName = firstName.trim();
     if (lastName) user.lastName = lastName.trim();
-    if (email) user.email = email.toLowerCase().trim();
     if (bio) user.bio = bio.trim();
-    if (phone) user.phone = phone;
+    if (phone !== undefined) user.phone = String(phone).trim();
     if (dob !== undefined) user.dob = String(dob).trim();
     if (links && typeof links === 'object') {
       user.links = {

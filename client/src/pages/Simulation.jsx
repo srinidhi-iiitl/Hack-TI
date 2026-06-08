@@ -533,6 +533,7 @@ function buildSimulationPayload({
   dashboardScores,
   dashboardData,
   dailyUpdate,
+  financeData,
 }) {
   const changesByDomain = buildScenarioChanges(currentValues, simulatedValues, scenarioFields);
   const customInputs = scenarioFields
@@ -561,7 +562,7 @@ function buildSimulationPayload({
         savings: firstFiniteNumber(currentValues.savings),
         investments: firstFiniteNumber(currentValues.investment),
         expenses: firstFiniteNumber(currentValues.expenses),
-        income: firstFiniteNumber(dashboardData?.profile?.monthlyIncome, dashboardData?.finance?.monthlyIncome),
+        income: firstFiniteNumber(financeData?.totalSalary, dashboardData?.profile?.monthlyIncome, dashboardData?.finance?.monthlyIncome),
       },
       career: {
         score: dashboardScores.Career,
@@ -587,7 +588,7 @@ function buildSimulationPayload({
         savings: firstFiniteNumber(simulatedValues.savings),
         investments: firstFiniteNumber(simulatedValues.investment),
         expenses: firstFiniteNumber(simulatedValues.expenses),
-        income: firstFiniteNumber(dashboardData?.profile?.monthlyIncome, dashboardData?.finance?.monthlyIncome),
+        income: firstFiniteNumber(financeData?.totalSalary, dashboardData?.profile?.monthlyIncome, dashboardData?.finance?.monthlyIncome),
       },
       career: {
         score: dashboardScores.Career,
@@ -1157,7 +1158,7 @@ function roundValue(value, decimals = 1) {
 }
 
 function moneyToK(value) {
-  return Math.max(0, Math.round(firstFiniteNumber(value) / 1000));
+  return Math.max(0, roundValue(firstFiniteNumber(value) / 1000, 1));
 }
 
 function readStoredOnboardingProfile() {
@@ -1169,7 +1170,7 @@ function readStoredOnboardingProfile() {
   }
 }
 
-function deriveSimulationCurrentValues({ dashboardData, dailyUpdate, healthIntegration, githubStats, leetcodeStats }) {
+function deriveSimulationCurrentValues({ dashboardData, dailyUpdate, healthIntegration, githubStats, leetcodeStats, financeData }) {
   const storedProfile = readStoredOnboardingProfile();
   const profile = dashboardData?.profile || {};
   const lifestyle = storedProfile?.lifestyle || {};
@@ -1181,17 +1182,22 @@ function deriveSimulationCurrentValues({ dashboardData, dailyUpdate, healthInteg
   const healthDevice = healthIntegration?.deviceData || {};
 
   const income = firstFiniteNumber(
+    financeData?.totalSalary,
     profile.monthlyIncome,
     financialPatterns.monthlyIncome,
     dashboardData?.finance?.monthlyIncome,
   );
   const expensesRaw = firstFiniteNumber(
+    financeData?.monthlyExpenses,
+    dashboardData?.finance?.monthlyExpenses,
+    dashboardData?.financeData?.monthlyExpenses,
     dailyFinance.moneySpent,
     profile.monthlyExpenditure,
     financialPatterns.monthlyExpenditure,
     dashboardData?.finance?.monthlyExpenditure,
   );
   const investmentRaw = firstFiniteNumber(
+    financeData?.portfolioValue,
     dailyFinance.portfolioValue,
     dailyFinance.investments,
     dashboardData?.finance?.portfolioValue,
@@ -1274,6 +1280,8 @@ function Simulation() {
   const [githubStatsLoading, setGithubStatsLoading] = useState(false);
   const [leetcodeStats, setLeetcodeStats] = useState(null);
   const [leetcodeStatsLoading, setLeetcodeStatsLoading] = useState(false);
+  const [financeData, setFinanceData] = useState(null);
+  const [financeLoading, setFinanceLoading] = useState(false);
 
   // Form states for the modal input
   const [newLabel, setNewLabel] = useState('');
@@ -1287,7 +1295,7 @@ function Simulation() {
   const [analysis, setAnalysis] = useState(defaultAnalysis);
   const [inputError, setInputError] = useState('');
   const [analysisError, setAnalysisError] = useState('');
-  const isLoadingInputs = isDashboardLoading || dailyUpdate.loading || githubStatsLoading || leetcodeStatsLoading;
+  const isLoadingInputs = isDashboardLoading || dailyUpdate.loading || githubStatsLoading || leetcodeStatsLoading || financeLoading;
 
   const authHeaders = useMemo(() => {
     const token = localStorage.getItem('authToken');
@@ -1300,6 +1308,45 @@ function Simulation() {
       dispatch(fetchTodayDailyUpdate());
     }
   }, [dailyUpdate.loading, dailyUpdate.todayUpdate, dispatch]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) return undefined;
+
+    let cancelled = false;
+    const fetchFinanceData = () => {
+      setFinanceLoading(true);
+      axios.get(`${API_BASE_URL}/api/integrations/finance`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((response) => {
+          if (!cancelled && response.data?.success) {
+            setFinanceData(response.data.data);
+          }
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            setFinanceData(null);
+            console.warn('Simulation finance data fallback:', error.response?.data?.message || error.message);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setFinanceLoading(false);
+        });
+    };
+
+    fetchFinanceData();
+    window.addEventListener('upload-history-updated', fetchFinanceData);
+    window.addEventListener('dashboard-data-updated', fetchFinanceData);
+    window.addEventListener('daily-update-saved', fetchFinanceData);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('upload-history-updated', fetchFinanceData);
+      window.removeEventListener('dashboard-data-updated', fetchFinanceData);
+      window.removeEventListener('daily-update-saved', fetchFinanceData);
+    };
+  }, []);
 
   useEffect(() => {
     const profileUrl = careerIntegrations.leetcode?.profileUrl;
@@ -1367,8 +1414,9 @@ function Simulation() {
       healthIntegration,
       githubStats,
       leetcodeStats,
+      financeData,
     }),
-    [dashboardData, dailyUpdate.todayUpdate, healthIntegration, githubStats, leetcodeStats],
+    [dashboardData, dailyUpdate.todayUpdate, healthIntegration, githubStats, leetcodeStats, financeData],
   );
 
   const dynamicSimulationGroups = useMemo(
@@ -1470,6 +1518,7 @@ function Simulation() {
       dashboardScores,
       dashboardData,
       dailyUpdate,
+      financeData,
     });
 
     const controller = new AbortController();
@@ -1502,7 +1551,7 @@ function Simulation() {
       setCompletedSteps(processingSteps.length);
       setPhase('result');
     }
-  }, [allSimulationFields, authHeaders, currentValues, dailyUpdate, dashboardData, dashboardScores, values]);
+  }, [allSimulationFields, authHeaders, currentValues, dailyUpdate, dashboardData, dashboardScores, financeData, values]);
 
   useEffect(() => {
     if (phase !== 'result') return;

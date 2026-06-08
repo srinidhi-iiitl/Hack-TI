@@ -904,7 +904,14 @@ function DomainSelector({ current, onChange }) {
 function CompactHeatmap({ careerIntegrations }) {
   const leetcodeUrl = careerIntegrations.leetcode?.profileUrl || '';
   const githubUrl = careerIntegrations.github?.profileUrl || '';
-  const source = leetcodeUrl ? 'leetcode' : githubUrl ? 'github' : 'none';
+  const availableSources = useMemo(() => ([
+    githubUrl ? { id: 'github', label: 'GitHub', icon: GithubIcon } : null,
+    leetcodeUrl ? { id: 'leetcode', label: 'LeetCode', icon: Code2 } : null,
+  ].filter(Boolean)), [githubUrl, leetcodeUrl]);
+  const [selectedSource, setSelectedSource] = useState(() => (githubUrl ? 'github' : leetcodeUrl ? 'leetcode' : 'none'));
+  const source = availableSources.some((item) => item.id === selectedSource)
+    ? selectedSource
+    : availableSources[0]?.id || 'none';
   const [heatmap, setHeatmap] = useState(() => buildNeutralHeatmap());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -918,6 +925,12 @@ function CompactHeatmap({ careerIntegrations }) {
   const subtitle = source === 'none'
     ? 'Connect GitHub or LeetCode to view your coding activity.'
     : '';
+
+  useEffect(() => {
+    if (source !== selectedSource) {
+      setSelectedSource(source);
+    }
+  }, [source, selectedSource]);
 
   const loadActivity = async () => {
     setError('');
@@ -979,11 +992,32 @@ function CompactHeatmap({ careerIntegrations }) {
             <p className="mt-1 text-[10px] text-white/25">No Coding Activity Connected</p>
           )}
         </div>
-        {source !== 'none' && !error && (
-          <span className="text-[10px] font-bold text-[#4ade80] bg-[#4ade80]/10 border border-[#4ade80]/20 px-2 py-0.5 rounded-full">
-            {source === 'leetcode' ? 'LeetCode Live' : 'GitHub Live'}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {availableSources.length > 1 && (
+            <div className="flex rounded-full border border-white/10 bg-white/[0.03] p-1">
+              {availableSources.map(({ id, label, icon: Icon }) => {
+                const active = source === id;
+                return (
+                  <button key={id} type="button" onClick={() => setSelectedSource(id)}
+                    className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
+                      active
+                        ? 'bg-[#7b61ff]/20 text-white shadow-[0_0_18px_rgba(123,97,255,0.22)]'
+                        : 'text-white/35 hover:bg-white/5 hover:text-white/70'
+                    }`}
+                    aria-pressed={active}>
+                    <Icon className="h-3 w-3" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {source !== 'none' && !error && (
+            <span className="text-[10px] font-bold text-[#4ade80] bg-[#4ade80]/10 border border-[#4ade80]/20 px-2 py-0.5 rounded-full">
+              {source === 'leetcode' ? 'LeetCode Live' : 'GitHub Live'}
+            </span>
+          )}
+        </div>
       </div>
       <div className="overflow-x-auto pb-1">
         <div className="min-w-full" style={{ minWidth: `${weekCount * 13}px` }}>

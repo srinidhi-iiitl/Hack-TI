@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { getSettings, updateSettings } from '../services/voiceAssistantService';
 import { logoutUser } from '../features/auth/authThunks';
+import { loginSuccess } from '../features/auth/authSlice';
 import {
   disconnectCareerIntegration,
   fetchCareerIntegrations,
@@ -276,20 +277,61 @@ function Settings() {
     setDraft(c => ({ ...c, [name]: value }));
   };
 
+  const persistProfile = (nextProfile) => {
+    const safeProfile = { ...nextProfile };
+    delete safeProfile.password;
+    delete safeProfile.currentPassword;
+    delete safeProfile.confirmPassword;
+    const savedUser = { ...readJson('user', {}), ...safeProfile, password: '' };
+    localStorage.setItem('user', JSON.stringify(savedUser));
+    const token = localStorage.getItem('authToken');
+    if (token) dispatch(loginSuccess({ token, user: savedUser }));
+  };
+
   const saveProfile = async (keys) => {
-    const next = keys.reduce((u, k) => ({ ...u, [k]: typeof draft[k] === 'string' ? draft[k].trim() : draft[k] }), { ...profile });
-    if (keys.includes('password') && next.password) next.passwordSet = true;
-    localStorage.setItem('user', JSON.stringify({ ...readJson('user', {}), ...next }));
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      showToast('Please log in again to save changes');
+      return;
+    }
+
+    const headers = { Authorization: `Bearer ${token}` };
+
     try {
-      const token = localStorage.getItem('authToken');
-      if (token && !keys.includes('password')) {
-        await axios.put(`${API_BASE_URL}/api/auth/profile`, { email: next.email, phone: next.phone, dob: next.dob }, { headers: { Authorization: `Bearer ${token}` } });
+      if (keys.includes('password')) {
+        const oldPassword = String(draft.currentPassword || '');
+        const newPassword = String(draft.password || '');
+        const confirmPassword = String(draft.confirmPassword || '');
+
+        if (!oldPassword || !newPassword || !confirmPassword) {
+          showToast('Enter current password, new password, and confirmation');
+          return;
+        }
+
+        await axios.put(`${API_BASE_URL}/api/auth/change-password`, { oldPassword, newPassword, confirmPassword }, { headers });
+        const next = { ...profile, password: '', passwordSet: true };
+        persistProfile(next);
+        setProfile(next);
+        setDraft(next);
+        setEditing('');
+        showToast('Password updated');
+        return;
       }
-      setProfile(next); setDraft(next); setEditing('');
-      showToast(keys.includes('password') ? 'Password updated' : 'Changes saved');
-    } catch {
-      setProfile(next); setDraft(next); setEditing('');
-      showToast('Saved locally');
+
+      const next = keys.reduce((u, k) => ({ ...u, [k]: typeof draft[k] === 'string' ? draft[k].trim() : draft[k] }), { ...profile });
+      const response = await axios.put(
+        `${API_BASE_URL}/api/auth/profile`,
+        { email: next.email, phone: next.phone, dob: next.dob },
+        { headers },
+      );
+      const saved = normalizeBackendProfile(response.data?.data || next, {});
+      persistProfile(saved);
+      setProfile(saved);
+      setDraft(saved);
+      setEditing('');
+      showToast('Changes saved');
+    } catch (error) {
+      showToast(error?.response?.data?.message || 'Could not save changes');
     }
   };
 
@@ -403,7 +445,7 @@ function Settings() {
                   {editableFields.map(field => (
                     <EditableCard key={field.key} field={field}
                       displayValue={field.key === 'password' ? maskPassword(profile.passwordSet || profile.password) : profile[field.key]}
-                      onEdit={() => { setDraft(profile); setEditing(field.key); }}
+                      onEdit={() => { setDraft(field.key === 'password' ? { ...profile, currentPassword: '', password: '', confirmPassword: '' } : profile); setEditing(field.key); }}
                     />
                   ))}
                 </div>
@@ -537,6 +579,7 @@ function Settings() {
           field={editableFields.find((field) => field.key === editing)}
           currentValue={editing === 'password' ? maskPassword(profile.passwordSet || profile.password) : profile[editing]}
           value={draft[editing]}
+          draft={draft}
           onChange={handleChange}
           onCancel={() => { setDraft(profile); setEditing(''); }}
           onSave={() => saveProfile([editing])}
@@ -1065,10 +1108,13 @@ function EditableCard({ field, displayValue, onEdit }) {
   );
 }
 
-function EditProfileModal({ field, currentValue, value, onChange, onCancel, onSave }) {
+function EditProfileModal({ field, currentValue, value, draft = {}, onChange, onCancel, onSave }) {
   if (!field) return null;
   const Icon = field.icon;
-  const canSave = String(value || '').trim().length > 0;
+  const isPassword = field.key === 'password';
+  const canSave = isPassword
+    ? Boolean(draft.currentPassword && draft.password && draft.confirmPassword)
+    : String(value || '').trim().length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#02040a]/72 px-4 backdrop-blur-xl">
@@ -1090,29 +1136,73 @@ function EditProfileModal({ field, currentValue, value, onChange, onCancel, onSa
         </div>
 
         <div className="space-y-4">
-          <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-white/38">Current value</span>
-            <input
-              type="text"
-              value={currentValue || 'Not set'}
-              readOnly
-              className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 text-sm font-bold text-white/62 outline-none"
-            />
-          </label>
+          {isPassword ? (
+            <>
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-white/38">Current password</span>
+                <input
+                  name="currentPassword"
+                  type="password"
+                  value={draft.currentPassword || ''}
+                  onChange={onChange}
+                  placeholder="Enter current password"
+                  autoComplete="current-password"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-[#080d15] px-4 text-sm font-semibold text-white outline-none placeholder:text-white/25 focus:border-[#10c7a1]/55"
+                  autoFocus
+                />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-[#7df3cc]/70">New password</span>
+                <input
+                  name="password"
+                  type="password"
+                  value={draft.password || ''}
+                  onChange={onChange}
+                  placeholder="New password"
+                  autoComplete="new-password"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-[#080d15] px-4 text-sm font-semibold text-white outline-none placeholder:text-white/25 focus:border-[#10c7a1]/55"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-[#7df3cc]/70">Confirm new password</span>
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  value={draft.confirmPassword || ''}
+                  onChange={onChange}
+                  placeholder="Confirm new password"
+                  autoComplete="new-password"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-[#080d15] px-4 text-sm font-semibold text-white outline-none placeholder:text-white/25 focus:border-[#10c7a1]/55"
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-white/38">Current value</span>
+                <input
+                  type="text"
+                  value={currentValue || 'Not set'}
+                  readOnly
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 text-sm font-bold text-white/62 outline-none"
+                />
+              </label>
 
-          <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-[#7df3cc]/70">New value</span>
-            <input
-              name={field.key}
-              type={field.type}
-              value={value || ''}
-              onChange={onChange}
-              placeholder={field.placeholder}
-              autoComplete={field.key === 'password' ? 'new-password' : 'off'}
-              className="h-12 w-full rounded-xl border border-white/10 bg-[#080d15] px-4 text-sm font-semibold text-white outline-none placeholder:text-white/25 focus:border-[#10c7a1]/55"
-              autoFocus
-            />
-          </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-[#7df3cc]/70">New value</span>
+                <input
+                  name={field.key}
+                  type={field.type}
+                  value={value || ''}
+                  onChange={onChange}
+                  placeholder={field.placeholder}
+                  autoComplete="off"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-[#080d15] px-4 text-sm font-semibold text-white outline-none placeholder:text-white/25 focus:border-[#10c7a1]/55"
+                  autoFocus
+                />
+              </label>
+            </>
+          )}
         </div>
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -1169,3 +1259,4 @@ function StatusPill({ active, label }) {
 function maskPassword(password) { return password ? '........' : 'Not set'; }
 
 export default Settings;
+
