@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Zap, BrainCircuit, Activity, RefreshCw, BarChart3, ShieldAlert } from 'lucide-react';
+import { Loader2, Zap, BrainCircuit, Activity, RefreshCw, BarChart3, ShieldAlert, Play, Sparkles } from 'lucide-react';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import DocumentarySlides from '../components/DocumentarySlides';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const Intelligence = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [diagnosticData, setDiagnosticData] = useState(null);
+  const [isDocumentaryOpen, setIsDocumentaryOpen] = useState(false);
   const diagnosticsRequestInFlightRef = useRef(false);
   
 
@@ -103,6 +105,29 @@ const Intelligence = () => {
       </div>
 
       <div className="relative z-10 space-y-12">
+
+        {/* 2026 Personal Documentary Launcher Card */}
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d101d]/85 backdrop-blur-xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="absolute -right-10 -top-10 w-48 h-48 bg-pink-500/10 blur-3xl rounded-full pointer-events-none" />
+          <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-purple-500/10 blur-3xl rounded-full pointer-events-none" />
+          
+          <div className="space-y-2 relative z-10">
+            <span className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-pink-400">
+              <Sparkles className="h-4 w-4" /> Personal Documentary
+            </span>
+            <h3 className="text-2xl font-extrabold text-white tracking-tight">Your 2026 Life Review is Ready!</h3>
+            <p className="text-sm text-gray-400 max-w-xl">
+              Launch your documentary summarizing your 2026 life experiences and achievements.
+            </p>
+          </div>
+          
+          <button
+            onClick={() => setIsDocumentaryOpen(true)}
+            className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 font-extrabold text-sm text-white hover:opacity-90 hover:shadow-[0_0_25px_rgba(236,72,153,0.3)] transition-all cursor-pointer border border-white/10 shrink-0 flex items-center gap-2"
+          >
+            <Play className="h-4 w-4 fill-white" /> Launch My 2026 Documentary
+          </button>
+        </div>
 
         {/* Diagnostics Trigger / Loader / Results */}
         <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
@@ -295,6 +320,9 @@ const Intelligence = () => {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* 2026 Personal Documentary Modal */}
+      <DocumentarySlides isOpen={isDocumentaryOpen} onClose={() => setIsDocumentaryOpen(false)} />
     </div>
   );
 };

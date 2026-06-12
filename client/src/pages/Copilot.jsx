@@ -146,6 +146,14 @@ export default function Copilot() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
 
+  useEffect(() => {
+    const preset = localStorage.getItem('copilotPresetPrompt');
+    if (preset) {
+      setChatInput(preset);
+      localStorage.removeItem('copilotPresetPrompt');
+    }
+  }, []);
+
   // Fetch active goals for context
   useEffect(() => {
     const fetchGoals = async () => {
