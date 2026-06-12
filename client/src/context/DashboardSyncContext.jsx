@@ -33,8 +33,6 @@ export function DashboardSyncProvider({ children }) {
       const response = await axios.get(`${API_BASE_URL}/api/dashboard`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Cache-Control': 'no-cache',
-          Pragma: 'no-cache',
         },
         params: { _t: Date.now() },
       });

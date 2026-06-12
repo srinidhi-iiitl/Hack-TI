@@ -6,6 +6,7 @@ import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import DigitalTwinLogo from '../components/DigitalTwinLogo';
 import { loginSuccess } from '../features/auth/authSlice';
+import { loginWithGoogle } from '../features/auth/authThunks';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -119,6 +120,19 @@ function Signup() {
     }
   };
 
+  const handleGoogleSignup = async () => {
+    setIsLoading(true);
+    try {
+      await dispatch(loginWithGoogle()).unwrap();
+      toast.success('Google sign-in successful!');
+      navigate('/onboarding', { replace: true });
+    } catch (error) {
+      toast.error(typeof error === 'string' ? error : 'Unable to continue with Google.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#05070c] text-white">
       <Toaster position="top-right" toastOptions={{ style: { background: 'rgba(9, 12, 20, 0.92)', color: '#f3f4f6', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.09)' } }} />
@@ -215,7 +229,7 @@ function Signup() {
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
                 </div>
 
-                <motion.button whileHover={{ y: -1, backgroundColor: "rgba(255,255,255,0.08)" }} type="button" className="flex w-full items-center justify-center gap-3 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm font-semibold text-white/88 transition">
+                <motion.button whileHover={{ y: -1, backgroundColor: "rgba(255,255,255,0.08)" }} type="button" onClick={handleGoogleSignup} disabled={isLoading} className="flex w-full items-center justify-center gap-3 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm font-semibold text-white/88 transition disabled:opacity-60">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-black">G</span> Continue with Google
                 </motion.button>
 

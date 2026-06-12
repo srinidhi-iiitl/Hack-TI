@@ -35,7 +35,9 @@ const app = express();
 // ============================================
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+}));
 
 
 app.use(corsMiddleware);
@@ -50,7 +52,11 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 await connectDB();
 
 // Initialize Firebase Admin SDK
-initializeFirebase();
+try {
+  initializeFirebase();
+} catch (error) {
+  console.error('[Firebase Admin] Startup initialization skipped:', error.message);
+}
 
 
 app.get('/api/server-health', (req, res) => {

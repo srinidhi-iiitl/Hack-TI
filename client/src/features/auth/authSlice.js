@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { loginUser, restoreSession } from './authThunks';
+import { loginUser, loginWithGoogle, restoreSession } from './authThunks';
 
 const storedToken = localStorage.getItem('authToken');
 const storedUser = readStoredUser();
@@ -50,6 +50,21 @@ const authSlice = createSlice({
         state.loading = false;
       })
       .addCase(loginUser.rejected, (state) => {
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        state.loading = false;
+      })
+      .addCase(loginWithGoogle.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(loginWithGoogle.fulfilled, (state, action) => {
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.isAuthenticated = true;
+        state.loading = false;
+      })
+      .addCase(loginWithGoogle.rejected, (state) => {
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;

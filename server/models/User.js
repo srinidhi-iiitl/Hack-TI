@@ -27,15 +27,28 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email'],
     },
+    name: {
+      type: String,
+      trim: true,
+      maxlength: [120, 'Name cannot exceed 120 characters'],
+      default: '',
+    },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: function () {
+        return this.authProvider !== 'google';
+      },
       minlength: [6, 'Password must be at least 6 characters'],
       select: false, // Don't return password by default
+      default: undefined,
     },
 
     // Profile Information
     profilePhoto: {
+      type: String,
+      default: null,
+    },
+    photoURL: {
       type: String,
       default: null,
     },
@@ -142,8 +155,24 @@ const userSchema = new mongoose.Schema(
       select: false,
       default: null,
     },
+    passwordResetRequestedAt: {
+      type: Date,
+      select: false,
+      default: null,
+    },
+
+    authProvider: {
+      type: String,
+      enum: ['local', 'google', 'google+password'],
+      default: 'local',
+    },
 
     // Firebase ID (optional, for Firebase Authentication)
+    firebaseUid: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     firebaseUID: {
       type: String,
       unique: true,
@@ -185,7 +214,7 @@ const userSchema = new mongoose.Schema(
  */
 userSchema.pre('save', async function (next) {
   // Skip if password hasn't been modified
-  if (!this.isModified('password')) {
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
 

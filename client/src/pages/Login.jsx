@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios';
 import DigitalTwinLogo from '../components/DigitalTwinLogo';
-import { loginUser } from '../features/auth/authThunks';
+import { loginUser, loginWithGoogle } from '../features/auth/authThunks';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -117,10 +117,14 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeSignalIndex, setActiveSignalIndex] = useState(0);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotMode, setForgotMode] = useState('reset');
   const [forgotStep, setForgotStep] = useState('email');
   const [forgotForm, setForgotForm] = useState({ email: '', otp: '', password: '', confirmPassword: '' });
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState('');
+  const [googleAccountDialogOpen, setGoogleAccountDialogOpen] = useState(false);
+  const [googleAccountEmail, setGoogleAccountEmail] = useState('');
+  const [passwordCreatedOpen, setPasswordCreatedOpen] = useState(false);
   const { stats: signalStats, animatedStats } = useAnimatedSignalStats();
 
   useEffect(() => {
@@ -132,11 +136,18 @@ function Login() {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const openForgotModal = () => {
-    setForgotForm({ email: formData.email, otp: '', password: '', confirmPassword: '' });
+  const openForgotModal = (mode = 'reset', email = formData.email) => {
+    setForgotForm({ email, otp: '', password: '', confirmPassword: '' });
+    setForgotMode(mode);
     setForgotStep('email');
     setForgotMessage('');
+    setPasswordCreatedOpen(false);
     setForgotOpen(true);
+  };
+
+  const openPasswordSetupModal = () => {
+    setGoogleAccountDialogOpen(false);
+    openForgotModal('create', googleAccountEmail || formData.email);
   };
 
   const closeForgotModal = () => {
@@ -153,20 +164,26 @@ function Login() {
 
   const handleForgotEmailSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setForgotLoading(true);
     setForgotMessage('');
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/forgot-password`, {
+      const endpoint = forgotMode === 'create' ? 'send-password-otp' : 'forgot-password';
+      const response = await axios.post(`${API_BASE_URL}/api/auth/${endpoint}`, {
         email: forgotForm.email,
       });
       setForgotStep('reset');
       setForgotMessage(response.data?.message || 'OTP sent to your registered email.');
-      toast.success('OTP sent to your email.');
+      if (forgotMode !== 'create') {
+        toast.success('OTP sent to your email.');
+      }
     } catch (error) {
       const message = getForgotErrorMessage(error, "You don't have account with this mail");
       setForgotMessage(message);
-      toast.error(message);
+      if (forgotMode !== 'create') {
+        toast.error(message);
+      }
     } finally {
       setForgotLoading(false);
     }
@@ -174,23 +191,69 @@ function Login() {
 
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (!forgotForm.otp.trim()) {
+      if (forgotMode === 'create') setForgotMessage('OTP is required');
+      else toast.error('OTP is required');
+      return;
+    }
+    if (!forgotForm.password) {
+      if (forgotMode === 'create') setForgotMessage('New Password is required');
+      else toast.error('Password is required');
+      return;
+    }
+    if (!forgotForm.confirmPassword) {
+      if (forgotMode === 'create') setForgotMessage('Confirm Password is required');
+      else toast.error('Confirm password is required');
+      return;
+    }
+    if (forgotForm.password !== forgotForm.confirmPassword) {
+      if (forgotMode === 'create') setForgotMessage('Passwords must match');
+      else toast.error('Passwords do not match');
+      return;
+    }
+    if (forgotForm.password.length < 6) {
+      if (forgotMode === 'create') setForgotMessage('Password must be at least 6 characters');
+      else toast.error('Password must be at least 6 characters');
+      return;
+    }
+
     setForgotLoading(true);
     setForgotMessage('');
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/reset-password`, {
-        email: forgotForm.email,
-        otp: forgotForm.otp,
-        password: forgotForm.password,
-        confirmPassword: forgotForm.confirmPassword,
-      });
-      toast.success(response.data?.message || 'Password reset successfully.');
+      let response;
+
+      if (forgotMode === 'create') {
+        response = await axios.post(`${API_BASE_URL}/api/auth/create-password`, {
+          email: forgotForm.email,
+          otp: forgotForm.otp,
+          newPassword: forgotForm.password,
+          confirmPassword: forgotForm.confirmPassword,
+        });
+      } else {
+        response = await axios.post(`${API_BASE_URL}/api/auth/reset-password`, {
+          email: forgotForm.email,
+          otp: forgotForm.otp,
+          password: forgotForm.password,
+          confirmPassword: forgotForm.confirmPassword,
+        });
+      }
+      if (forgotMode !== 'create') {
+        toast.success(response.data?.message || 'Password reset successfully.');
+      }
       setFormData((current) => ({ ...current, email: forgotForm.email, password: '' }));
       setForgotOpen(false);
+      if (forgotMode === 'create') {
+        setPasswordCreatedOpen(true);
+        navigate('/login', { replace: true });
+      }
     } catch (error) {
       const message = getForgotErrorMessage(error, 'Invalid or expired OTP');
       setForgotMessage(message);
-      toast.error(message);
+      if (forgotMode !== 'create') {
+        toast.error(message);
+      }
     } finally {
       setForgotLoading(false);
     }
@@ -198,13 +261,35 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsLoading(true);
     try {
       await dispatch(loginUser(formData)).unwrap();
       toast.success('Login successful!');
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      toast.error(typeof error === 'string' ? error : 'Login failed.');
+      const code = typeof error === 'object' ? error?.code : undefined;
+      const message = typeof error === 'string' ? error : error?.message || 'Login failed.';
+      if (code === 'GOOGLE_ACCOUNT' || message.toLowerCase().includes('created with google')) {
+        setGoogleAccountEmail(error?.email || formData.email);
+        setGoogleAccountDialogOpen(true);
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      setGoogleAccountDialogOpen(false);
+      await dispatch(loginWithGoogle()).unwrap();
+      toast.success('Google sign-in successful!');
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      toast.error(typeof error === 'string' ? error : 'Unable to continue with Google.');
     } finally {
       setIsLoading(false);
     }
@@ -268,7 +353,7 @@ function Login() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-2xl">✨</div>
                 </div>
 
-                <form className="space-y-4" onSubmit={handleSubmit}>
+                <form className="space-y-4" onSubmit={handleSubmit} noValidate>
                   <label className="block space-y-2">
                     <span className="text-xs font-semibold uppercase tracking-[0.25em] text-white/48">Email address</span>
                     <input name="email" type="email" value={formData.email} onChange={handleChange} disabled={isLoading} className="w-full rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#7b61ff]/50 focus:bg-white/[0.08]" />
@@ -280,7 +365,7 @@ function Login() {
                   
                   <div className="flex items-center justify-between pt-2 text-sm text-white/65">
                     <label className="flex items-center gap-2 cursor-pointer hover:text-white transition"><input type="checkbox" className="h-4 w-4 rounded border-white/20 bg-white/10 text-[#7b61ff]" /> Remember me</label>
-                    <button type="button" onClick={openForgotModal} className="font-medium text-[#8fd9ff] transition hover:text-[#b7f7d4]">Forgot password?</button>
+                    <button type="button" onClick={() => openForgotModal('reset')} className="font-medium text-[#8fd9ff] transition hover:text-[#b7f7d4]">Forgot password?</button>
                   </div>
 
                   <motion.button whileHover={{ y: -2, scale: 1.01 }} whileTap={{ scale: 0.98 }} type="submit" disabled={isLoading} className="mt-2 w-full rounded-[1rem] bg-gradient-to-r from-[#1a2b4c] via-[#2a3f6a] to-[#1d463d] px-4 py-4 text-sm font-semibold text-white ring-1 ring-white/20 transition hover:ring-white/40">
@@ -294,7 +379,7 @@ function Login() {
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
                 </div>
 
-                <motion.button whileHover={{ y: -1, backgroundColor: "rgba(255,255,255,0.08)" }} type="button" className="flex w-full items-center justify-center gap-3 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm font-semibold text-white/88 transition">
+                <motion.button whileHover={{ y: -1, backgroundColor: "rgba(255,255,255,0.08)" }} type="button" onClick={handleGoogleLogin} disabled={isLoading} className="flex w-full items-center justify-center gap-3 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm font-semibold text-white/88 transition disabled:opacity-60">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-black">G</span> Continue with Google
                 </motion.button>
 
@@ -304,6 +389,62 @@ function Login() {
           </div>
         </div>
       </section>
+
+      <AnimatePresence>
+        {googleAccountDialogOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/62 px-4 backdrop-blur-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="google-account-title"
+              className="w-full max-w-md overflow-hidden rounded-[1.5rem] border border-white/12 bg-[#0a0e17] p-5 shadow-[0_28px_90px_-34px_rgba(0,0,0,0.92)] ring-1 ring-white/5 sm:p-6"
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            >
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#7df3cc]/75">Sign-in method</p>
+                  <h2 id="google-account-title" className="mt-2 text-2xl font-semibold tracking-tight text-white">Google Account Detected</h2>
+                  <p className="mt-2 text-sm leading-6 text-white/60">This account was originally created using Google Sign-In.</p>
+                  <p className="mt-2 text-sm leading-6 text-white/60">You can either continue using Google or create a password for email/password login.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGoogleAccountDialogOpen(false)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
+                  aria-label="Close Google account dialog"
+                >
+                  X
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setGoogleAccountDialogOpen(false)}
+                  className="w-full rounded-[1rem] bg-gradient-to-r from-[#1a2b4c] via-[#2a3f6a] to-[#1d463d] px-4 py-3 text-sm font-semibold text-white ring-1 ring-white/20 transition hover:ring-white/40 disabled:opacity-60"
+                >
+                  OK
+                </button>
+                <button
+                  type="button"
+                  onClick={openPasswordSetupModal}
+                  className="w-full rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition hover:bg-white/[0.08]"
+                >
+                  Generate Password
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {forgotOpen && (
@@ -327,11 +468,11 @@ function Login() {
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#7df3cc]/75">Account recovery</p>
                   <h2 id="forgot-password-title" className="mt-2 text-2xl font-semibold tracking-tight text-white">
-                    {forgotStep === 'email' ? 'Reset password' : 'Enter OTP'}
+                    {forgotMode === 'create' ? (forgotStep === 'email' ? 'Create password' : 'Enter OTP') : (forgotStep === 'email' ? 'Reset password' : 'Enter OTP')}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-white/60">
                     {forgotStep === 'email'
-                      ? 'Enter your registered email to receive a password reset OTP.'
+                      ? (forgotMode === 'create' ? `A verification code will be sent to: ${forgotForm.email}` : 'Enter your registered email to receive a password reset OTP.')
                       : 'Enter the OTP sent to your email and create a new password.'}
                   </p>
                 </div>
@@ -348,18 +489,22 @@ function Login() {
 
               {forgotStep === 'email' ? (
                 <form className="space-y-4" onSubmit={handleForgotEmailSubmit}>
-                  <label className="block space-y-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/48">Registered email</span>
-                    <input
-                      name="email"
-                      type="email"
-                      required
-                      value={forgotForm.email}
-                      onChange={handleForgotChange}
-                      disabled={forgotLoading}
-                      className="w-full rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#7b61ff]/50 focus:bg-white/[0.08] disabled:opacity-60"
-                    />
-                  </label>
+                  {forgotMode === 'create' ? (
+                    <p className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/75">{forgotForm.email}</p>
+                  ) : (
+                    <label className="block space-y-2">
+                      <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/48">Registered email</span>
+                      <input
+                        name="email"
+                        type="email"
+                        required
+                        value={forgotForm.email}
+                        onChange={handleForgotChange}
+                        disabled={forgotLoading}
+                        className="w-full rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#7b61ff]/50 focus:bg-white/[0.08] disabled:opacity-60"
+                      />
+                    </label>
+                  )}
 
                   {forgotMessage && <p className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/75">{forgotMessage}</p>}
 
@@ -416,13 +561,50 @@ function Login() {
                   {forgotMessage && <p className="rounded-[1rem] border border-[#10c7a1]/20 bg-[#10c7a1]/10 px-4 py-3 text-sm text-white/78">{forgotMessage}</p>}
 
                   <div className="flex gap-3 pt-1">
-                    <button type="button" onClick={() => setForgotStep('email')} disabled={forgotLoading} className="flex-1 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition hover:bg-white/[0.08] disabled:opacity-50">Back</button>
+                    <button type="button" onClick={closeForgotModal} disabled={forgotLoading} className="flex-1 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition hover:bg-white/[0.08] disabled:opacity-50">Cancel</button>
                     <button type="submit" disabled={forgotLoading} className="flex-1 rounded-[1rem] bg-gradient-to-r from-[#1a2b4c] via-[#2a3f6a] to-[#1d463d] px-4 py-3 text-sm font-semibold text-white ring-1 ring-white/20 transition hover:ring-white/40 disabled:opacity-60">
-                      {forgotLoading ? 'Updating...' : 'Update password'}
+                      {forgotLoading ? 'Updating...' : (forgotMode === 'create' ? 'Create password' : 'Update password')}
                     </button>
                   </div>
                 </form>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {passwordCreatedOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/62 px-4 backdrop-blur-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="password-created-title"
+              className="w-full max-w-md overflow-hidden rounded-[1.5rem] border border-white/12 bg-[#0a0e17] p-5 shadow-[0_28px_90px_-34px_rgba(0,0,0,0.92)] ring-1 ring-white/5 sm:p-6"
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#7df3cc]/75">Password ready</p>
+              <h2 id="password-created-title" className="mt-2 text-2xl font-semibold tracking-tight text-white">Password created successfully.</h2>
+              <p className="mt-3 text-sm leading-6 text-white/60">You can now log in using either:</p>
+              <div className="mt-3 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-6 text-white/75">
+                <p>Google Sign-In</p>
+                <p>Email and Password</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPasswordCreatedOpen(false)}
+                className="mt-5 w-full rounded-[1rem] bg-gradient-to-r from-[#1a2b4c] via-[#2a3f6a] to-[#1d463d] px-4 py-3 text-sm font-semibold text-white ring-1 ring-white/20 transition hover:ring-white/40"
+              >
+                OK
+              </button>
             </motion.div>
           </motion.div>
         )}
