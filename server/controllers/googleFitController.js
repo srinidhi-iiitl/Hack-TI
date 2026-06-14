@@ -74,10 +74,12 @@ export const callback = async (req, res) => {
     // Decode state
     let userId = '';
     let decodedOrigin = '';
+    let integrationLink = 'anjali_googlefit';
     try {
-      const decodedState = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+      const decodedState = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
       userId = decodedState.userId;
       decodedOrigin = decodedState.origin;
+      integrationLink = decodedState.integrationLink || integrationLink;
     } catch (err) {
       console.warn('[GoogleFitController] State decoding failed, falling back to raw state parameter:', err.message);
       userId = state;
@@ -91,8 +93,8 @@ export const callback = async (req, res) => {
 
     user.healthIntegration = user.healthIntegration || {};
     user.healthIntegration.connected = true;
-    user.healthIntegration.provider = 'anjali_googlefit';
-    user.healthIntegration.integrationLink = `googlefit:${userId}`;
+    user.healthIntegration.provider = integrationLink;
+    user.healthIntegration.integrationLink = integrationLink;
     user.healthIntegration.lastSync = new Date();
     user.healthIntegration.googleFit = user.healthIntegration.googleFit || {};
     user.healthIntegration.googleFit.accessToken = data.access_token;

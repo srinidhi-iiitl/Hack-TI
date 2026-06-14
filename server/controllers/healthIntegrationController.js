@@ -21,6 +21,8 @@ export const getHealthIntegration = async (req, res) => {
       data: {
         connected: Boolean(user.healthIntegration?.connected),
         provider: user.healthIntegration?.provider || '',
+        integrationLink: user.healthIntegration?.integrationLink || user.healthIntegration?.provider || '',
+        lastSync: user.healthIntegration?.lastSync || null,
       },
     });
   } catch (err) {
@@ -29,7 +31,7 @@ export const getHealthIntegration = async (req, res) => {
 };
 
 export const updateHealthIntegration = async (req, res) => {
-  const { integrationLink } = req.body;
+  const integrationLink = String(req.body?.integrationLink || '').trim();
   const userId = req.user.userId;
 
   try {
@@ -38,11 +40,11 @@ export const updateHealthIntegration = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (integrationLink === 'anjali_fitband') {
+    if (integrationLink.endsWith('_fitband')) {
       user.healthIntegration = {
         connected: true,
-        provider: 'anjali_fitband',
-        integrationLink: 'anjali_fitband',
+        provider: integrationLink,
+        integrationLink,
         lastSync: new Date(),
       };
       await user.save();
@@ -50,13 +52,13 @@ export const updateHealthIntegration = async (req, res) => {
         success: true,
         data: {
           connected: true,
-          provider: 'anjali_fitband',
+          provider: integrationLink,
+          integrationLink,
         },
       });
     }
 
-    if (integrationLink === 'anjali_googlefit') {
-      // Return the OAuth redirect URL
+    if (integrationLink.includes('googlefit')) {
       const queryOrigin = req.query.origin || '';
       const referrer = req.headers.referer || req.headers.referrer || '';
       let referrerOrigin = '';
@@ -69,7 +71,7 @@ export const updateHealthIntegration = async (req, res) => {
       }
 
       const origin = queryOrigin || referrerOrigin || 'http://localhost:5173';
-      const stateData = { userId, origin };
+      const stateData = { userId, origin, integrationLink };
       const stateBase64 = Buffer.from(JSON.stringify(stateData)).toString('base64url');
 
       const params = new URLSearchParams({
@@ -122,6 +124,7 @@ export const deleteHealthIntegration = async (req, res) => {
       data: {
         connected: false,
         provider: '',
+        integrationLink: '',
       },
     });
   } catch (err) {
@@ -131,11 +134,16 @@ export const deleteHealthIntegration = async (req, res) => {
 
 export const getHealthMetrics = async (req, res) => {
   try {
-    const metrics = MockFitbandService.getMetrics();
+    const user = await User.findById(req.user.userId);
+    const accountName = user?.healthIntegration?.provider
+      || user?.healthIntegration?.integrationLink
+      || 'anjali_fitband';
+    const metrics = MockFitbandService.getMetrics(accountName);
+
     return res.status(200).json({
       success: true,
       data: {
-        source: 'mock',
+        source: metrics.source,
         lastSync: new Date().toISOString(),
         metrics,
       },

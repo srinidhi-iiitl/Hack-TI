@@ -24,6 +24,7 @@ import {
   fetchHealthIntegration,
   saveHealthIntegration,
 } from '../features/healthIntegration/healthIntegrationSlice';
+import { getHealthProviderLabel } from '../services/healthIntegrationApi.js';
 import { useIntegrations } from '../context/IntegrationContext';
 import { fetchCareerIntegrationStats, getCareerProfileLabel } from '../utils/careerIntegrationStats';
 
@@ -822,7 +823,9 @@ function HealthIntegrationSettings({ integration, onSave, onDisconnect, onRefres
 
       {integration.connected && (
         <div className="mb-3 grid gap-2 text-sm text-white/62 md:grid-cols-3">
-          <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">Provider: Gargi Fitband</div>
+          <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
+            Provider: {getHealthProviderLabel(integration.integrationLink, integration.provider)}
+          </div>
           <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">Status: Synced</div>
           <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
             Last Sync: {integration.lastSync ? new Date(integration.lastSync).toLocaleString() : 'Not synced'}

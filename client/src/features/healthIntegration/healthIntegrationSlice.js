@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import healthApi from '../../services/healthIntegrationApi.js';
+import healthApi, { mapMetricsToDeviceData } from '../../services/healthIntegrationApi.js';
 
 const DEFAULT_PROVIDER = 'anjali_fitband';
 
@@ -21,25 +21,19 @@ export const fetchHealthIntegration = createAsyncThunk(
     try {
       const statusRes = await healthApi.getIntegrationStatus();
       const status = statusRes.data || {};
-      
+
       let deviceData = {};
       if (status.connected && status.provider) {
         const metricsRes = await healthApi.getMetrics(status.provider);
-        const rawMetrics = metricsRes.data?.metrics || {};
-        deviceData = {
-          ...rawMetrics,
-          avgHeartRate: rawMetrics.heartRate ?? null,
-          activeCalories: rawMetrics.calories ?? null,
-          hrv: rawMetrics.hrv ?? null
-        };
+        deviceData = mapMetricsToDeviceData(metricsRes.data?.metrics || {});
       }
-      
+
       return {
         connected: status.connected,
         provider: status.provider || DEFAULT_PROVIDER,
-        integrationLink: status.provider || '',
-        lastSync: new Date().toISOString(),
-        deviceData
+        integrationLink: status.integrationLink || status.provider || '',
+        lastSync: status.lastSync || new Date().toISOString(),
+        deviceData,
       };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Could not load health integration.');
@@ -51,37 +45,36 @@ export const saveHealthIntegration = createAsyncThunk(
   'healthIntegration/save',
   async ({ integrationLink }, { rejectWithValue }) => {
     try {
-      if (integrationLink === 'anjali_fitband') {
-        const connectRes = await healthApi.connectMockDevice();
+      const link = String(integrationLink || '').trim();
+
+      if (link.endsWith('_fitband')) {
+        const connectRes = await healthApi.connectMockDevice(link);
         const data = connectRes.data || {};
-        const metricsRes = await healthApi.getMetrics('anjali_fitband');
-        const rawMetrics = metricsRes.data?.metrics || {};
-        const deviceData = {
-          ...rawMetrics,
-          avgHeartRate: rawMetrics.heartRate ?? null,
-          activeCalories: rawMetrics.calories ?? null,
-          hrv: rawMetrics.hrv ?? null
-        };
+        const metricsRes = await healthApi.getMetrics(link);
+        const deviceData = mapMetricsToDeviceData(metricsRes.data?.metrics || {});
         return {
           connected: data.connected,
-          provider: data.provider,
-          integrationLink: data.provider,
+          provider: data.provider || link,
+          integrationLink: data.integrationLink || link,
           lastSync: new Date().toISOString(),
-          deviceData
+          deviceData,
         };
-      } else if (integrationLink === 'anjali_googlefit') {
-        const connectRes = await healthApi.connectGoogleFit();
+      }
+
+      if (link.includes('googlefit')) {
+        const connectRes = await healthApi.connectGoogleFit(link);
         if (connectRes.url) {
           window.location.href = connectRes.url;
         }
         return {
           connected: false,
-          provider: 'anjali_googlefit',
-          integrationLink: 'anjali_googlefit',
+          provider: link,
+          integrationLink: link,
           lastSync: null,
-          deviceData: {}
+          deviceData: {},
         };
       }
+
       return rejectWithValue('Invalid integration link.');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Could not save health integration.');

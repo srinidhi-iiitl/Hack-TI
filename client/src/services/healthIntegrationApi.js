@@ -12,21 +12,52 @@ const getHeaders = () => {
   };
 };
 
-export const connectGoogleFit = async () => {
+export const isFitbandAccount = (provider) => String(provider || '').endsWith('_fitband');
+export const isGoogleFitAccount = (provider) => String(provider || '').includes('googlefit');
+
+export const getHealthProviderLabel = (accountName = '', fallbackProvider = '') => {
+  const name = String(accountName || fallbackProvider || '').trim().toLowerCase();
+  if (!name) return fallbackProvider || 'Unknown';
+  if (name.includes('googlefit')) return 'Google Fit';
+  if (name.includes('fitbit')) return 'Fitbit';
+  if (name === 'gargi_fitband') return 'Gargi Fitband';
+  if (name === 'anjali_fitband') return 'Anjali Fitband';
+  return fallbackProvider || accountName;
+};
+
+export const mapMetricsToDeviceData = (rawMetrics = {}) => {
+  const device = rawMetrics.device || {};
+  return {
+    ...rawMetrics,
+    steps: rawMetrics.steps ?? null,
+    sleepHours: rawMetrics.sleepHours ?? null,
+    hrv: rawMetrics.hrv ?? null,
+    restingHeartRate: rawMetrics.restingHeartRate ?? null,
+    distanceKm: rawMetrics.distanceKm ?? null,
+    avgHeartRate: rawMetrics.avgHeartRate ?? rawMetrics.heartRate ?? null,
+    activeCalories: rawMetrics.activeCalories ?? rawMetrics.calories ?? null,
+    deviceName: device.name ?? rawMetrics.deviceName ?? null,
+    deviceModel: device.model ?? rawMetrics.deviceModel ?? null,
+    firmware: device.firmware ?? rawMetrics.firmware ?? null,
+    battery: device.battery ?? rawMetrics.battery ?? null,
+  };
+};
+
+export const connectGoogleFit = async (integrationLink = 'anjali_googlefit') => {
   console.log('[1] OAuth Start - connectGoogleFit called');
   const response = await axios.post(
     `${API_BASE_URL}/api/health/integration`,
-    { integrationLink: 'anjali_googlefit' },
+    { integrationLink },
     getHeaders()
   );
   return response.data;
 };
 
-export const connectMockDevice = async () => {
-  console.log('[Mock Fitband] connectMockDevice called');
+export const connectMockDevice = async (integrationLink) => {
+  console.log('[Mock Fitband] connectMockDevice called for', integrationLink);
   const response = await axios.post(
     `${API_BASE_URL}/api/health/integration`,
-    { integrationLink: 'anjali_fitband' },
+    { integrationLink },
     getHeaders()
   );
   return response.data;
@@ -38,17 +69,17 @@ export const getIntegrationStatus = async () => {
 };
 
 export const getMetrics = async (provider) => {
-  if (provider === 'anjali_googlefit') {
+  if (isGoogleFitAccount(provider)) {
     console.log('[Google Fit] getMetrics called for Google Fit');
     const response = await axios.get(`${API_BASE_URL}/api/health/google/live`, getHeaders());
     return response.data;
-  } else if (provider === 'anjali_fitband') {
-    console.log('[Mock Fitband] getMetrics called for Mock Device');
+  }
+  if (isFitbandAccount(provider)) {
+    console.log('[Mock Fitband] getMetrics called for', provider);
     const response = await axios.get(`${API_BASE_URL}/api/health/integration/metrics`, getHeaders());
     return response.data;
-  } else {
-    throw new Error(`Unsupported health provider: ${provider}`);
   }
+  throw new Error(`Unsupported health provider: ${provider}`);
 };
 
 export const disconnect = async () => {
@@ -72,4 +103,8 @@ export default {
   getMetrics,
   disconnect,
   fetchWeatherAdvice,
+  getHealthProviderLabel,
+  mapMetricsToDeviceData,
+  isFitbandAccount,
+  isGoogleFitAccount,
 };
