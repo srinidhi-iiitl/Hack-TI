@@ -61,6 +61,8 @@ axios.interceptors.response.use(
 );
 
 import ErrorBoundary from './components/ErrorBoundary';
+import { LanguageProvider } from './context/languageContext.js';
+import PageTranslationHost from './components/PageTranslationHost.jsx';
 
 function App() {
   return (
@@ -68,7 +70,9 @@ function App() {
     <GamificationProvider>
       <IntegrationProvider>
         <DashboardSyncProvider>
+          <LanguageProvider>
           <BrowserRouter>
+        <PageTranslationHost />
         <Routes>
           <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -99,6 +103,7 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+          </LanguageProvider>
     
       <ToastOverlay />
         </DashboardSyncProvider>

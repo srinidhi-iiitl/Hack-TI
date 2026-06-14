@@ -16,6 +16,7 @@ import { useGamification } from '../context/GamificationContext';
 import { useIntegrations } from '../context/IntegrationContext';
 import { useDashboardSync } from '../context/DashboardSyncContext';
 import useNotificationCount from '../hooks/useNotificationCount';
+import LanguageSelector from '../components/LanguageSelector';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -504,6 +505,7 @@ function DashboardHeader({ today, firstName, onSearchClick, onNotificationClick 
         </button>
       </div>
       <div className="ml-4 flex items-center gap-2.5">
+        <LanguageSelector compact />
         <div className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/55 sm:flex">
           <CalendarDays className="h-3.5 w-3.5 text-[#c8a84b]" />
           {today}

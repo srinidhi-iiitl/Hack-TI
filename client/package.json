@@ -13,9 +13,7 @@
     "@reduxjs/toolkit": "^2.12.0",
     "axios": "^1.16.1",
     "clsx": "^2.1.1",
-
     "face-api.js": "^0.22.2",
-
     "firebase": "^12.14.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",
@@ -30,7 +28,8 @@
     "recharts": "^3.8.1",
     "regenerator-runtime": "^0.14.1",
     "socket.io-client": "^4.8.3",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "translate-google": "^1.5.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
