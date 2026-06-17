@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Mic, MicOff, Rocket, Send, Volume2, X, Zap } from 'lucide-react';
 import { useTwinAssistant } from './twinAssistantContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const stateConfig = {
   disabled: {
@@ -72,16 +73,21 @@ const voiceStatusText = {
 
 const busyStates = new Set(['processing', 'executing', 'responding', 'speaking']);
 
-function getReadinessState(assistantState, voiceStatus) {
+function getReadinessState(assistantState, voiceStatus, theme) {
+  const isLight = theme === 'light';
+
   if (assistantState === 'listening' && voiceStatus === 'listening') {
     return {
       title: 'Speak now',
       detail: 'Mic is active and waiting for your command.',
       icon: Mic,
-      tone: 'border-[#10c7a1]/35 bg-[#071d19]/95 text-[#7df3cc] shadow-[0_18px_45px_-24px_rgba(16,199,161,0.95)]',
+      tone: isLight
+        ? 'border-slate-200 bg-white text-slate-900 shadow-lg'
+        : 'border-[#10c7a1]/35 bg-[#071d19]/95 text-[#7df3cc] shadow-[0_18px_45px_-24px_rgba(16,199,161,0.95)]',
       iconTone: 'bg-[#10c7a1] text-white',
       pulseTone: 'bg-[#10c7a1]',
       showWave: true,
+      detailClass: isLight ? 'text-slate-600' : 'text-white/58',
     };
   }
 
@@ -98,10 +104,13 @@ function getReadinessState(assistantState, voiceStatus) {
       title,
       detail,
       icon: stateConfig[assistantState]?.icon || Zap,
-      tone: 'border-[#fb923c]/35 bg-[#24150b]/95 text-[#fed7aa] shadow-[0_18px_45px_-24px_rgba(251,146,60,0.8)]',
+      tone: isLight
+        ? 'border-slate-200 bg-white text-slate-900 shadow-lg'
+        : 'border-[#fb923c]/35 bg-[#24150b]/95 text-[#fed7aa] shadow-[0_18px_45px_-24px_rgba(251,146,60,0.8)]',
       iconTone: 'bg-[#ea580c] text-white',
       pulseTone: 'bg-[#fb923c]',
       showWave: false,
+      detailClass: isLight ? 'text-slate-600' : 'text-white/58',
     };
   }
 
@@ -110,10 +119,13 @@ function getReadinessState(assistantState, voiceStatus) {
       title: 'Wait',
       detail: 'Connecting microphone...',
       icon: CheckCircle2,
-      tone: 'border-[#60a5fa]/30 bg-[#081527]/95 text-[#bfdbfe] shadow-[0_18px_45px_-24px_rgba(96,165,250,0.75)]',
+      tone: isLight
+        ? 'border-slate-200 bg-white text-slate-900 shadow-lg'
+        : 'border-[#60a5fa]/30 bg-[#081527]/95 text-[#bfdbfe] shadow-[0_18px_45px_-24px_rgba(96,165,250,0.75)]',
       iconTone: 'bg-[#2563eb] text-white',
       pulseTone: 'bg-[#60a5fa]',
       showWave: false,
+      detailClass: isLight ? 'text-slate-600' : 'text-white/58',
     };
   }
 
@@ -121,14 +133,18 @@ function getReadinessState(assistantState, voiceStatus) {
     title: 'Not listening',
     detail: voiceStatus === 'error' ? 'Voice connection failed. Retry before speaking.' : 'Enable voice or wait for connection.',
     icon: MicOff,
-    tone: 'border-white/12 bg-[#121822]/95 text-white/70 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.8)]',
+    tone: isLight
+      ? 'border-slate-200 bg-white text-slate-900 shadow-lg'
+      : 'border-white/12 bg-[#121822]/95 text-white/70 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.8)]',
     iconTone: 'bg-white/10 text-white/70',
     pulseTone: 'bg-white/40',
     showWave: false,
+    detailClass: isLight ? 'text-slate-600' : 'text-white/58',
   };
 }
 
 export default function TwinAssistantButton() {
+  const { theme } = useTheme();
   const assistant = useTwinAssistant();
   const [typedCommand, setTypedCommand] = useState('');
   const latestMessageRef = useRef(null);
@@ -148,7 +164,7 @@ export default function TwinAssistantButton() {
   const config = stateConfig[assistantState] || stateConfig.disabled;
   const displayLabel = config.label;
   const Icon = config.icon;
-  const readiness = getReadinessState(assistantState, voiceStatus);
+  const readiness = getReadinessState(assistantState, voiceStatus, theme);
   const ReadinessIcon = readiness.icon;
   const canSpeakNow = assistantState === 'listening' && voiceStatus === 'listening';
 
@@ -170,11 +186,19 @@ export default function TwinAssistantButton() {
   return (
     <div className="fixed bottom-6 right-6 z-[70] flex flex-col items-end gap-3">
       {panelOpen && (
-        <div className="w-[min(24rem,calc(100vw-3rem))] rounded-2xl border border-white/10 bg-[#080d15]/95 p-4 text-white shadow-[0_24px_70px_-28px_rgba(0,0,0,0.9)] backdrop-blur-xl">
+        <div className={`w-[min(24rem,calc(100vw-3rem))] rounded-2xl border p-4 shadow-xl backdrop-blur-xl ${
+          theme === 'light'
+            ? 'border-slate-200 bg-white text-slate-900 shadow-xl'
+            : 'border-white/10 bg-[#080d15]/95 text-white shadow-[0_24px_70px_-28px_rgba(0,0,0,0.9)]'
+        }`}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#7df3cc]/70">Twin Assistant</p>
-              <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white/56">
+              <p className={`text-xs font-black uppercase tracking-[0.22em] ${
+                theme === 'light' ? 'text-slate-900' : 'text-[#7df3cc]/70'
+              }`}>Twin Assistant</p>
+              <div className={`mt-1 flex items-center gap-2 text-sm font-semibold ${
+                theme === 'light' ? 'text-slate-700' : 'text-white/56'
+              }`}>
                 <span className="relative flex h-2.5 w-2.5">
                   {canSpeakNow && (
                     <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${config.dotClass} opacity-75`} />
@@ -183,12 +207,18 @@ export default function TwinAssistantButton() {
                 </span>
                 <span>{displayLabel}</span>
               </div>
-              <p className="mt-1 text-xs font-semibold text-white/38">{voiceStatusText[voiceStatus] || voiceStatusText.offline}</p>
+              <p className={`mt-1 text-xs font-semibold ${
+                theme === 'light' ? 'text-slate-500' : 'text-white/38'
+              }`}>{voiceStatusText[voiceStatus] || voiceStatusText.offline}</p>
             </div>
             <button
               type="button"
               onClick={() => setPanelOpen(false)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.055] text-white/62 transition hover:bg-white/10 hover:text-white"
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${
+                theme === 'light'
+                  ? 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                  : 'border-white/10 bg-white/[0.055] text-white/62 hover:bg-white/10 hover:text-white'
+              }`}
               aria-label="Close Twin Assistant panel"
             >
               <X className="h-4 w-4" />
@@ -198,9 +228,15 @@ export default function TwinAssistantButton() {
           <div className="space-y-3 text-sm">
             <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
               {messages.length === 0 ? (
-                <div className="rounded-xl border border-white/10 bg-white/[0.045] p-3">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/36">Assistant</p>
-                  <p className="mt-1 text-white/84">Speak a command like "Open dashboard" or "Show my health score."</p>
+                <div className={`rounded-xl border p-3 ${
+                  theme === 'light'
+                    ? 'border-slate-200 bg-white'
+                    : 'border-white/10 bg-white/[0.045]'
+                }`}>
+                  <p className={`text-xs font-bold uppercase tracking-[0.18em] ${
+                    theme === 'light' ? 'text-slate-500' : 'text-white/36'
+                  }`}>Assistant</p>
+                  <p className={`mt-1 ${theme === 'light' ? 'text-slate-700' : 'text-white/84'}`}>Speak a command like "Open dashboard" or "Show my health score."</p>
                 </div>
               ) : (
                 messages.map((message, index) => (
@@ -212,17 +248,23 @@ export default function TwinAssistantButton() {
                     <div
                       className={`max-w-[82%] rounded-2xl border px-3.5 py-3 ${
                         message.role === 'assistant'
-                          ? 'rounded-bl-md border-[#10c7a1]/20 bg-[#10c7a1]/10 text-left'
-                          : 'rounded-br-md border-[#7b61ff]/25 bg-[#7b61ff]/20 text-right'
+                          ? theme === 'light'
+                            ? 'rounded-bl-md border-[#10c7a1]/30 bg-[#10c7a1]/10 text-left text-slate-800'
+                            : 'rounded-bl-md border-[#10c7a1]/20 bg-[#10c7a1]/10 text-left'
+                          : theme === 'light'
+                            ? 'rounded-br-md border-[#7b61ff]/30 bg-[#7b61ff]/10 text-right text-slate-800'
+                            : 'rounded-br-md border-[#7b61ff]/25 bg-[#7b61ff]/20 text-right'
                       }`}
                     >
                       <p className={`text-xs font-bold uppercase tracking-[0.18em] ${
-                        message.role === 'assistant' ? 'text-[#7df3cc]/70' : 'text-[#c7bdff]/80'
+                        message.role === 'assistant'
+                          ? theme === 'light' ? 'text-[#0f9f80]' : 'text-[#7df3cc]/70'
+                          : theme === 'light' ? 'text-[#5e3aff]' : 'text-[#c7bdff]/80'
                       }`}
                       >
                         {message.role === 'assistant' ? 'Assistant' : 'You'}
                       </p>
-                      <p className="mt-1 break-words text-white/84">{message.text}</p>
+                      <p className={`mt-1 break-words ${theme === 'light' ? 'text-slate-700' : 'text-white/84'}`}>{message.text}</p>
                     </div>
                   </div>
                 ))
@@ -230,15 +272,19 @@ export default function TwinAssistantButton() {
               <div ref={messages.length === 0 ? latestMessageRef : null} />
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.045] p-3">
+            <div className={`rounded-xl border p-3 ${
+              theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/10 bg-white/[0.045]'
+            }`}>
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/36">Live</p>
-                  <p className="mt-1 min-h-5 text-white/84">{transcript || assistantMessage || config.statusText}</p>
-                  <p className="mt-2 text-xs leading-5 text-white/48">
-                    Heard: <span className="text-white/78">{transcript ? `"${transcript}"` : 'Waiting for speech...'}</span>
+                  <p className={`text-xs font-bold uppercase tracking-[0.18em] ${
+                    theme === 'light' ? 'text-slate-500' : 'text-white/36'
+                  }`}>Live</p>
+                  <p className={`mt-1 min-h-5 ${theme === 'light' ? 'text-slate-700' : 'text-white/84'}`}>{transcript || assistantMessage || config.statusText}</p>
+                  <p className={`mt-2 text-xs leading-5 ${theme === 'light' ? 'text-slate-500' : 'text-white/48'}`}>
+                    Heard: <span className={theme === 'light' ? 'text-slate-700 font-medium' : 'text-white/78'}>{transcript ? `"${transcript}"` : 'Waiting for speech...'}</span>
                   </p>
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/32">
+                  <p className={`mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${theme === 'light' ? 'text-slate-400' : 'text-white/32'}`}>
                     {voiceStatusText[voiceStatus] || voiceStatusText.offline}
                   </p>
                 </div>
@@ -249,7 +295,11 @@ export default function TwinAssistantButton() {
                 <button
                   type="button"
                   onClick={retryConnection}
-                  className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-[#10c7a1]/25 bg-[#10c7a1]/12 px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#7df3cc] transition hover:bg-[#10c7a1]/20"
+                  className={`mt-3 inline-flex w-full items-center justify-center rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-[0.14em] transition ${
+                    theme === 'light'
+                      ? 'border-[#10c7a1]/30 bg-[#10c7a1]/10 text-[#0f9f80] hover:bg-[#10c7a1]/15'
+                      : 'border-[#10c7a1]/25 bg-[#10c7a1]/12 text-[#7df3cc] hover:bg-[#10c7a1]/20'
+                  }`}
                 >
                   Retry Connection
                 </button>
@@ -262,11 +312,19 @@ export default function TwinAssistantButton() {
                 value={typedCommand}
                 onChange={(event) => setTypedCommand(event.target.value)}
                 placeholder="Type a command..."
-                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-white/32 focus:border-[#10c7a1]/45 focus:bg-white/[0.07]"
+                className={`min-w-0 flex-1 rounded-xl border px-3 py-2.5 text-sm outline-none transition ${
+                  theme === 'light'
+                    ? 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#10c7a1]'
+                    : 'border-white/10 bg-white/[0.045] text-white placeholder:text-white/32 focus:border-[#10c7a1]/45 focus:bg-white/[0.07]'
+                }`}
               />
               <button
                 type="submit"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#10c7a1]/25 bg-[#10c7a1]/15 text-[#7df3cc] transition hover:bg-[#10c7a1]/25"
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border transition ${
+                  theme === 'light'
+                    ? 'border-[#10c7a1]/30 bg-[#10c7a1]/10 text-[#0f9f80] hover:bg-[#10c7a1]/15'
+                    : 'border-[#10c7a1]/25 bg-[#10c7a1]/15 text-[#7df3cc] hover:bg-[#10c7a1]/25'
+                }`}
                 aria-label="Send Twin Assistant command"
               >
                 <Send className="h-4 w-4" />
@@ -286,7 +344,7 @@ export default function TwinAssistantButton() {
           </span>
           <div className="min-w-0">
             <p className="text-sm font-black uppercase tracking-[0.16em]">{readiness.title}</p>
-            <p className="mt-0.5 text-xs font-semibold text-white/58">{readiness.detail}</p>
+            <p className={`mt-0.5 text-xs font-semibold ${readiness.detailClass}`}>{readiness.detail}</p>
           </div>
         </div>
         {readiness.showWave && <Waveform compact />}
