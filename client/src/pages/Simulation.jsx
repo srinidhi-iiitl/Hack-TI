@@ -22,6 +22,7 @@ import {
 import { useDashboardSync } from '../context/DashboardSyncContext';
 import { fetchTodayDailyUpdate } from '../features/dailyUpdate/dailyUpdateThunks';
 import { fetchCareerIntegrationStats } from '../utils/careerIntegrationStats';
+import { useTheme } from '../context/ThemeContext';
 
 const simulationGroups = [
   {
@@ -64,6 +65,42 @@ const simulationGroups = [
     ],
   },
 ];
+
+const groupAccents = {
+  health: {
+    border: {
+      light: 'border-[#10c7a1]/30 bg-[#10c7a1]/5',
+      dark: 'border-[#10c7a1]/25 bg-[#10c7a1]/10',
+    },
+    text: {
+      light: 'text-[#0e9f80]',
+      dark: 'text-[#7df3cc]',
+    },
+    slider: 'accent-[#10c7a1]',
+  },
+  finance: {
+    border: {
+      light: 'border-[#c8a84b]/30 bg-[#c8a84b]/5',
+      dark: 'border-[#c8a84b]/25 bg-[#c8a84b]/10',
+    },
+    text: {
+      light: 'text-[#a2822a]',
+      dark: 'text-[#ffe08a]',
+    },
+    slider: 'accent-[#c8a84b]',
+  },
+  career: {
+    border: {
+      light: 'border-[#7b61ff]/30 bg-[#7b61ff]/5',
+      dark: 'border-[#7b61ff]/25 bg-[#7b61ff]/10',
+    },
+    text: {
+      light: 'text-[#5e3aff]',
+      dark: 'text-[#d5c9ff]',
+    },
+    slider: 'accent-[#7b61ff]',
+  },
+};
 
 const resultCards = [
   {
@@ -1265,6 +1302,7 @@ function buildSimulationGroupsWithCurrent(baseGroups, currentValues, leetcodeCon
 }
 
 function Simulation() {
+  const { theme } = useTheme();
   const location = useLocation();
   const dispatch = useDispatch();
   const { dashboardData, isLoading: isDashboardLoading } = useDashboardSync();
@@ -1597,11 +1635,15 @@ function Simulation() {
     <PageShell>
       <div className="mx-auto max-w-7xl space-y-6">
         <HeroPanel eyebrow="Digital Twin Simulator" title="Build Simulation" icon={Brain}>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">
+          <p className={`mt-3 max-w-2xl text-sm leading-6 ${
+            theme === 'light' ? 'text-slate-700' : 'text-white/60'
+          }`}>
             Adjust future inputs. Watch the twin calculate before and after impact.
           </p>
           {(isLoadingInputs || inputError) && (
-            <p className="mt-3 text-sm font-semibold text-[#7df3cc]/80">
+            <p className={`mt-3 text-sm font-semibold ${
+              theme === 'light' ? 'text-[#0e9f80]' : 'text-[#7df3cc]/80'
+            }`}>
               {isLoadingInputs ? 'Loading your current twin inputs...' : inputError}
             </p>
           )}
@@ -1634,7 +1676,7 @@ function Simulation() {
             type="button"
             onClick={startSimulation}
             disabled={isAiRequestLoading || isLoadingInputs}
-            className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#ff7a00] via-[#ff007f] to-[#7b61ff] px-7 py-4 text-sm font-black text-white shadow-[0_20px_50px_-25px_rgba(255,0,127,0.9)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+            className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#ff7a00] via-[#ff007f] to-[#7b61ff] px-7 py-4 text-sm font-black text-white shadow-[0_20px_50px_-25px_rgba(255,0,127,0.9)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 cursor-pointer"
           >
             <Sparkles className="h-5 w-5" />
             {isAiRequestLoading ? 'Running Simulation...' : 'Start Simulation'}
@@ -1645,15 +1687,25 @@ function Simulation() {
       {/* Dynamic Creation Modal popup wrapper */}
       {modalGroup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#0b111a] p-6 text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className={`w-full max-w-md overflow-hidden rounded-3xl border p-6 shadow-2xl ${
+            theme === 'light'
+              ? 'border-slate-200 bg-white text-slate-900 shadow-slate-200/50'
+              : 'border-white/10 bg-[#0b111a] text-white shadow-2xl'
+          }`}>
+            <div className={`flex items-center justify-between border-b pb-4 ${
+              theme === 'light' ? 'border-slate-200' : 'border-white/10'
+            }`}>
               <h4 className="text-xl font-black capitalize tracking-tight">
                 Add Custom {modalGroup} Metric
               </h4>
               <button
                 type="button"
                 onClick={() => setModalGroup(null)}
-                className="rounded-lg p-1 text-white/40 hover:bg-white/10 hover:text-white"
+                className={`rounded-lg p-1 transition-colors ${
+                  theme === 'light'
+                    ? 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                    : 'text-white/40 hover:bg-white/10 hover:text-white'
+                }`}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1661,47 +1713,71 @@ function Simulation() {
 
             <form onSubmit={handleSaveCustomInput} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Metric Name</label>
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1 ${
+                  theme === 'light' ? 'text-slate-600' : 'text-white/50'
+                }`}>Metric Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g., Deep Sleep, Net Worth, Side Hustle"
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none focus:border-white/30"
+                  className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-colors ${
+                    theme === 'light'
+                      ? 'border-slate-200 bg-slate-50 text-slate-900 focus:border-slate-400'
+                      : 'border-white/10 bg-white/5 text-white focus:border-white/30'
+                  }`}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Unit (Optional)</label>
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1 ${
+                  theme === 'light' ? 'text-slate-600' : 'text-white/50'
+                }`}>Unit (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g., %, bpm, hrs, count"
                   value={newUnit}
                   onChange={(e) => setNewUnit(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none focus:border-white/30"
+                  className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-colors ${
+                    theme === 'light'
+                      ? 'border-slate-200 bg-slate-50 text-slate-900 focus:border-slate-400'
+                      : 'border-white/10 bg-white/5 text-white focus:border-white/30'
+                  }`}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Current Value</label>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1 ${
+                    theme === 'light' ? 'text-slate-600' : 'text-white/50'
+                  }`}>Current Value</label>
                   <input
                     type="number"
                     required
                     placeholder="0"
                     value={newCurrent}
                     onChange={(e) => setNewCurrent(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none focus:border-white/30"
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-colors ${
+                      theme === 'light'
+                        ? 'border-slate-200 bg-slate-50 text-slate-900 focus:border-slate-400'
+                        : 'border-white/10 bg-white/5 text-white focus:border-white/30'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-white/50 mb-1">Simulated Value</label>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1 ${
+                    theme === 'light' ? 'text-slate-600' : 'text-white/50'
+                  }`}>Simulated Value</label>
                   <input
                     type="number"
                     required
                     placeholder="0"
                     value={newSimulated}
                     onChange={(e) => setNewSimulated(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none focus:border-white/30"
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-colors ${
+                      theme === 'light'
+                        ? 'border-slate-200 bg-slate-50 text-slate-900 focus:border-slate-400'
+                        : 'border-white/10 bg-white/5 text-white focus:border-white/30'
+                    }`}
                   />
                 </div>
               </div>
@@ -1710,13 +1786,17 @@ function Simulation() {
                 <button
                   type="button"
                   onClick={() => setModalGroup(null)}
-                  className="w-full rounded-xl bg-white/5 py-3 text-sm font-bold text-white/70 hover:bg-white/10"
+                  className={`w-full rounded-xl py-3 text-sm font-bold transition-colors ${
+                    theme === 'light'
+                      ? 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 border border-slate-200'
+                      : 'bg-white/5 text-white/70 hover:bg-white/10'
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-[#ff7a00] to-[#ff007f] py-3 text-sm font-black text-white hover:opacity-90"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#ff7a00] to-[#ff007f] py-3 text-sm font-black text-white hover:opacity-90 cursor-pointer"
                 >
                   Add Metric
                 </button>
@@ -1730,8 +1810,13 @@ function Simulation() {
 }
 
 function PageShell({ children }) {
+  const { theme } = useTheme();
   return (
-    <div className="min-h-[calc(100vh-112px)] bg-[#05070d] px-4 py-6 text-white sm:px-6 lg:px-8">
+    <div className={`min-h-[calc(100vh-112px)] px-4 py-6 sm:px-6 lg:px-8 ${
+      theme === 'light'
+        ? 'bg-[#f8fafc] text-slate-900'
+        : 'bg-[#05070d] text-white'
+    }`}>
       <div className="pointer-events-none fixed inset-0 left-[20rem] bg-[radial-gradient(circle_at_16%_0%,rgba(255,122,0,0.12),transparent_28%),radial-gradient(circle_at_86%_12%,rgba(16,199,161,0.10),transparent_30%),linear-gradient(135deg,rgba(123,97,255,0.08),transparent_34%)]" />
       <div className="relative">{children}</div>
     </div>
@@ -1739,15 +1824,26 @@ function PageShell({ children }) {
 }
 
 function HeroPanel({ eyebrow, title, icon: Icon, children }) {
+  const { theme } = useTheme();
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#080d15]/95 p-6 text-white shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85)] sm:p-8">
+    <section className={`relative overflow-hidden rounded-[1.75rem] border p-6 shadow-xl sm:p-8 ${
+      theme === 'light'
+        ? 'border-slate-200 bg-white text-slate-900 shadow-slate-100/50'
+        : 'border-white/10 bg-[#080d15]/95 text-white shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85)]'
+    }`}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_18%,rgba(255,122,0,0.18),transparent_30%),radial-gradient(circle_at_90%_15%,rgba(123,97,255,0.18),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.06),transparent_38%)]" />
       <div className="relative">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/58">
+        <div className={`mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] ${
+          theme === 'light'
+            ? 'border-slate-200 bg-slate-50 text-slate-500'
+            : 'border-white/10 bg-white/5 text-white/58'
+        }`}>
           <Icon className="h-3.5 w-3.5 text-[#10c7a1]" />
           {eyebrow}
         </div>
-        <h2 className="text-3xl font-black tracking-tight sm:text-5xl">{title}</h2>
+        <h2 className={`text-3xl font-black tracking-tight sm:text-5xl ${
+          theme === 'light' ? 'text-slate-900' : 'text-white'
+        }`}>{title}</h2>
         {children}
       </div>
     </section>
@@ -1755,16 +1851,29 @@ function HeroPanel({ eyebrow, title, icon: Icon, children }) {
 }
 
 function SimulationCard({ group, combinedFields, currentValues, values, onChange, onAddCustom }) {
+  const { theme } = useTheme();
   const Icon = group.icon;
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-xl">
-      <div className={`border-b border-white/10 bg-gradient-to-br ${group.tint} p-5`}>
+    <article className={`flex flex-col overflow-hidden rounded-[1.5rem] border shadow-xl backdrop-blur-xl ${
+      theme === 'light'
+        ? 'border-slate-200 bg-white shadow-slate-100/50'
+        : 'border-white/10 bg-[#0b111a]/92'
+    }`}>
+      <div className={`border-b bg-gradient-to-br ${group.tint} p-5 ${
+        theme === 'light' ? 'border-slate-200' : 'border-white/10'
+      }`}>
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-white">
+          <span className={`flex h-11 w-11 items-center justify-center rounded-2xl border ${
+            theme === 'light'
+              ? 'border-slate-200 bg-slate-50 text-slate-800'
+              : 'border-white/10 bg-white/8 text-white'
+          }`}>
             <Icon className="h-5 w-5" />
           </span>
-          <h3 className="text-2xl font-black tracking-tight text-white">{group.title}</h3>
+          <h3 className={`text-2xl font-black tracking-tight ${
+            theme === 'light' ? 'text-slate-900' : 'text-white'
+          }`}>{group.title}</h3>
         </div>
       </div>
 
@@ -1776,6 +1885,7 @@ function SimulationCard({ group, combinedFields, currentValues, values, onChange
             currentValue={currentValues[field.key] ?? field.current}
             simulatedValue={values[field.key] ?? field.simulated}
             onChange={onChange}
+            groupKey={group.key}
           />
         ))}
 
@@ -1783,7 +1893,15 @@ function SimulationCard({ group, combinedFields, currentValues, values, onChange
         <button
           type="button"
           onClick={() => onAddCustom(group.key)}
-          className={`mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed ${group.borderColor} bg-transparent py-4 text-sm font-bold ${group.textColor} transition-all duration-200 hover:bg-white/[0.02] active:scale-[0.99]`}
+          className={`mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed bg-transparent py-4 text-sm font-bold transition-all duration-200 active:scale-[0.99] ${
+            theme === 'light'
+              ? group.key === 'health'
+                ? 'border-[#10c7a1]/50 text-[#0e9f80] hover:bg-[#10c7a1]/5'
+                : group.key === 'finance'
+                  ? 'border-[#c8a84b]/50 text-[#a2822a] hover:bg-[#c8a84b]/5'
+                  : 'border-[#7b61ff]/50 text-[#5e3aff] hover:bg-[#7b61ff]/5'
+              : `${group.borderColor} ${group.textColor} hover:bg-white/[0.02]`
+          }`}
         >
           <Plus className="h-4 w-4" />
           Add Custom {group.title.split(' ')[0]} Input
@@ -1793,16 +1911,30 @@ function SimulationCard({ group, combinedFields, currentValues, values, onChange
   );
 }
 
-function SimulationField({ field, currentValue, simulatedValue, onChange }) {
+function SimulationField({ field, currentValue, simulatedValue, onChange, groupKey }) {
+  const { theme } = useTheme();
   const safeCurrent = sanitizeSimulationValue(currentValue);
   const safeSimulated = sanitizeSimulationValue(simulatedValue);
   const sliderMax = getDynamicSliderMax(field, safeCurrent, safeSimulated);
+  const currentGroupKey = groupKey || field.groupKey || inferDomainFromFieldKey(field.key) || 'health';
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+    <div className={`rounded-2xl border p-4 ${
+      theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+    }`}>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-sm font-black text-white">{field.label}</span>
-        <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-[#7df3cc] ring-1 ring-white/10">
+        <span className={`text-sm font-black ${
+          theme === 'light' ? 'text-slate-900' : 'text-white'
+        }`}>{field.label}</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-black ${
+          theme === 'light'
+            ? currentGroupKey === 'health'
+              ? 'bg-[#10c7a1]/10 text-[#0e9f80] ring-1 ring-[#10c7a1]/20'
+              : currentGroupKey === 'finance'
+                ? 'bg-[#c8a84b]/10 text-[#a2822a] ring-1 ring-[#c8a84b]/20'
+                : 'bg-[#7b61ff]/10 text-[#5e3aff] ring-1 ring-[#7b61ff]/20'
+            : 'bg-white/8 text-[#7df3cc] ring-1 ring-white/10'
+        }`}>
           {formatValue(field, safeSimulated)}
         </span>
       </div>
@@ -1814,34 +1946,114 @@ function SimulationField({ field, currentValue, simulatedValue, onChange }) {
         step={field.step}
         value={safeSimulated}
         onChange={(event) => onChange(field.key, event.target.value)}
-        className="w-full accent-[#10c7a1]"
+        className={`w-full cursor-pointer ${
+          theme === 'light'
+            ? currentGroupKey === 'health'
+              ? 'accent-[#10c7a1]'
+              : currentGroupKey === 'finance'
+                ? 'accent-[#c8a84b]'
+                : 'accent-[#7b61ff]'
+            : 'accent-[#10c7a1]'
+        }`}
       />
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <ValuePill label="Current" value={formatValue(field, safeCurrent)} />
-        <SimulatedValueInput field={field} value={safeSimulated} onChange={onChange} />
+        <ValuePill label="Current" value={formatValue(field, safeCurrent)} groupKey={currentGroupKey} />
+        <SimulatedValueInput field={field} value={safeSimulated} onChange={onChange} groupKey={currentGroupKey} />
       </div>
       {field.helperText && (
-        <p className="mt-2 text-xs font-semibold text-white/42">{field.helperText}</p>
+        <p className={`mt-2 text-xs font-semibold ${
+          theme === 'light' ? 'text-slate-600' : 'text-white/42'
+        }`}>{field.helperText}</p>
       )}
     </div>
   );
 }
 
-function ValuePill({ label, value, strong = false }) {
+function ValuePill({ label, value, strong = false, groupKey }) {
+  const { theme } = useTheme();
+  const currentGroupKey = groupKey || 'health';
+
+  const lightStrongStyles = {
+    health: 'border-[#10c7a1]/30 bg-[#10c7a1]/8',
+    finance: 'border-[#c8a84b]/30 bg-[#c8a84b]/8',
+    career: 'border-[#7b61ff]/30 bg-[#7b61ff]/8',
+  };
+
+  const lightTextStrongStyles = {
+    health: 'text-[#0e9f80]',
+    finance: 'text-[#a2822a]',
+    career: 'text-[#5e3aff]',
+  };
+
+  const borderBgClass = theme === 'light'
+    ? strong
+      ? lightStrongStyles[currentGroupKey]
+      : 'border-slate-200 bg-slate-100/50'
+    : strong
+      ? 'border-[#10c7a1]/25 bg-[#10c7a1]/10'
+      : 'border-white/10 bg-white/[0.045]';
+
+  const labelClass = theme === 'light'
+    ? strong
+      ? lightTextStrongStyles[currentGroupKey]
+      : 'text-slate-500'
+    : 'text-white/36';
+
+  const valueClass = theme === 'light'
+    ? strong
+      ? lightTextStrongStyles[currentGroupKey]
+      : 'text-slate-800'
+    : strong
+      ? 'text-[#7df3cc]'
+      : 'text-white/78';
+
   return (
-    <div className={`rounded-xl border px-3 py-2 ${strong ? 'border-[#10c7a1]/25 bg-[#10c7a1]/10' : 'border-white/10 bg-white/[0.045]'}`}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/36">{label}</p>
-      <p className={`mt-1 text-sm font-black ${strong ? 'text-[#7df3cc]' : 'text-white/78'}`}>{value}</p>
+    <div className={`rounded-xl border px-3 py-2 ${borderBgClass}`}>
+      <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${labelClass}`}>{label}</p>
+      <p className={`mt-1 text-sm font-black ${valueClass}`}>{value}</p>
     </div>
   );
 }
 
-function SimulatedValueInput({ field, value, onChange }) {
+function SimulatedValueInput({ field, value, onChange, groupKey }) {
+  const { theme } = useTheme();
+  const currentGroupKey = groupKey || inferDomainFromFieldKey(field.key) || 'health';
+
+  const lightStyles = {
+    health: {
+      borderBg: 'border-[#10c7a1]/30 bg-[#10c7a1]/8',
+      text: 'text-[#0e9f80]',
+      label: 'text-[#0e9f80]/80',
+    },
+    finance: {
+      borderBg: 'border-[#c8a84b]/30 bg-[#c8a84b]/8',
+      text: 'text-[#a2822a]',
+      label: 'text-[#a2822a]/80',
+    },
+    career: {
+      borderBg: 'border-[#7b61ff]/30 bg-[#7b61ff]/8',
+      text: 'text-[#5e3aff]',
+      label: 'text-[#5e3aff]/80',
+    },
+  };
+
+  const borderBgClass = theme === 'light'
+    ? lightStyles[currentGroupKey].borderBg
+    : 'border-[#10c7a1]/25 bg-[#10c7a1]/10';
+
+  const labelTextClass = theme === 'light'
+    ? lightStyles[currentGroupKey].label
+    : 'text-white/36';
+
+  const textColorClass = theme === 'light'
+    ? lightStyles[currentGroupKey].text
+    : 'text-[#7df3cc]';
+
   return (
-    <label className="rounded-xl border border-[#10c7a1]/25 bg-[#10c7a1]/10 px-3 py-2">
-      <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-white/36">Simulated</span>
-      <span className="mt-1 flex items-center gap-1 text-sm font-black text-[#7df3cc]">
+    <label className={`rounded-xl border px-3 py-2 cursor-text ${borderBgClass}`}>
+      <span className={`block text-[10px] font-bold uppercase tracking-[0.18em] ${labelTextClass}`}>Simulated</span>
+      <span className={`mt-1 flex items-center gap-1 text-sm font-black ${textColorClass}`}>
         {field.prefix && <span>{field.prefix}</span>}
         <input
           type="number"
@@ -1852,7 +2064,7 @@ function SimulatedValueInput({ field, value, onChange }) {
           onBlur={(event) => {
             if (event.target.value === '') onChange(field.key, 0);
           }}
-          className="min-w-0 flex-1 bg-transparent font-black text-[#7df3cc] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className={`min-w-0 flex-1 bg-transparent font-black outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${textColorClass}`}
           aria-label={`${field.label} simulated value`}
         />
         {field.unit && <span className="shrink-0">{field.unit}</span>}
@@ -1862,28 +2074,53 @@ function SimulatedValueInput({ field, value, onChange }) {
 }
 
 function ProcessingScreen({ completedSteps, dotCount }) {
+  const { theme } = useTheme();
   const dots = '.'.repeat(dotCount);
 
   return (
     <PageShell>
       <div className="mx-auto flex min-h-[calc(100vh-180px)] max-w-4xl items-center justify-center">
-        <section className="relative w-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#080d15]/95 p-6 text-white shadow-[0_24px_80px_-35px_rgba(0,0,0,0.9)] sm:p-8">
+        <section className={`relative w-full overflow-hidden rounded-[1.75rem] border p-6 shadow-xl sm:p-8 ${
+          theme === 'light'
+            ? 'border-slate-200 bg-white text-slate-900 shadow-slate-100/50'
+            : 'border-white/10 bg-[#080d15]/95 text-white shadow-[0_24px_80px_-35px_rgba(0,0,0,0.9)]'
+        }`}>
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(16,199,161,0.20),transparent_30%),radial-gradient(circle_at_85%_20%,rgba(123,97,255,0.25),transparent_30%)]" />
           <div className="relative mx-auto max-w-2xl text-center">
-            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[1.5rem] border border-white/12 bg-white/8">
-              <Brain className="h-9 w-9 animate-pulse text-[#7df3cc]" />
+            <div className={`mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[1.5rem] border ${
+              theme === 'light'
+                ? 'border-slate-200 bg-slate-50'
+                : 'border-white/12 bg-white/8'
+            }`}>
+              <Brain className={`h-9 w-9 animate-pulse ${
+                theme === 'light' ? 'text-[#0e9f80]' : 'text-[#7df3cc]'
+              }`} />
             </div>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-white/48">Digital Twin Processing</p>
-            <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">Processing{dots}</h2>
+            <p className={`text-xs font-bold uppercase tracking-[0.3em] ${
+              theme === 'light' ? 'text-slate-600' : 'text-white/48'
+            }`}>Digital Twin Processing</p>
+            <h2 className={`mt-3 text-3xl font-black tracking-tight sm:text-5xl ${
+              theme === 'light' ? 'text-slate-900' : 'text-white'
+            }`}>Processing{dots}</h2>
 
             <div className="mt-8 space-y-3 text-left">
               {processingSteps.map((step, index) => {
                 const done = completedSteps > index;
                 const active = completedSteps === index;
                 return (
-                  <div key={step} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3">
-                    <span className="font-bold text-white/84">{step}...</span>
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-full ${done ? 'bg-[#10c7a1] text-[#07120f]' : active ? 'bg-[#7b61ff]/25 text-white' : 'bg-white/8 text-white/28'}`}>
+                  <div key={step} className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
+                    theme === 'light'
+                      ? 'border-slate-200 bg-slate-50/50'
+                      : 'border-white/10 bg-white/[0.055]'
+                  }`}>
+                    <span className={`font-bold ${
+                      theme === 'light' ? 'text-slate-900' : 'text-white/84'
+                    }`}>{step}...</span>
+                    <span className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                      theme === 'light'
+                        ? done ? 'bg-[#10c7a1] text-white' : active ? 'bg-[#7b61ff]/15 text-[#7b61ff]' : 'bg-slate-200 text-slate-500'
+                        : done ? 'bg-[#10c7a1] text-[#07120f]' : active ? 'bg-[#7b61ff]/25 text-white' : 'bg-white/8 text-white/28'
+                    }`}>
                       {done ? <Check className="h-4 w-4" /> : <RefreshCw className={`h-4 w-4 ${active ? 'animate-spin' : ''}`} />}
                     </span>
                   </div>
@@ -1898,6 +2135,7 @@ function ProcessingScreen({ completedSteps, dotCount }) {
 }
 
 function ResultScreen({ analysis, analysisError, onReset }) {
+  const { theme } = useTheme();
   const twinScore = analysis.twinScore || defaultAnalysis.twinScore;
   const aiLoading = Boolean(analysis.aiLoading);
 
@@ -1905,7 +2143,9 @@ function ResultScreen({ analysis, analysisError, onReset }) {
     <PageShell>
       <div className="mx-auto max-w-7xl space-y-6">
         <HeroPanel eyebrow="Simulation Complete" title="Simulation Result" icon={Check}>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">
+          <p className={`mt-3 max-w-2xl text-sm leading-6 ${
+            theme === 'light' ? 'text-slate-700' : 'text-white/60'
+          }`}>
             {aiLoading ? 'Score cards are ready. AI insights are being generated in the background.' : analysis.source === 'ai' ? 'Generated from real-time AI analysis of your current and simulated values.' : analysisError || 'Generated from deterministic fallback analysis.'}
           </p>
           <div className="mt-6 grid items-stretch gap-4 xl:grid-cols-2">
@@ -1921,12 +2161,24 @@ function ResultScreen({ analysis, analysisError, onReset }) {
         </section>
 
         <section>
-          <div className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92 p-5 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-6">
-            <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4">
+          <div className={`rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl sm:p-6 ${
+            theme === 'light'
+              ? 'border-slate-200 bg-white shadow-slate-100/50'
+              : 'border-white/10 bg-[#0b111a]/92'
+          }`}>
+            <div className={`mb-5 flex items-center justify-between border-b pb-4 ${
+              theme === 'light' ? 'border-slate-200' : 'border-white/10'
+            }`}>
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#7df3cc]/70">Cross Domain Analysis</p>
-                <h3 className="mt-1 text-2xl font-black text-white">Impact chains</h3>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/54">
+                <p className={`text-xs font-bold uppercase tracking-[0.24em] ${
+                  theme === 'light' ? 'text-[#0e9f80]' : 'text-[#7df3cc]/70'
+                }`}>Cross Domain Analysis</p>
+                <h3 className={`mt-1 text-2xl font-black ${
+                  theme === 'light' ? 'text-slate-900' : 'text-white'
+                }`}>Impact chains</h3>
+                <p className={`mt-2 max-w-2xl text-sm leading-6 ${
+                  theme === 'light' ? 'text-slate-700' : 'text-white/54'
+                }`}>
                   The twin links cause and effect across domains, so one habit can move health, focus, and finances together.
                 </p>
               </div>
@@ -1954,14 +2206,18 @@ function ResultScreen({ analysis, analysisError, onReset }) {
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.065] px-5 py-3 text-sm font-black text-white/86 transition hover:bg-white/10"
+            className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-3 text-sm font-black transition cursor-pointer ${
+              theme === 'light'
+                ? 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200/85'
+                : 'border-white/10 bg-white/[0.065] text-white/86 hover:bg-white/10'
+            }`}
           >
             <RefreshCw className="h-4 w-4" />
             Run Another Simulation
           </button>
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#ff7a00] via-[#ff007f] to-[#7b61ff] px-5 py-3 text-sm font-black text-white shadow-[0_20px_50px_-25px_rgba(255,0,127,0.9)] transition hover:-translate-y-0.5"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#ff7a00] via-[#ff007f] to-[#7b61ff] px-5 py-3 text-sm font-black text-white shadow-[0_20px_50px_-25px_rgba(255,0,127,0.9)] transition hover:-translate-y-0.5 cursor-pointer"
           >
             <Save className="h-4 w-4" />
             Save Scenario
@@ -1973,6 +2229,7 @@ function ResultScreen({ analysis, analysisError, onReset }) {
 }
 
 function SimulationSummary({ current, simulated, points: dynamicPoints, isLoading = false }) {
+  const { theme } = useTheme();
   const points = dynamicPoints || [
     'Health score improves significantly due to better recovery and energy levels.',
     'Career growth accelerates through increased productivity and learning.',
@@ -1981,28 +2238,44 @@ function SimulationSummary({ current, simulated, points: dynamicPoints, isLoadin
   ];
 
   return (
-    <div className="flex h-full min-h-[360px] flex-col rounded-[1.35rem] border border-white/10 bg-white/[0.055] p-6 backdrop-blur-xl">
+    <div className={`flex h-full min-h-[360px] flex-col rounded-[1.35rem] border p-6 backdrop-blur-xl ${
+      theme === 'light' ? 'border-slate-200 bg-slate-50/60' : 'border-white/10 bg-white/[0.055]'
+    }`}>
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#10c7a1]/25 bg-[#10c7a1]/10 text-[#7df3cc]">
+        <span className={`flex h-10 w-10 items-center justify-center rounded-2xl border ${
+          theme === 'light'
+            ? 'border-[#10c7a1]/30 bg-[#10c7a1]/10 text-[#0e9f80]'
+            : 'border-[#10c7a1]/25 bg-[#10c7a1]/10 text-[#7df3cc]'
+        }`}>
           <Sparkles className="h-5 w-5" />
         </span>
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#7df3cc]/70">Simulation Summary</p>
-          <h3 className="mt-1 text-xl font-black text-white">Based on your selected improvements</h3>
+          <p className={`text-xs font-bold uppercase tracking-[0.22em] ${
+            theme === 'light' ? 'text-[#0e9f80]' : 'text-[#7df3cc]/70'
+          }`}>Simulation Summary</p>
+          <h3 className={`mt-1 text-xl font-black ${
+            theme === 'light' ? 'text-slate-900' : 'text-white'
+          }`}>Based on your selected improvements</h3>
         </div>
       </div>
 
       <div className="mt-5 grid flex-1 gap-3 md:grid-cols-2">
         {isLoading ? Array.from({ length: 4 }).map((_, index) => (
-          <div key={`summary-skeleton-${index}`} className="rounded-2xl border border-white/10 bg-[#080d15]/80 p-4">
+          <div key={`summary-skeleton-${index}`} className={`rounded-2xl border p-4 ${
+            theme === 'light' ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#080d15]/80'
+          }`}>
             <SkeletonLine className="h-3 w-3/4" />
             <SkeletonLine className="mt-3 h-3 w-full" />
             <SkeletonLine className="mt-2 h-3 w-5/6" />
           </div>
         )) : points.map((point) => (
-          <div key={point} className="flex gap-3 rounded-2xl border border-white/10 bg-[#080d15]/80 p-4">
+          <div key={point} className={`flex gap-3 rounded-2xl border p-4 ${
+            theme === 'light' ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#080d15]/80'
+          }`}>
             <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#10c7a1] shadow-[0_0_10px_rgba(16,199,161,0.75)]" />
-            <p className="text-sm leading-6 text-white/66">{point}</p>
+            <p className={`text-sm leading-6 ${
+              theme === 'light' ? 'text-slate-700' : 'text-white/66'
+            }`}>{point}</p>
           </div>
         ))}
       </div>
@@ -2011,6 +2284,7 @@ function SimulationSummary({ current, simulated, points: dynamicPoints, isLoadin
 }
 
 function OverallTwinScore({ current, simulated }) {
+  const { theme } = useTheme();
   const progressWidth = `${Math.min(Math.max(Number(simulated || 0), 0), 100)}%`;
   const directionCopy = Number(simulated) > Number(current)
     ? 'Your simulated choices improve the full Digital Twin across health, finance, and career signals.'
@@ -2019,11 +2293,19 @@ function OverallTwinScore({ current, simulated }) {
       : 'Your simulated choices keep the full Digital Twin outlook stable across health, finance, and career signals.';
 
   return (
-    <div className="flex h-full min-h-[360px] flex-col rounded-[1.35rem] border border-white/10 bg-gradient-to-br from-[#1a103d]/88 via-[#231044]/82 to-[#132b35]/88 p-6 text-white shadow-[0_20px_60px_-40px_rgba(0,0,0,0.9)]">
+    <div className={`flex h-full min-h-[360px] flex-col rounded-[1.35rem] border p-6 shadow-xl ${
+      theme === 'light'
+        ? 'border-slate-200 bg-gradient-to-br from-[#f5f3ff] via-[#faf5ff] to-[#f0fdfa] text-slate-800 shadow-slate-100/50'
+        : 'border-white/10 bg-gradient-to-br from-[#1a103d]/88 via-[#231044]/82 to-[#132b35]/88 text-white shadow-[0_20px_60px_-40px_rgba(0,0,0,0.9)]'
+    }`}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/48">Overall Twin Score</p>
-          <p className="mt-2 text-sm leading-6 text-white/56">
+          <p className={`text-xs font-bold uppercase tracking-[0.24em] ${
+            theme === 'light' ? 'text-slate-500' : 'text-white/48'
+          }`}>Overall Twin Score</p>
+          <p className={`mt-2 text-sm leading-6 ${
+            theme === 'light' ? 'text-slate-700' : 'text-white/56'
+          }`}>
             {directionCopy}
           </p>
         </div>
@@ -2031,17 +2313,25 @@ function OverallTwinScore({ current, simulated }) {
 
       <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
         <TwinScore label="Current Twin" value={current} />
-        <ArrowRight className="mx-auto hidden h-5 w-5 text-white/38 sm:block" />
+        <ArrowRight className={`mx-auto hidden h-5 w-5 sm:block ${
+          theme === 'light' ? 'text-slate-500' : 'text-white/38'
+        }`} />
         <TwinScore label="Simulated Twin" value={simulated} active />
       </div>
 
-      <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.055] p-4">
-        <div className="flex items-center justify-between text-sm font-bold text-white/70">
+      <div className={`mt-auto rounded-2xl border p-4 ${
+        theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.055]'
+      }`}>
+        <div className={`flex items-center justify-between text-sm font-bold ${
+          theme === 'light' ? 'text-slate-700' : 'text-white/70'
+        }`}>
           <span>Before</span>
           <ArrowRight className="h-4 w-4" />
           <span>After</span>
         </div>
-        <div className="mt-3 h-3 overflow-hidden rounded-full bg-white/10">
+        <div className={`mt-3 h-3 overflow-hidden rounded-full ${
+          theme === 'light' ? 'bg-slate-200/80' : 'bg-white/10'
+        }`}>
           <div
             className="h-full rounded-full bg-gradient-to-r from-[#ff7a00] via-[#ff007f] to-[#10c7a1]"
             style={{ width: progressWidth }}
@@ -2053,45 +2343,68 @@ function OverallTwinScore({ current, simulated }) {
 }
 
 function ResultCard({ card, isLoading = false }) {
+  const { theme } = useTheme();
   const Icon = card.icon;
 
   return (
-    <article className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92 p-5 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-xl">
+    <article className={`rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl ${
+      theme === 'light'
+        ? 'border-slate-200 bg-white shadow-slate-100/50'
+        : 'border-white/10 bg-[#0b111a]/92'
+    }`}>
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/40">{card.title}</p>
-          <h3 className="mt-1 text-2xl font-black text-white">{card.label}</h3>
+          <p className={`text-xs font-bold uppercase tracking-[0.24em] ${
+            theme === 'light' ? 'text-slate-500' : 'text-white/40'
+          }`}>{card.title}</p>
+          <h3 className={`mt-1 text-2xl font-black ${
+            theme === 'light' ? 'text-slate-900' : 'text-white'
+          }`}>{card.label}</h3>
         </div>
         <Icon className={`h-6 w-6 ${card.accent}`} />
       </div>
 
       <div className="mb-5 flex items-end gap-4">
-        <span className="text-5xl font-black text-white/35">{card.from}</span>
-        <ArrowRight className="mb-3 h-6 w-6 text-[#7df3cc]/65" />
-        <span className="text-6xl font-black text-white">{card.to}</span>
+        <span className={`text-5xl font-black ${
+          theme === 'light' ? 'text-slate-400' : 'text-white/35'
+        }`}>{card.from}</span>
+        <ArrowRight className={`mb-3 h-6 w-6 ${
+          theme === 'light' ? 'text-[#0e9f80]' : 'text-[#7df3cc]/65'
+        }`} />
+        <span className={`text-6xl font-black ${
+          theme === 'light' ? 'text-slate-900' : 'text-white'
+        }`}>{card.to}</span>
       </div>
 
       <div className="grid gap-2">
         {card.signals.map((signal) => (
-          <div key={signal.label} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3">
-            <span className="text-sm font-bold text-white/82">{signal.label}</span>
+          <div key={signal.label} className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
+            theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+          }`}>
+            <span className={`text-sm font-bold ${
+              theme === 'light' ? 'text-slate-700' : 'text-white/82'
+            }`}>{signal.label}</span>
             {signal.direction === 'up'
               ? <TrendingUp className="h-5 w-5 text-[#10c7a1]" />
               : signal.direction === 'down'
                 ? <TrendingDown className="h-5 w-5 text-[#ff007f]" />
-                : <Minus className="h-5 w-5 text-white/38" />}
+                : <Minus className={`h-5 w-5 ${theme === 'light' ? 'text-slate-400' : 'text-white/38'}`} />}
           </div>
         ))}
       </div>
 
       {isLoading ? (
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+        <div className={`mt-4 rounded-2xl border p-4 ${
+          theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+        }`}>
           <SkeletonLine className="h-3 w-2/3" />
           <SkeletonLine className="mt-3 h-3 w-full" />
           <SkeletonLine className="mt-2 h-3 w-4/5" />
         </div>
       ) : card.analysis && (
-        <p className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-sm leading-6 text-white/58">
+        <p className={`mt-4 rounded-2xl border p-4 text-sm leading-6 ${
+          theme === 'light' ? 'border-slate-200 bg-slate-50/50 text-slate-600' : 'border-white/10 bg-white/[0.045] text-white/58'
+        }`}>
           {card.analysis}
         </p>
       )}
@@ -2100,23 +2413,42 @@ function ResultCard({ card, isLoading = false }) {
 }
 
 function TimelineForecast({ items = [], isLoading = false }) {
+  const { theme } = useTheme();
   return (
-    <section className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92 p-5 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-6">
-      <div className="mb-5 border-b border-white/10 pb-4">
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#7df3cc]/70">Timeline Visualization</p>
-        <h3 className="mt-1 text-2xl font-black text-white">Future projection timeline</h3>
+    <section className={`rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl sm:p-6 ${
+      theme === 'light'
+        ? 'border-slate-200 bg-white shadow-slate-100/50'
+        : 'border-white/10 bg-[#0b111a]/92'
+    }`}>
+      <div className={`mb-5 border-b pb-4 ${
+        theme === 'light' ? 'border-slate-200' : 'border-white/10'
+      }`}>
+        <p className={`text-xs font-bold uppercase tracking-[0.24em] ${
+          theme === 'light' ? 'text-[#0e9f80]' : 'text-[#7df3cc]/70'
+        }`}>Timeline Visualization</p>
+        <h3 className={`mt-1 text-2xl font-black ${
+          theme === 'light' ? 'text-slate-900' : 'text-white'
+        }`}>Future projection timeline</h3>
       </div>
       <div className="grid gap-4 md:grid-cols-4">
         {isLoading ? Array.from({ length: 3 }).map((_, index) => (
-          <div key={`timeline-skeleton-${index}`} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+          <div key={`timeline-skeleton-${index}`} className={`rounded-2xl border p-4 ${
+            theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+          }`}>
             <SkeletonLine className="h-3 w-1/2" />
             <SkeletonLine className="mt-4 h-3 w-full" />
             <SkeletonLine className="mt-2 h-3 w-5/6" />
           </div>
         )) : items.map((item) => (
-          <div key={item.period} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
-            <p className="text-sm font-black text-[#7df3cc]">{item.period}</p>
-            <p className="mt-3 text-sm leading-6 text-white/58">{item.forecast}</p>
+          <div key={item.period} className={`rounded-2xl border p-4 ${
+            theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+          }`}>
+            <p className={`text-sm font-black ${
+              theme === 'light' ? 'text-[#0e9f80]' : 'text-[#7df3cc]'
+            }`}>{item.period}</p>
+            <p className={`mt-3 text-sm leading-6 ${
+              theme === 'light' ? 'text-slate-700' : 'text-white/58'
+            }`}>{item.forecast}</p>
           </div>
         ))}
       </div>
@@ -2125,32 +2457,53 @@ function TimelineForecast({ items = [], isLoading = false }) {
 }
 
 function TradeOffAnalysis({ items = [], isLoading = false }) {
+  const { theme } = useTheme();
   return (
-    <section className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92 p-5 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-6">
-      <div className="mb-5 border-b border-white/10 pb-4">
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#c8a84b]/80">Trade-Off Analysis</p>
-        <h3 className="mt-1 text-2xl font-black text-white">Benefits and risks</h3>
+    <section className={`rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl sm:p-6 ${
+      theme === 'light'
+        ? 'border-slate-200 bg-white shadow-slate-100/50'
+        : 'border-white/10 bg-[#0b111a]/92'
+    }`}>
+      <div className={`mb-5 border-b pb-4 ${
+        theme === 'light' ? 'border-slate-200' : 'border-white/10'
+      }`}>
+        <p className={`text-xs font-bold uppercase tracking-[0.24em] ${
+          theme === 'light' ? 'text-[#a2822a]' : 'text-[#c8a84b]/80'
+        }`}>Trade-Off Analysis</p>
+        <h3 className={`mt-1 text-2xl font-black ${
+          theme === 'light' ? 'text-slate-900' : 'text-white'
+        }`}>Benefits and risks</h3>
       </div>
       <div className="space-y-3">
         {isLoading ? Array.from({ length: 2 }).map((_, index) => (
-          <div key={`tradeoff-skeleton-${index}`} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+          <div key={`tradeoff-skeleton-${index}`} className={`rounded-2xl border p-4 ${
+            theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+          }`}>
             <SkeletonLine className="h-3 w-1/3" />
             <SkeletonLine className="mt-3 h-3 w-2/3" />
             <SkeletonLine className="mt-4 h-3 w-full" />
           </div>
         )) : items.map((item) => (
-          <div key={`${item.benefit}-${item.risk}`} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+          <div key={`${item.benefit}-${item.risk}`} className={`rounded-2xl border p-4 ${
+            theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+          }`}>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#10c7a1]/70">Benefit</p>
-                <p className="mt-1 text-sm font-black text-white">{item.benefit}</p>
+                <p className={`mt-1 text-sm font-black ${
+                  theme === 'light' ? 'text-slate-800' : 'text-white'
+                }`}>{item.benefit}</p>
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#ff007f]/70">Risk</p>
-                <p className="mt-1 text-sm font-black text-white">{item.risk}</p>
+                <p className={`mt-1 text-sm font-black ${
+                  theme === 'light' ? 'text-slate-800' : 'text-white'
+                }`}>{item.risk}</p>
               </div>
             </div>
-            <p className="mt-3 text-sm leading-6 text-white/58">{item.impact}</p>
+            <p className={`mt-3 text-sm leading-6 ${
+              theme === 'light' ? 'text-slate-700' : 'text-white/58'
+            }`}>{item.impact}</p>
           </div>
         ))}
       </div>
@@ -2159,26 +2512,45 @@ function TradeOffAnalysis({ items = [], isLoading = false }) {
 }
 
 function RiskAssessment({ items = [], isLoading = false }) {
+  const { theme } = useTheme();
   return (
-    <section className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92 p-5 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-6">
-      <div className="mb-5 border-b border-white/10 pb-4">
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#ff007f]/70">Risk Assessment</p>
-        <h3 className="mt-1 text-2xl font-black text-white">Domain risk levels</h3>
+    <section className={`rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl sm:p-6 ${
+      theme === 'light'
+        ? 'border-slate-200 bg-white shadow-slate-100/50'
+        : 'border-white/10 bg-[#0b111a]/92'
+    }`}>
+      <div className={`mb-5 border-b pb-4 ${
+        theme === 'light' ? 'border-slate-200' : 'border-white/10'
+      }`}>
+        <p className={`text-xs font-bold uppercase tracking-[0.24em] ${
+          theme === 'light' ? 'text-[#d0006f]' : 'text-[#ff007f]/70'
+        }`}>Risk Assessment</p>
+        <h3 className={`mt-1 text-2xl font-black ${
+          theme === 'light' ? 'text-slate-900' : 'text-white'
+        }`}>Domain risk levels</h3>
       </div>
       <div className="space-y-3">
         {isLoading ? Array.from({ length: 4 }).map((_, index) => (
-          <div key={`risk-skeleton-${index}`} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+          <div key={`risk-skeleton-${index}`} className={`rounded-2xl border p-4 ${
+            theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+          }`}>
             <SkeletonLine className="h-3 w-1/2" />
             <SkeletonLine className="mt-3 h-3 w-full" />
             <SkeletonLine className="mt-2 h-3 w-4/5" />
           </div>
         )) : items.map((item) => (
-          <div key={item.domain} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+          <div key={item.domain} className={`rounded-2xl border p-4 ${
+            theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+          }`}>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-black text-white">{item.domain}</p>
-              <span className={`rounded-full px-3 py-1 text-xs font-black ${riskStatusClass(item.status)}`}>{item.status}</span>
+              <p className={`text-sm font-black ${
+                theme === 'light' ? 'text-slate-900' : 'text-white'
+              }`}>{item.domain}</p>
+              <span className={`rounded-full px-3 py-1 text-xs font-black ${riskStatusClass(item.status, theme)}`}>{item.status}</span>
             </div>
-            <p className="mt-3 text-sm leading-6 text-white/58">{item.analysis}</p>
+            <p className={`mt-3 text-sm leading-6 ${
+              theme === 'light' ? 'text-slate-700' : 'text-white/58'
+            }`}>{item.analysis}</p>
           </div>
         ))}
       </div>
@@ -2186,27 +2558,44 @@ function RiskAssessment({ items = [], isLoading = false }) {
   );
 }
 
-function riskStatusClass(status) {
+function riskStatusClass(status, theme) {
+  if (theme === 'light') {
+    if (status === 'Low') return 'bg-[#10c7a1]/10 text-[#0e9f80] ring-1 ring-[#10c7a1]/20';
+    if (status === 'High') return 'bg-[#ff007f]/10 text-[#d0006f] ring-1 ring-[#ff007f]/20';
+    return 'bg-[#c8a84b]/15 text-[#a2822a] ring-1 ring-[#c8a84b]/20';
+  }
   if (status === 'Low') return 'bg-[#10c7a1]/10 text-[#7df3cc] ring-1 ring-[#10c7a1]/25';
   if (status === 'High') return 'bg-[#ff007f]/10 text-[#ff8dbf] ring-1 ring-[#ff007f]/25';
   return 'bg-[#c8a84b]/10 text-[#ffe08a] ring-1 ring-[#c8a84b]/25';
 }
 
 function SkeletonLine({ className = '' }) {
-  return <div className={`animate-pulse rounded-full bg-gradient-to-r from-white/8 via-white/18 to-white/8 ${className}`} />;
+  const { theme } = useTheme();
+  return <div className={`animate-pulse rounded-full bg-gradient-to-r ${
+    theme === 'light'
+      ? 'from-slate-200 via-slate-100 to-slate-200'
+      : 'from-white/8 via-white/18 to-white/8'
+  } ${className}`} />;
 }
 
 function ImpactChainSkeleton({ title }) {
+  const { theme } = useTheme();
   return (
-    <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.045] p-4">
-      <p className="text-sm font-black text-white">{title}</p>
+    <div className={`rounded-[1.25rem] border p-4 ${
+      theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+    }`}>
+      <p className={`text-sm font-black ${
+        theme === 'light' ? 'text-slate-800' : 'text-white'
+      }`}>{title}</p>
       <div className="mt-2 min-h-12">
         <SkeletonLine className="h-3 w-2/3" />
         <SkeletonLine className="mt-2 h-3 w-full" />
       </div>
       <div className="mt-4 space-y-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={`impact-skeleton-${index}`} className="rounded-2xl border border-white/10 bg-[#080d15]/92 p-4">
+          <div key={`impact-skeleton-${index}`} className={`rounded-2xl border p-4 ${
+            theme === 'light' ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#080d15]/92'
+          }`}>
             <SkeletonLine className="mx-auto h-3 w-1/2" />
             <SkeletonLine className="mx-auto mt-3 h-3 w-4/5" />
           </div>
@@ -2218,26 +2607,47 @@ function ImpactChainSkeleton({ title }) {
 
 // ... keeping standard subcomponents uniform
 function ImpactChain({ chain }) {
+  const { theme } = useTheme();
   return (
-    <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.045] p-4">
-      <p className="text-sm font-black text-white">{chain.title}</p>
-      <p className="mt-2 min-h-12 text-xs leading-5 text-white/52">{chain.copy}</p>
+    <div className={`rounded-[1.25rem] border p-4 ${
+      theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/[0.045]'
+    }`}>
+      <p className={`text-sm font-black ${
+        theme === 'light' ? 'text-slate-800' : 'text-white'
+      }`}>{chain.title}</p>
+      <p className={`mt-2 min-h-12 text-xs leading-5 ${
+        theme === 'light' ? 'text-slate-600' : 'text-white/52'
+      }`}>{chain.copy}</p>
       <div className="mt-4 space-y-3">
         {chain.steps.map((item, index) => (
           <div key={`${chain.title}-${item.label}`} className="flex flex-col items-center">
-            <div className="w-full rounded-2xl border border-white/10 bg-[#080d15]/92 p-4 shadow-sm">
-              <p className="text-center text-base font-black text-white">{item.label}</p>
+            <div className={`w-full rounded-2xl border p-4 shadow-sm ${
+              theme === 'light' ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#080d15]/92'
+            }`}>
+              <p className={`text-center text-base font-black ${
+                theme === 'light' ? 'text-slate-900' : 'text-white'
+              }`}>{item.label}</p>
               {item.explanation && (
-                <p className="mx-auto mt-2 max-w-[18rem] text-center text-xs leading-5 text-white/48">
+                <p className={`mx-auto mt-2 max-w-[18rem] text-center text-xs leading-5 ${
+                  theme === 'light' ? 'text-slate-600' : 'text-white/48'
+                }`}>
                   {item.explanation}
                 </p>
               )}
             </div>
             {index < chain.steps.length - 1 && (
               <div className="flex w-full flex-col items-center">
-                <div className="h-3 w-px bg-white/10" />
-                <ChevronDown className="my-1 h-5 w-5 text-[#7df3cc]/70" />
-                <div className="h-3 w-px bg-white/10" />
+                <div className={`h-3 w-px ${theme === 'light' ? 'bg-slate-200' : 'bg-white/10'}`} />
+                <ChevronDown className={`my-1 h-5 w-5 ${
+                  theme === 'light'
+                    ? chain.title === 'Recovery Loop'
+                      ? 'text-[#0e9f80]'
+                      : chain.title === 'Money Impact' || chain.title === 'Money Calm'
+                        ? 'text-[#a2822a]'
+                        : 'text-[#5e3aff]'
+                    : 'text-[#7df3cc]/70'
+                }`} />
+                <div className={`h-3 w-px ${theme === 'light' ? 'bg-slate-200' : 'bg-white/10'}`} />
               </div>
             )}
           </div>
@@ -2248,10 +2658,21 @@ function ImpactChain({ chain }) {
 }
 
 function TwinScore({ label, value, active = false }) {
+  const { theme } = useTheme();
   return (
-    <div className={`rounded-2xl border px-4 py-5 text-center ${active ? 'border-[#10c7a1]/25 bg-[#10c7a1]/10' : 'border-white/10 bg-white/[0.055]'}`}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">{label}</p>
-      <p className={`mt-2 text-5xl font-black ${active ? 'text-[#7df3cc]' : 'text-white'}`}>{value}</p>
+    <div className={`rounded-2xl border px-4 py-5 text-center ${
+      theme === 'light'
+        ? active ? 'border-[#10c7a1]/30 bg-[#10c7a1]/8' : 'border-slate-200 bg-slate-100/50'
+        : active ? 'border-[#10c7a1]/25 bg-[#10c7a1]/10' : 'border-white/10 bg-white/[0.055]'
+    }`}>
+      <p className={`text-[10px] font-bold uppercase tracking-[0.22em] ${
+        theme === 'light' ? 'text-slate-500' : 'text-white/45'
+      }`}>{label}</p>
+      <p className={`mt-2 text-5xl font-black ${
+        theme === 'light'
+          ? active ? 'text-[#0e9f80]' : 'text-slate-800'
+          : active ? 'text-[#7df3cc]' : 'text-white'
+      }`}>{value}</p>
     </div>
   );
 }

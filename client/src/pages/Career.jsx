@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { useGamification } from '../context/GamificationContext';
+import { useTheme } from '../context/ThemeContext';
 import {
   disconnectCareerIntegration,
   CAREER_DOMAIN_LABELS,
@@ -20,8 +21,15 @@ import {
 import { fetchCareerIntegrationStats, getCareerProfileLabel } from '../utils/careerIntegrationStats';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
-const card  = 'rounded-2xl border border-white/10 bg-[#11131a]/84 shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl';
-const iCard = `${card} transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#7b61ff]/30 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5)]`;
+const getCardClass = (theme) =>
+  theme === 'light'
+    ? 'rounded-2xl border border-[#e2e8f0] bg-white shadow-sm'
+    : 'rounded-2xl border border-white/10 bg-[#11131a]/84 shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl';
+
+const getICardClass = (theme) =>
+  theme === 'light'
+    ? 'rounded-2xl border border-[#e2e8f0] bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#7b61ff]/30 hover:shadow-lg cursor-pointer active:scale-[0.98]'
+    : 'rounded-2xl border border-white/10 bg-[#11131a]/84 shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#7b61ff]/30 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5)] cursor-pointer active:scale-[0.98]';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const token = () => localStorage.getItem('authToken');
@@ -423,10 +431,10 @@ function getProfessionalGrowthStatus(score) {
   return 'Getting Started';
 }
 
-function getHeatmapColor(count) {
-  if (count <= 0) return 'rgba(255,255,255,0.05)';
-  if (count <= 2) return 'rgba(123,97,255,0.25)';
-  if (count <= 5) return 'rgba(123,97,255,0.60)';
+function getHeatmapColor(count, theme) {
+  if (count <= 0) return theme === 'light' ? '#e2e8f0' : 'rgba(255,255,255,0.05)';
+  if (count <= 2) return theme === 'light' ? 'rgba(123,97,255,0.20)' : 'rgba(123,97,255,0.25)';
+  if (count <= 5) return theme === 'light' ? 'rgba(123,97,255,0.50)' : 'rgba(123,97,255,0.60)';
   return 'rgba(123,97,255,1)';
 }
 
@@ -681,6 +689,7 @@ function sumRecentActivity(activityCounts = {}, days = 30) {
 
 // ─── Platform Integration Card ────────────────────────────────────────────────
 function PlatformCard({ platform, domainColor }) {
+  const { theme } = useTheme();
   const STORAGE_KEY = `integration_${platform.id}`;
 
   const [input,     setInput]     = useState('');
@@ -753,8 +762,8 @@ function PlatformCard({ platform, domainColor }) {
   return (
     <div className={`rounded-2xl border transition-all duration-300 ${
       connected
-        ? 'border-white/15 bg-white/4'
-        : 'border-white/8 bg-white/2'
+        ? (theme === 'light' ? 'border-[#7b61ff]/30 bg-slate-50' : 'border-white/15 bg-white/4')
+        : (theme === 'light' ? 'border-[#e2e8f0] bg-white' : 'border-white/8 bg-white/2')
     }`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 cursor-pointer"
@@ -766,9 +775,9 @@ function PlatformCard({ platform, domainColor }) {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-white/90">{platform.name}</p>
+              <p className={`text-sm font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white/90'}`}>{platform.name}</p>
               {platform.comingSoon && (
-                <span className="text-[9px] font-bold uppercase tracking-widest border border-white/15 text-white/30 px-1.5 py-0.5 rounded-full">
+                <span className={`text-[9px] font-bold uppercase tracking-widest border ${theme === 'light' ? 'border-slate-200 text-slate-400' : 'border-white/15 text-white/30'} px-1.5 py-0.5 rounded-full`}>
                   Soon
                 </span>
               )}
@@ -780,7 +789,7 @@ function PlatformCard({ platform, domainColor }) {
               )}
             </div>
             {connected && input && (
-              <p className="text-[11px] text-white/35 mt-0.5">@{input}</p>
+              <p className={`text-[11px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'} mt-0.5`}>@{input}</p>
             )}
           </div>
         </div>
@@ -805,7 +814,7 @@ function PlatformCard({ platform, domainColor }) {
               onKeyDown={e => e.key === 'Enter' && handleConnect()}
               placeholder={platform.comingSoon ? 'Coming soon' : platform.placeholder}
               disabled={loading || platform.comingSoon}
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/25 focus:border-white/25 focus:outline-none disabled:opacity-40"
+              className={`flex-1 rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-slate-50 text-[#0f172a] placeholder-slate-400' : 'border-white/10 bg-white/5 text-white placeholder-white/25'} px-3 py-2 text-sm focus:outline-none disabled:opacity-40`}
             />
             <button
               onClick={handleConnect}
@@ -831,10 +840,10 @@ function PlatformCard({ platform, domainColor }) {
           {stats.length > 0 && (
             <div className="grid grid-cols-2 gap-2">
               {stats.map((stat, i) => (
-                <div key={i} className="rounded-xl bg-white/5 border border-white/8 p-3">
+                <div key={i} className={`rounded-xl ${theme === 'light' ? 'bg-slate-100 border-[#e2e8f0]' : 'bg-white/5 border-white/8'} p-3`}>
                   <div className="flex items-center gap-1.5 mb-1">
-                    <stat.icon className="h-3 w-3 text-white/30" />
-                    <p className="text-[10px] text-white/35 uppercase tracking-wider">{stat.label}</p>
+                    <stat.icon className={`h-3 w-3 ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`} />
+                    <p className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'} uppercase tracking-wider`}>{stat.label}</p>
                   </div>
                   <p className="text-base font-bold" style={{ color: platform.color }}>
                     {stat.value?.toLocaleString?.() ?? stat.value ?? '—'}
@@ -847,7 +856,7 @@ function PlatformCard({ platform, domainColor }) {
           {/* Profile link */}
           {platform.profileUrl && input && !platform.isPost && (
             <a href={platform.profileUrl(input)} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/70 transition-colors">
+              className={`flex items-center gap-1.5 text-xs ${theme === 'light' ? 'text-[#64748b] hover:text-[#0f172a]' : 'text-white/35 hover:text-white/70'} transition-colors`}>
               <ExternalLink className="h-3 w-3" /> View public profile
             </a>
           )}
@@ -863,7 +872,7 @@ function PlatformCard({ platform, domainColor }) {
                 <p className="text-sm font-bold" style={{ color: platform.color }}>
                   {stat.value?.toLocaleString?.() ?? stat.value ?? '—'}
                 </p>
-                <p className="text-[10px] text-white/30">{stat.label}</p>
+                <p className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>{stat.label}</p>
               </div>
             ))}
           </div>
@@ -875,19 +884,20 @@ function PlatformCard({ platform, domainColor }) {
 
 // ─── Domain Selector ──────────────────────────────────────────────────────────
 function DomainSelector({ current, onChange }) {
+  const { theme } = useTheme();
   return (
     <div className="grid grid-cols-3 gap-3">
       {Object.entries(DOMAINS).map(([key, dom]) => (
         <button key={key} onClick={() => onChange(key)}
           className={`rounded-2xl border p-4 text-left transition-all duration-200 ${
             current === key
-              ? 'bg-white/8 scale-[1.01]'
-              : 'border-white/8 bg-white/2 hover:bg-white/5'
+              ? (theme === 'light' ? 'bg-[#7b61ff]/5 scale-[1.01]' : 'bg-white/8 scale-[1.01]')
+              : (theme === 'light' ? 'border-slate-200 bg-white hover:bg-slate-50' : 'border-white/8 bg-white/2 hover:bg-white/5')
           }`}
-          style={current === key ? { borderColor: `${dom.color}50` } : {}}>
+          style={current === key ? { borderColor: dom.color } : {}}>
           <div className="text-2xl mb-2">{dom.emoji}</div>
-          <p className="text-sm font-bold text-white/90">{dom.label}</p>
-          <p className="text-[11px] text-white/40 mt-1 leading-relaxed">{dom.desc}</p>
+          <p className={`text-sm font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white/90'}`}>{dom.label}</p>
+          <p className={`text-[11px] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'} mt-1 leading-relaxed`}>{dom.desc}</p>
           {current === key && (
             <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest"
               style={{ color: dom.color }}>
@@ -981,20 +991,22 @@ function CompactHeatmap({ careerIntegrations }) {
   const gridColumns = `repeat(${weekCount}, minmax(10px, 1fr))`;
   const monthLabels = buildHeatmapMonthLabels(visibleHeatmap);
 
+  const { theme } = useTheme();
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-white/30">
+          <p className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-slate-400' : 'text-white/30'}`}>
             {title}
           </p>
           {source === 'none' && (
-            <p className="mt-1 text-[10px] text-white/25">No Coding Activity Connected</p>
+            <p className={`mt-1 text-[10px] ${theme === 'light' ? 'text-slate-400' : 'text-white/25'}`}>No Coding Activity Connected</p>
           )}
         </div>
         <div className="flex items-center gap-2">
           {availableSources.length > 1 && (
-            <div className="flex rounded-full border border-white/10 bg-white/[0.03] p-1">
+            <div className={`flex rounded-full border ${theme === 'light' ? 'border-slate-200 bg-slate-100' : 'border-white/10 bg-white/[0.03]'} p-1`}>
               {availableSources.map(({ id, label, icon: Icon }) => {
                 const active = source === id;
                 return (
@@ -1002,7 +1014,7 @@ function CompactHeatmap({ careerIntegrations }) {
                     className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
                       active
                         ? 'bg-[#7b61ff]/20 text-white shadow-[0_0_18px_rgba(123,97,255,0.22)]'
-                        : 'text-white/35 hover:bg-white/5 hover:text-white/70'
+                        : (theme === 'light' ? 'text-slate-500 hover:bg-slate-200 hover:text-slate-800' : 'text-white/35 hover:bg-white/5 hover:text-white/70')
                     }`}
                     aria-pressed={active}>
                     <Icon className="h-3 w-3" />
@@ -1024,7 +1036,7 @@ function CompactHeatmap({ careerIntegrations }) {
           <div className="mb-1 grid gap-[3px]" style={{ gridTemplateColumns: gridColumns }}>
             {monthLabels.map((month) => (
               <span key={month.key}
-                className="truncate text-[9px] font-semibold text-white/24"
+                className={`truncate text-[9px] font-semibold ${theme === 'light' ? 'text-slate-400' : 'text-white/24'}`}
                 style={{ gridColumn: `${month.column} / span 4` }}>
                 {month.label}
               </span>
@@ -1035,39 +1047,40 @@ function CompactHeatmap({ careerIntegrations }) {
               <div key={i} title={`${cell.date}: ${cell.count} activit${cell.count === 1 ? 'y' : 'ies'}`}
                 className={`h-2.5 w-2.5 shrink-0 cursor-pointer rounded-[2px] transition-transform hover:scale-110 sm:h-3 sm:w-3 ${loading ? 'animate-pulse' : ''}`}
                 style={{
-                  backgroundColor: loading ? 'rgba(255,255,255,0.08)' : getHeatmapColor(cell.count),
+                  backgroundColor: loading ? (theme === 'light' ? '#f1f5f9' : 'rgba(255,255,255,0.08)') : getHeatmapColor(cell.count, theme),
                 }} />
             ))}
           </div>
         </div>
       </div>
       {loading && (
-        <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-white/25">Loading Activity...</p>
+        <p className={`mt-2 text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-slate-400' : 'text-white/25'}`}>Loading Activity...</p>
       )}
       {!loading && source === 'none' && (
-        <p className="mt-2 text-[10px] text-white/25">{subtitle}</p>
+        <p className={`mt-2 text-[10px] ${theme === 'light' ? 'text-slate-400' : 'text-white/25'}`}>{subtitle}</p>
       )}
       {!loading && error && (
         <div className="mt-2 flex items-center justify-between gap-3">
           <p className="text-[10px] text-[#ff8fbd]">{error}</p>
           <button type="button" onClick={loadActivity}
-            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold text-white/50 hover:bg-white/10 hover:text-white">
+            className={`rounded-lg border ${theme === 'light' ? 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800' : 'border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'} px-2.5 py-1 text-[10px] font-bold`}>
             Retry
           </button>
         </div>
       )}
       <div className="flex items-center gap-1.5 justify-end mt-2">
-        <span className="text-[9px] text-white/20">Less</span>
+        <span className={`text-[9px] ${theme === 'light' ? 'text-slate-400' : 'text-white/20'}`}>Less</span>
         {[0.05, 0.25, 0.5, 0.75, 1].map((o, i) => (
           <div key={i} className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: `rgba(123,97,255,${o})` }} />
         ))}
-        <span className="text-[9px] text-white/20">More</span>
+        <span className={`text-[9px] ${theme === 'light' ? 'text-slate-400' : 'text-white/20'}`}>More</span>
       </div>
     </div>
   );
 }
 
 function CareerLinkCard({ provider, label, icon: Icon, placeholder, metricLabels = [], integration, saving, onSave, onDisconnect }) {
+  const { theme } = useTheme();
   const [input, setInput] = useState(integration.profileUrl || '');
   const [editing, setEditing] = useState(!integration.connected);
   const [stats, setStats] = useState(null);
@@ -1111,15 +1124,15 @@ function CareerLinkCard({ provider, label, icon: Icon, placeholder, metricLabels
   };
 
   return (
-    <div className={`rounded-2xl border p-4 transition-all ${connected ? 'border-[#10c7a1]/25 bg-[#10c7a1]/5' : 'border-white/8 bg-white/2'}`}>
+    <div className={`rounded-2xl border p-4 transition-all ${connected ? (theme === 'light' ? 'border-[#10c7a1]/30 bg-[#10c7a1]/5' : 'border-[#10c7a1]/25 bg-[#10c7a1]/5') : (theme === 'light' ? 'border-slate-200 bg-white shadow-sm' : 'border-white/8 bg-white/2')}`}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/6 text-[#c084fc]">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-100' : 'border-white/10 bg-white/6'} text-[#c084fc]`}>
             <Icon className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-sm font-bold text-white/90">{label}</p>
-            <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-widest ${connected ? 'text-[#10c7a1]' : 'text-white/30'}`}>
+            <p className={`text-sm font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white/90'}`}>{label}</p>
+            <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-widest ${connected ? 'text-[#10c7a1]' : (theme === 'light' ? 'text-slate-400' : 'text-white/30')}`}>
               {connected ? `${label} Connected` : 'Not connected'}
             </p>
           </div>
@@ -1127,7 +1140,7 @@ function CareerLinkCard({ provider, label, icon: Icon, placeholder, metricLabels
         {connected && (
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setEditing(true)}
-              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[10px] font-bold text-white/50 transition hover:bg-white/10 hover:text-white">
+              className={`inline-flex items-center gap-1 rounded-lg border ${theme === 'light' ? 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800' : 'border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'} px-2.5 py-1.5 text-[10px] font-bold transition`}>
               <Pencil className="h-3 w-3" />
               Edit
             </button>
@@ -1171,7 +1184,7 @@ function CareerLinkCard({ provider, label, icon: Icon, placeholder, metricLabels
 
       {connected && integration.profileUrl && (
         <a href={integration.profileUrl} target="_blank" rel="noreferrer"
-          className="mb-3 flex items-center gap-2 truncate rounded-xl border border-white/8 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-[#7df3cc]/80 hover:text-[#7df3cc]">
+          className={`mb-3 flex items-center gap-2 truncate rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50 text-[#10b981] hover:text-[#047857]' : 'border-white/8 bg-white/[0.035] text-[#7df3cc]/80 hover:text-[#7df3cc]'} px-3 py-2 text-sm font-semibold`}>
           <ExternalLink className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{getCareerProfileLabel(provider, integration.profileUrl)}</span>
         </a>
@@ -1184,11 +1197,11 @@ function CareerLinkCard({ provider, label, icon: Icon, placeholder, metricLabels
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && showSave && handleSave()}
             placeholder={placeholder}
-            className="h-10 min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#7b61ff]/45"
+            className={`h-10 min-w-0 flex-1 rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50 text-[#0f172a] placeholder-slate-400 focus:border-[#7b61ff]' : 'border-white/10 bg-white/5 text-white placeholder:text-white/25 focus:border-[#7b61ff]/45'} px-3 text-sm outline-none`}
           />
           {showSave && (
             <button type="button" onClick={handleSave} disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#7b61ff]/35 bg-[#7b61ff]/15 px-3 text-xs font-bold text-[#c084fc] transition hover:bg-[#7b61ff]/22 disabled:opacity-50">
+              className={`inline-flex items-center gap-1.5 rounded-xl border ${theme === 'light' ? 'border-[#7b61ff]/30 bg-[#7b61ff]/10 text-[#7b61ff] hover:bg-[#7b61ff]/20' : 'border-[#7b61ff]/35 bg-[#7b61ff]/15 text-[#c084fc] hover:bg-[#7b61ff]/22'} px-3 text-xs font-bold transition disabled:opacity-50`}>
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
               Save
             </button>
@@ -1200,10 +1213,11 @@ function CareerLinkCard({ provider, label, icon: Icon, placeholder, metricLabels
 }
 
 function CareerStatsChips({ loading, items }) {
+  const { theme } = useTheme();
   if (loading) {
     return (
       <div className="mb-3 flex flex-wrap gap-2">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold text-white/40">
+        <span className={`inline-flex items-center gap-2 rounded-full border ${theme === 'light' ? 'border-slate-200 bg-slate-50 text-slate-400' : 'border-white/10 bg-white/5 text-white/40'} px-2.5 py-1 text-[10px] font-bold`}>
           <Loader2 className="h-3 w-3 animate-spin" />
           Fetching profile
         </span>
@@ -1217,7 +1231,7 @@ function CareerStatsChips({ loading, items }) {
   return (
     <div className="mb-3 flex flex-wrap gap-2">
       {visible.map(([value, label]) => (
-        <span key={label} className="rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[10px] font-bold text-white/62">
+        <span key={label} className={`rounded-full border ${theme === 'light' ? 'border-slate-200 bg-slate-50 text-[#64748b]' : 'border-white/10 bg-white/6 text-white/62'} px-2.5 py-1 text-[10px] font-bold`}>
           {typeof value === 'number' ? value.toLocaleString() : value} {label}
         </span>
       ))}
@@ -1227,6 +1241,9 @@ function CareerStatsChips({ loading, items }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Career() {
+  const { theme } = useTheme();
+  const card = getCardClass(theme);
+  const iCard = getICardClass(theme);
   const dispatch = useDispatch();
   const careerIntegrations = useSelector((state) => state.careerIntegrations);
   const [mounted, setMounted]               = useState(false);
@@ -1473,16 +1490,16 @@ export default function Career() {
   const burnoutInsight      = aiInsights.find(i => i.label === 'Burnout Risk');
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-[#06080f] px-6 py-8 text-white sm:px-8 lg:px-12">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(123,97,255,0.14),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(200,168,75,0.10),transparent_26%)]" />
+    <div className={`relative min-h-full overflow-hidden ${theme === 'light' ? 'bg-[#f8fafc] text-[#64748b]' : 'bg-[#06080f] text-white'} px-6 py-8 sm:px-8 lg:px-12`}>
+      <div className={`pointer-events-none absolute inset-0 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_top_left,rgba(123,97,255,0.06),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(200,168,75,0.04),transparent_26%)]' : 'bg-[radial-gradient(circle_at_top_left,rgba(123,97,255,0.14),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(200,168,75,0.10),transparent_26%)]'}`} />
 
       <div className="relative space-y-8">
 
         {/* ── HEADER ── */}
         <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-4xl font-semibold tracking-tight">Career Intelligence</h1>
-            <p className="mt-2 max-w-2xl text-base leading-relaxed text-white/55">
+            <h1 className={`text-4xl font-semibold tracking-tight ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Career Intelligence</h1>
+            <p className={`mt-2 max-w-2xl text-base leading-relaxed ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'}`}>
               {profileLoading ? 'Loading your career signals…' :
                burnoutRisk != null && burnoutRisk > 65
                 ? `Burnout risk is at ${burnoutRisk}% — recovery is the highest-leverage career move right now.`
@@ -1490,7 +1507,7 @@ export default function Career() {
             </p>
           </div>
           <button onClick={fetchDashProfile} disabled={profileLoading}
-            className="flex shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/50 hover:bg-white/8 hover:text-white/70 transition-all disabled:opacity-40">
+            className={`flex shrink-0 items-center gap-2 rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800' : 'border-white/10 bg-white/5 text-white/50 hover:bg-white/8 hover:text-white/70'} px-4 py-2 text-xs font-semibold transition-all disabled:opacity-40`}>
             <RefreshCw className={`h-3.5 w-3.5 ${profileLoading ? 'animate-spin' : ''}`} />
             {profileLoading ? 'Syncing…' : 'Refresh signals'}
           </button>
@@ -1507,15 +1524,15 @@ export default function Career() {
 
         {/* ── CAREER DOMAIN + INTEGRATIONS ── */}
         <section className={`${card} p-6`}>
-          <div className="flex items-center justify-between mb-5 border-b border-white/8 pb-4">
+          <div className={`flex items-center justify-between mb-5 border-b ${theme === 'light' ? 'border-slate-100' : 'border-white/8'} pb-4`}>
             <div>
-              <h2 className="text-xl font-bold">Career Domain</h2>
-              <p className="mt-1 text-sm text-white/45">
+              <h2 className={`text-xl font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Career Domain</h2>
+              <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'}`}>
                 Select your domain — we'll show you the right platforms to connect.
               </p>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border px-3 py-1.5"
-              style={{ borderColor: `${domainConfig.color}40`, backgroundColor: `${domainConfig.color}10` }}>
+            <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5`}
+              style={theme === 'light' ? { borderColor: `${domainConfig.color}25`, backgroundColor: `${domainConfig.color}08` } : { borderColor: `${domainConfig.color}40`, backgroundColor: `${domainConfig.color}10` }}>
               <span className="text-base">{domainConfig.emoji}</span>
               <span className="text-xs font-bold" style={{ color: domainConfig.color }}>{domainConfig.label}</span>
             </div>
@@ -1527,8 +1544,8 @@ export default function Career() {
           {/* Platform integrations */}
           <div className="mt-6">
             <div className="flex items-center gap-2 mb-4">
-              <Link className="h-4 w-4 text-white/30" />
-              <p className="text-xs font-bold uppercase tracking-widest text-white/30">
+              <Link className={`h-4 w-4 ${theme === 'light' ? 'text-slate-400' : 'text-white/30'}`} />
+              <p className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-slate-400' : 'text-white/30'}`}>
                 Career integrations · Connect your profiles
               </p>
             </div>
@@ -1557,22 +1574,22 @@ export default function Career() {
 
           {/* Compact heatmap */}
           {showCodingActivity && (
-            <div className="mt-6 pt-5 border-t border-white/8">
+            <div className={`mt-6 pt-5 border-t ${theme === 'light' ? 'border-slate-100' : 'border-white/8'}`}>
               <CompactHeatmap careerIntegrations={careerIntegrations} />
             </div>
           )}
 
           {/* LeetCode quick stats if connected — coding domain */}
           {showCodingActivity && (
-            <div className="mt-4 pt-4 border-t border-white/8 grid grid-cols-3 gap-3">
+            <div className={`mt-4 pt-4 border-t ${theme === 'light' ? 'border-slate-100' : 'border-white/8'} grid grid-cols-3 gap-3`}>
               {[
                 { label: 'Total Solved', value: displayedLeetcodeData.totalSolved, color: '#10c7a1' },
                 { label: 'Hard',         value: displayedLeetcodeData.hardSolved, color: '#f87171' },
                 { label: 'Easy Solved',  value: displayedLeetcodeData.easySolved, color: '#fbbf24' },
               ].map(s => (
-                <div key={s.label} className="rounded-xl bg-white/4 border border-white/8 p-3 text-center">
+                <div key={s.label} className={`rounded-xl ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-white/4 border-white/8'} p-3 text-center`}>
                   <p className="text-xl font-bold" style={{ color: s.color }}>{s.value}</p>
-                  <p className="text-[10px] text-white/35 mt-1 uppercase tracking-wider">{s.label}</p>
+                  <p className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'} mt-1 uppercase tracking-wider`}>{s.label}</p>
                 </div>
               ))}
             </div>
@@ -1581,19 +1598,19 @@ export default function Career() {
 
         {/* ── AI CAREER DEBRIEF ── */}
         <section>
-          <article className={`${card} border-[#7b61ff]/20 bg-gradient-to-br from-[#7b61ff]/5 to-[#06080f] p-6`}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 border-b border-white/5 pb-4">
+          <article className={`${card} border-[#7b61ff]/20 ${theme === 'light' ? 'bg-gradient-to-br from-[#7b61ff]/5 to-white shadow-sm' : 'bg-gradient-to-br from-[#7b61ff]/5 to-[#06080f]'} p-6`}>
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 border-b ${theme === 'light' ? 'border-slate-100' : 'border-white/5'} pb-4`}>
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#7b61ff]/30 to-[#c084fc]/20 flex items-center justify-center">
                   <Sparkles className="h-5 w-5 text-[#c084fc]" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">Daily Career Debrief</h2>
-                  <p className="text-xs text-white/40 mt-0.5">Your Digital Twin reads your signals and speaks directly to you.</p>
+                  <h2 className={`text-xl font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Daily Career Debrief</h2>
+                  <p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'} mt-0.5`}>Your Digital Twin reads your signals and speaks directly to you.</p>
                 </div>
               </div>
               <button onClick={fetchCareerDebrief} disabled={debriefLoading}
-                className="flex items-center gap-2 rounded-xl border border-[#7b61ff]/40 bg-[#7b61ff]/10 px-4 py-2.5 text-sm font-bold text-[#c084fc] hover:bg-[#7b61ff]/20 transition-all disabled:opacity-50">
+                className={`flex items-center gap-2 rounded-xl border ${theme === 'light' ? 'border-[#7b61ff]/30 bg-[#7b61ff]/10 text-[#7b61ff] hover:bg-[#7b61ff]/20' : 'border-[#7b61ff]/40 bg-[#7b61ff]/10 text-[#c084fc] hover:bg-[#7b61ff]/20'} px-4 py-2.5 text-sm font-bold transition-all disabled:opacity-50`}>
                 {debriefLoading
                   ? <><div className="h-4 w-4 rounded-full border-2 border-[#c084fc]/30 border-t-[#c084fc] animate-spin" /> Thinking…</>
                   : <><Sparkles className="h-4 w-4" /> Generate today's debrief</>}
@@ -1602,10 +1619,10 @@ export default function Career() {
 
             {!debriefText && !debriefLoading && !debriefError && (
               <div className="flex flex-col items-center justify-center py-8 text-center gap-3">
-                <div className="h-16 w-16 rounded-full border-2 border-dashed border-[#7b61ff]/20 flex items-center justify-center">
-                  <Sparkles className="h-7 w-7 text-[#7b61ff]/30" />
+                <div className={`h-16 w-16 rounded-full border-2 border-dashed ${theme === 'light' ? 'border-[#7b61ff]/30' : 'border-[#7b61ff]/20'} flex items-center justify-center`}>
+                  <Sparkles className={`h-7 w-7 ${theme === 'light' ? 'text-[#7b61ff]/50' : 'text-[#7b61ff]/30'}`} />
                 </div>
-                <p className="text-sm text-white/35 max-w-sm leading-relaxed">
+                <p className={`text-sm ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'} max-w-sm leading-relaxed`}>
                   Hit "Generate today's debrief" and your Digital Twin will synthesise your connected profile data, productivity score, and burnout trajectory into a personalised 3-sentence briefing.
                 </p>
               </div>
@@ -1615,7 +1632,7 @@ export default function Career() {
                 <div className="flex gap-1.5">
                   {[0,1,2,3].map(i => <div key={i} className="h-2 w-2 rounded-full bg-[#7b61ff]/60 animate-bounce" style={{ animationDelay: `${i*120}ms` }} />)}
                 </div>
-                <p className="text-sm text-white/30">Reading your signals…</p>
+                <p className={`text-sm ${theme === 'light' ? 'text-slate-400' : 'text-white/30'}`}>Reading your signals…</p>
               </div>
             )}
             {debriefError && (
@@ -1625,14 +1642,14 @@ export default function Career() {
               </div>
             )}
             {debriefText && (
-              <div className="rounded-2xl bg-gradient-to-br from-[#7b61ff]/8 to-transparent border border-[#7b61ff]/15 p-5">
-                <p className="text-base leading-[1.8] text-white/85 font-light">{debriefText}</p>
+              <div className={`rounded-2xl bg-gradient-to-br from-[#7b61ff]/8 to-transparent border ${theme === 'light' ? 'border-[#7b61ff]/30' : 'border-[#7b61ff]/15'} p-5`}>
+                <p className={`text-base leading-[1.8] ${theme === 'light' ? 'text-[#334155]' : 'text-white/85'} font-light`}>{debriefText}</p>
                 <div className="mt-4 flex items-center justify-between">
-                  <p className="text-[10px] text-white/25 uppercase tracking-widest">
+                  <p className={`text-[10px] ${theme === 'light' ? 'text-slate-400' : 'text-white/25'} uppercase tracking-widest`}>
                     Generated from live signals · {new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'short' })}
                   </p>
                   <button onClick={fetchCareerDebrief} disabled={debriefLoading}
-                    className="text-xs text-[#7b61ff]/60 hover:text-[#7b61ff] transition-colors disabled:cursor-not-allowed disabled:opacity-40">
+                    className={`text-xs ${theme === 'light' ? 'text-[#7b61ff] hover:text-[#7b61ff]/80' : 'text-[#7b61ff]/60 hover:text-[#7b61ff]'} transition-colors disabled:cursor-not-allowed disabled:opacity-40`}>
                     Regenerate ↺
                   </button>
                 </div>
@@ -1640,16 +1657,16 @@ export default function Career() {
             )}
 
             {(productivityInsight || burnoutInsight) && (
-              <div className="mt-5 pt-4 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className={`mt-5 pt-4 border-t ${theme === 'light' ? 'border-slate-100' : 'border-white/5'} grid grid-cols-1 md:grid-cols-2 gap-3`}>
                 {[productivityInsight, burnoutInsight].filter(Boolean).map((ins, i) => (
                   <div key={i} className={`rounded-xl border p-3.5 flex items-start gap-3 ${
-                    ins.colorState === 'green' ? 'bg-[#4ade80]/5 border-[#4ade80]/15' :
-                    ins.colorState === 'orange'? 'bg-[#fbbf24]/5 border-[#fbbf24]/15' :
-                                                 'bg-[#f87171]/5 border-[#f87171]/15'}`}>
+                    ins.colorState === 'green' ? (theme === 'light' ? 'bg-[#4ade80]/5 border-[#4ade80]/30' : 'bg-[#4ade80]/5 border-[#4ade80]/15') :
+                    ins.colorState === 'orange'? (theme === 'light' ? 'bg-[#fbbf24]/5 border-[#fbbf24]/30' : 'bg-[#fbbf24]/5 border-[#fbbf24]/15') :
+                                                 (theme === 'light' ? 'bg-[#f87171]/5 border-[#f87171]/30' : 'bg-[#f87171]/5 border-[#f87171]/15')}`}>
                     <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: ins.colorState === 'green' ? '#4ade80' : ins.colorState === 'orange' ? '#fbbf24' : '#f87171' }} />
                     <div>
-                      <p className="text-xs font-bold text-white/60 uppercase tracking-wider mb-1">Your Twin on {ins.label}</p>
-                      <p className="text-sm text-white/70 leading-relaxed">{ins.message}</p>
+                      <p className={`text-xs font-bold ${theme === 'light' ? 'text-slate-500' : 'text-white/60'} uppercase tracking-wider mb-1`}>Your Twin on {ins.label}</p>
+                      <p className={`text-sm ${theme === 'light' ? 'text-[#334155]' : 'text-white/70'} leading-relaxed`}>{ins.message}</p>
                     </div>
                   </div>
                 ))}
@@ -1663,9 +1680,9 @@ export default function Career() {
 
           {/* 7-Day Burnout Forecast */}
           <article className={`${iCard} p-6 xl:col-span-6`}>
-            <div className="mb-5 border-b border-white/8 pb-4">
-              <h2 className="text-xl font-bold">7-Day Burnout Forecast</h2>
-              <p className="mt-1 text-sm text-white/45">
+            <div className={`mb-5 border-b ${theme === 'light' ? 'border-slate-100' : 'border-white/8'} pb-4`}>
+              <h2 className={`text-xl font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>7-Day Burnout Forecast</h2>
+              <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'}`}>
                 {burnoutRisk != null
                   ? `Based on burnout risk (${burnoutRisk}%), study load (${profile.studyHours ?? '?'}h/day), sleep (${profile.sleepHours ?? '?'}h/night).`
                   : 'Complete onboarding to unlock your personal burnout trajectory.'}
@@ -1683,7 +1700,7 @@ export default function Career() {
                         <div className="w-full rounded-t-md" style={{ height: `${Math.max(8, pct*100)}px`, backgroundColor: color+'25', border:`1px solid ${color}30` }}>
                           <div className="rounded-t-sm" style={{ height:`${pct*100}%`, backgroundColor: color+'60' }} />
                         </div>
-                        <span className="text-[9px] text-white/30">{day.label}</span>
+                        <span className={`text-[9px] ${theme === 'light' ? 'text-slate-400' : 'text-white/30'}`}>{day.label}</span>
                       </div>
                     );
                   })}
@@ -1692,12 +1709,12 @@ export default function Career() {
                   {[['#4ade80','Safe (< 50%)'],['#fbbf24','Warning (50–70%)'],['#f87171','High (> 70%)']].map(([c,l]) => (
                     <div key={l} className="flex items-center gap-1.5">
                       <div className="h-2 w-2 rounded-sm" style={{ backgroundColor: c }} />
-                      <span className="text-[10px] text-white/35">{l}</span>
+                      <span className={`text-[10px] ${theme === 'light' ? 'text-slate-400' : 'text-white/35'}`}>{l}</span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 rounded-xl border border-white/8 bg-white/3 p-3.5">
-                  <p className="text-xs text-white/60 leading-relaxed">
+                <div className={`mt-4 rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/8 bg-white/3'} p-3.5`}>
+                  <p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/60'} leading-relaxed`}>
                     {forecast[6].risk > forecast[0].risk + 10
                       ? `⚠️ Trending upward — projects ${forecast[6].risk}% burnout risk by ${forecast[6].label}. One full rest day can reverse this.`
                       : forecast[6].risk <= forecast[0].risk
@@ -1708,20 +1725,20 @@ export default function Career() {
               </>
             ) : (
               <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
-                <div className="h-14 w-14 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center">
-                  <Activity className="h-6 w-6 text-white/20" />
+                <div className={`h-14 w-14 rounded-full border-2 border-dashed ${theme === 'light' ? 'border-slate-200' : 'border-white/10'} flex items-center justify-center`}>
+                  <Activity className={`h-6 w-6 ${theme === 'light' ? 'text-slate-300' : 'text-white/20'}`} />
                 </div>
-                <p className="text-sm text-white/30 max-w-xs">Complete your onboarding profile to see your 7-day burnout forecast.</p>
+                <p className={`text-sm ${theme === 'light' ? 'text-slate-400' : 'text-white/30'} max-w-xs`}>Complete your onboarding profile to see your 7-day burnout forecast.</p>
               </div>
             )}
           </article>
 
           {/* Cross-Domain Correlation Alerts */}
           <article className={`${iCard} p-6 xl:col-span-6`}>
-            <div className="mb-5 border-b border-white/8 pb-4 flex items-center justify-between">
+            <div className={`mb-5 border-b ${theme === 'light' ? 'border-slate-100' : 'border-white/8'} pb-4 flex items-center justify-between`}>
               <div>
-                <h2 className="text-xl font-bold">Cross-Domain Alerts</h2>
-                <p className="mt-1 text-sm text-white/45">Health × Career × Finance — signals no single app can see.</p>
+                <h2 className={`text-xl font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Cross-Domain Alerts</h2>
+                <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'}`}>Health × Career × Finance — signals no single app can see.</p>
               </div>
               <Target className="h-5 w-5 text-[#7b61ff] shrink-0" />
             </div>
@@ -1729,26 +1746,26 @@ export default function Career() {
               {crossInsights.map((ins, i) => (
                 <div key={i} onClick={() => setExpandedInsight(expandedInsight === i ? null : i)}
                   className={`rounded-xl border p-4 cursor-pointer transition-all ${
-                    ins.severity === 'critical' ? 'border-[#f87171]/20 bg-[#f87171]/5 hover:bg-[#f87171]/8' :
-                    ins.severity === 'warning'  ? 'border-[#fbbf24]/20 bg-[#fbbf24]/5 hover:bg-[#fbbf24]/8' :
-                    ins.severity === 'positive' ? 'border-[#4ade80]/20 bg-[#4ade80]/5 hover:bg-[#4ade80]/8' :
-                                                  'border-white/10 bg-white/3 hover:bg-white/5'}`}>
+                    ins.severity === 'critical' ? (theme === 'light' ? 'border-[#f87171]/30 bg-[#f87171]/5 hover:bg-[#f87171]/10' : 'border-[#f87171]/20 bg-[#f87171]/5 hover:bg-[#f87171]/8') :
+                    ins.severity === 'warning'  ? (theme === 'light' ? 'border-[#fbbf24]/40 bg-[#fbbf24]/5 hover:bg-[#fbbf24]/10' : 'border-[#fbbf24]/20 bg-[#fbbf24]/5 hover:bg-[#fbbf24]/8') :
+                    ins.severity === 'positive' ? (theme === 'light' ? 'border-[#4ade80]/30 bg-[#4ade80]/5 hover:bg-[#4ade80]/10' : 'border-[#4ade80]/20 bg-[#4ade80]/5 hover:bg-[#4ade80]/8') :
+                                                  (theme === 'light' ? 'border-slate-200 bg-slate-50 hover:bg-slate-100 shadow-sm' : 'border-white/10 bg-white/3 hover:bg-white/5')}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                       <span className="text-xl">{ins.icon}</span>
                       <div>
-                        <p className="text-sm font-bold text-white/85">{ins.title}</p>
-                        {expandedInsight !== i && <p className="text-xs text-white/45 mt-1 line-clamp-1">{ins.body}</p>}
+                        <p className={`text-sm font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white/85'}`}>{ins.title}</p>
+                        {expandedInsight !== i && <p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'} mt-1 line-clamp-1`}>{ins.body}</p>}
                       </div>
                     </div>
-                    {expandedInsight === i ? <ChevronUp className="h-4 w-4 text-white/30 shrink-0 mt-0.5" /> : <ChevronDown className="h-4 w-4 text-white/30 shrink-0 mt-0.5" />}
+                    {expandedInsight === i ? <ChevronUp className={`h-4 w-4 ${theme === 'light' ? 'text-slate-400' : 'text-white/30'} shrink-0 mt-0.5`} /> : <ChevronDown className={`h-4 w-4 ${theme === 'light' ? 'text-slate-400' : 'text-white/30'} shrink-0 mt-0.5`} />}
                   </div>
                   {expandedInsight === i && (
-                    <div className="mt-3 pt-3 border-t border-white/8 space-y-2">
-                      <p className="text-sm text-white/65 leading-relaxed">{ins.body}</p>
+                    <div className={`mt-3 pt-3 border-t ${theme === 'light' ? 'border-slate-100' : 'border-white/8'} space-y-2`}>
+                      <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/65'} leading-relaxed`}>{ins.body}</p>
                       <div className="flex items-start gap-2">
                         <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: ins.color }}>Action</span>
-                        <p className="text-xs text-white/55 leading-relaxed">{ins.action}</p>
+                        <p className={`text-xs ${theme === 'light' ? 'text-slate-600' : 'text-white/55'} leading-relaxed`}>{ins.action}</p>
                       </div>
                     </div>
                   )}
@@ -1756,12 +1773,12 @@ export default function Career() {
               ))}
             </div>
             {careerInsights.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-white/8 space-y-2.5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/25">From your connected integrations</p>
+              <div className={`mt-4 pt-4 border-t ${theme === 'light' ? 'border-slate-100' : 'border-white/8'} space-y-2.5`}>
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-slate-400' : 'text-white/25'}`}>From your connected integrations</p>
                 {careerInsights.slice(0, 2).map((ins, i) => (
-                  <div key={i} className={`flex items-start gap-2.5 rounded-lg px-3 py-2.5 border ${ins.colorState === 'green' ? 'bg-[#4ade80]/5 border-[#4ade80]/15' : 'bg-[#fbbf24]/5 border-[#fbbf24]/15'}`}>
+                  <div key={i} className={`flex items-start gap-2.5 rounded-lg px-3 py-2.5 border ${ins.colorState === 'green' ? (theme === 'light' ? 'bg-[#4ade80]/5 border-[#4ade80]/25' : 'bg-[#4ade80]/5 border-[#4ade80]/15') : (theme === 'light' ? 'bg-[#fbbf24]/5 border-[#fbbf24]/25' : 'bg-[#fbbf24]/5 border-[#fbbf24]/15')}`}>
                     <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ins.colorState === 'green' ? '#4ade80' : '#fbbf24' }} />
-                    <p className="text-xs text-white/60 leading-relaxed">{ins.message}</p>
+                    <p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/60'} leading-relaxed`}>{ins.message}</p>
                   </div>
                 ))}
               </div>
@@ -1772,19 +1789,19 @@ export default function Career() {
         {/* ── TRAJECTORY ── */}
         <section>
           <article className={`${iCard} p-6`}>
-            <div className="mb-5 border-b border-white/8 pb-4">
-              <h2 className="text-xl font-bold">Career Trajectory Model</h2>
-              <p className="mt-1 text-sm text-white/45">
+            <div className={`mb-5 border-b ${theme === 'light' ? 'border-slate-100' : 'border-white/8'} pb-4`}>
+              <h2 className={`text-xl font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Career Trajectory Model</h2>
+              <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'}`}>
                 {momentumScore != null
                   ? `Sustainable path at ${momentumScore}/100 momentum — ${burnoutRisk > 50 ? 'high-fatigue risk is pulling your curve down' : 'trajectory is currently healthy'}.`
                   : 'Complete onboarding to unlock your personal trajectory model.'}
               </p>
             </div>
-            <div className="relative h-52 overflow-hidden rounded-xl border border-white/8 bg-[#0a0c14]">
+            <div className={`relative h-52 overflow-hidden rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/8 bg-[#0a0c14]'}`}>
               <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 800 220">
-                <line x1="0" x2="800" y1="55"  stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                <line x1="0" x2="800" y1="110" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                <line x1="0" x2="800" y1="165" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                <line x1="0" x2="800" y1="55"  stroke={theme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'} strokeWidth="1" />
+                <line x1="0" x2="800" y1="110" stroke={theme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'} strokeWidth="1" />
+                <line x1="0" x2="800" y1="165" stroke={theme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'} strokeWidth="1" />
                 <path d="M0 180 Q200 140 400 155 T800 215" fill="none" stroke="#c8a84b" strokeDasharray="7 7" strokeWidth="2.5" opacity="0.7" />
                 <path d={momentumScore != null && momentumScore >= 60 ? "M0 180 Q250 140 550 70 T800 35" : "M0 180 Q250 155 550 120 T800 90"}
                   fill="none" stroke="#7b61ff" strokeLinecap="round" strokeWidth="4"
@@ -1792,10 +1809,10 @@ export default function Career() {
                   style={{ transition: 'stroke-dashoffset 1.8s ease-in-out' }} />
                 {momentumScore != null && <circle cx="200" cy={180 - (momentumScore/100)*80} r="5" fill="#7b61ff" opacity="0.9" />}
               </svg>
-              <div className="absolute right-4 top-4 bg-[#0a0c14]/90 backdrop-blur border border-white/8 p-3 rounded-xl space-y-2 text-xs font-semibold">
+              <div className={`absolute right-4 top-4 ${theme === 'light' ? 'bg-white/95 border-slate-200 shadow-sm' : 'bg-[#0a0c14]/90 border-white/8'} backdrop-blur p-3 rounded-xl space-y-2 text-xs font-semibold`}>
                 <div className="flex items-center gap-2 text-[#7b61ff]"><span className="h-0.5 w-5 rounded bg-[#7b61ff] inline-block" /> Sustainable path</div>
                 <div className="flex items-center gap-2 text-[#c8a84b]"><span className="h-0.5 w-5 rounded border-b-2 border-dashed border-[#c8a84b] inline-block" /> Burnout trajectory</div>
-                {momentumScore != null && <div className="flex items-center gap-2 text-white/50"><span className="h-2 w-2 rounded-full bg-[#7b61ff] inline-block" /> You are here</div>}
+                {momentumScore != null && <div className={`flex items-center gap-2 ${theme === 'light' ? 'text-slate-500' : 'text-white/50'}`}><span className="h-2 w-2 rounded-full bg-[#7b61ff] inline-block" /> You are here</div>}
               </div>
             </div>
             {momentumScore != null && (
@@ -1818,24 +1835,27 @@ export default function Career() {
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 function CareerMetricCard({ metric, mounted }) {
+  const { theme } = useTheme();
+  const iCard = getICardClass(theme);
   const Icon = metric.icon;
   const ringVal = metric.inverted ? 100 - metric.value : metric.value;
   return (
     <article className={`${iCard} p-5 text-center`}>
-      <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white/5 ring-1 ring-white/8">
+      <div className={`mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full ${theme === 'light' ? 'bg-slate-100 ring-slate-200' : 'bg-white/5 ring-white/8'}`}>
         <CareerRing value={ringVal} color={metric.color} mounted={mounted} />
       </div>
       <div className="mx-auto mb-2.5 h-9 w-9 rounded-xl flex items-center justify-center"
         style={{ backgroundColor: metric.color+'18', color: metric.color }}>
         <Icon className="h-5 w-5" />
       </div>
-      <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white/45 truncate">{metric.label}</h3>
+      <h3 className={`text-xs font-bold uppercase tracking-[0.12em] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/45'} truncate`}>{metric.label}</h3>
       <p className="mt-1 text-sm font-bold truncate" style={{ color: metric.color }}>{metric.status}</p>
     </article>
   );
 }
 
 function CareerRing({ value, color, mounted }) {
+  const { theme } = useTheme();
   const r = 28, circ = 2 * Math.PI * r;
   const [cur, setCur] = useState(0);
   useEffect(() => {
@@ -1854,34 +1874,39 @@ function CareerRing({ value, color, mounted }) {
   return (
     <div className="relative h-14 w-14">
       <svg className="h-full w-full -rotate-90" viewBox="0 0 72 72">
-        <circle cx="36" cy="36" fill="none" r={r} stroke="rgba(255,255,255,0.08)" strokeWidth="4.5" />
+        <circle cx="36" cy="36" fill="none" r={r} stroke={theme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)'} strokeWidth="4.5" />
         <circle cx="36" cy="36" fill="none" r={r} stroke={color} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" strokeWidth="4.5" />
       </svg>
-      <div className="absolute inset-0 grid place-items-center text-xs font-bold text-white/80">{cur}%</div>
+      <div className={`absolute inset-0 grid place-items-center text-xs font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white/80'}`}>{cur}%</div>
     </div>
   );
 }
 
 function NoSignalCard({ label, icon: Icon, hint = 'Complete onboarding' }) {
+  const { theme } = useTheme();
+  const card = getCardClass(theme);
   return (
     <article className={`${card} p-5 text-center flex flex-col items-center justify-center gap-3 min-h-[140px]`}>
-      <div className="h-14 w-14 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center">
-        <Icon className="h-6 w-6 text-white/15" />
+      <div className={`h-14 w-14 rounded-full border-2 border-dashed ${theme === 'light' ? 'border-slate-200' : 'border-white/10'} flex items-center justify-center`}>
+        <Icon className={`h-6 w-6 ${theme === 'light' ? 'text-slate-300' : 'text-white/15'}`} />
       </div>
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-white/25">{label}</p>
-        <p className="text-[11px] text-white/15 mt-0.5">{hint}</p>
+        <p className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/25'}`}>{label}</p>
+        <p className={`text-[11px] ${theme === 'light' ? 'text-slate-400' : 'text-white/15'} mt-0.5`}>{hint}</p>
       </div>
     </article>
   );
 }
 
 function TrajectoryCard({ tone, title, text }) {
-  const styles = tone === 'positive' ? 'border-[#7b61ff]/20 bg-[#7b61ff]/5 text-[#c084fc]' : 'border-[#c8a84b]/20 bg-[#c8a84b]/5 text-[#c8a84b]';
+  const { theme } = useTheme();
+  const styles = tone === 'positive'
+    ? (theme === 'light' ? 'border-[#7b61ff]/20 bg-[#7b61ff]/5 text-[#7b61ff]' : 'border-[#7b61ff]/20 bg-[#7b61ff]/5 text-[#c084fc]')
+    : (theme === 'light' ? 'border-[#c8a84b]/30 bg-[#c8a84b]/5 text-[#a88220]' : 'border-[#c8a84b]/20 bg-[#c8a84b]/5 text-[#c8a84b]');
   return (
     <div className={`rounded-xl border p-4 ${styles}`}>
       <h4 className="mb-1.5 text-xs font-bold uppercase tracking-[0.14em]">{title}</h4>
-      <p className="text-sm leading-relaxed text-white/55">{text}</p>
+      <p className={`text-sm leading-relaxed ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'}`}>{text}</p>
     </div>
   );
 }

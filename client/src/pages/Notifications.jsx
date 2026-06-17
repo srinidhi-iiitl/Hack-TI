@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
 import {
   AlertTriangle,
   Bell,
@@ -63,6 +64,7 @@ function formatRelativeTime(value) {
 }
 
 export default function Notifications() {
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('all');
   const [notifications, setNotifications] = useState([]);
@@ -159,15 +161,25 @@ export default function Notifications() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-112px)] bg-[#05070d] px-4 py-6 text-white sm:px-6 lg:px-8">
+    <div className={`min-h-[calc(100vh-112px)] px-4 py-6 sm:px-6 lg:px-8 transition-colors duration-200 ${
+      theme === 'light' ? 'bg-[#f8fafc] text-slate-900' : 'bg-[#05070d] text-white'
+    }`}>
       <div className="pointer-events-none fixed inset-0 left-[18rem] bg-[radial-gradient(circle_at_20%_0%,rgba(16,199,161,0.11),transparent_26%),radial-gradient(circle_at_86%_12%,rgba(123,97,255,0.10),transparent_30%)]" />
       <main className="relative mx-auto max-w-7xl space-y-5">
-        <header className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/95 p-5 shadow-[0_24px_70px_-38px_rgba(0,0,0,0.9)] sm:p-6">
+        <header className={`rounded-[1.5rem] border p-5 sm:p-6 transition-all duration-200 ${
+          theme === 'light'
+            ? 'border-slate-200 bg-white shadow-sm text-slate-900'
+            : 'border-white/10 bg-[#0b111a]/95 shadow-[0_24px_70px_-38px_rgba(0,0,0,0.9)] text-white'
+        }`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               {/* <p className="text-xs font-black uppercase tracking-[0.24em] text-[#7df3cc]/70">Real-time notifications</p> */}
-              <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Twin AI Alerts</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/55">
+              <h2 className={`mt-2 text-3xl font-black tracking-tight sm:text-4xl ${
+                theme === 'light' ? 'text-slate-900' : 'text-white'
+              }`}>Twin AI Alerts</h2>
+              <p className={`mt-2 max-w-3xl text-sm leading-6 ${
+                theme === 'light' ? 'text-slate-700' : 'text-white/55'
+              }`}>
                 Health, finance, career, goal, and daily update alerts generated from your Digital Twin activity.
               </p>
             </div>
@@ -175,7 +187,11 @@ export default function Notifications() {
               type="button"
               onClick={markAllRead}
               disabled={actionId === 'all' || unreadActiveCount === 0}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#10c7a1]/25 bg-[#10c7a1]/10 px-4 py-2.5 text-sm font-black text-[#7df3cc] transition hover:bg-[#10c7a1]/18 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/30"
+              className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition disabled:cursor-not-allowed ${
+                theme === 'light'
+                  ? 'border-transparent bg-[#10c7a1] text-[#06110f] hover:bg-[#7df3cc] disabled:bg-slate-100 disabled:text-slate-400'
+                  : 'border-[#10c7a1]/25 bg-[#10c7a1]/10 text-[#7df3cc] hover:bg-[#10c7a1]/18 disabled:border-white/10 disabled:bg-white/5 disabled:text-white/30'
+              }`}
             >
               {actionId === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               Mark all read
@@ -183,35 +199,53 @@ export default function Notifications() {
           </div>
         </header>
 
-        <section className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/95 p-5 shadow-[0_24px_70px_-38px_rgba(0,0,0,0.9)] sm:p-6">
-          <div className="flex flex-col gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-center lg:justify-between">
+        <section className={`rounded-[1.5rem] border p-5 sm:p-6 transition-all duration-200 ${
+          theme === 'light'
+            ? 'border-slate-200 bg-white shadow-sm text-slate-900'
+            : 'border-white/10 bg-[#0b111a]/95 shadow-[0_24px_70px_-38px_rgba(0,0,0,0.9)] text-white'
+        }`}>
+          <div className={`flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-center lg:justify-between ${
+            theme === 'light' ? 'border-slate-200' : 'border-white/10'
+          }`}>
             <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-2xl border border-[#10c7a1]/25 bg-[#10c7a1]/10 text-[#7df3cc]">
-              <Bell className="h-5 w-5" />
-            </span>
-            <div>
-              <h1 className="text-lg font-black">AI Alert Center</h1>
-              <p className="text-xs font-semibold text-white/45">{unreadActiveCount} active unread notifications</p>
+              <span className={`grid h-11 w-11 place-items-center rounded-2xl border shrink-0 ${
+                theme === 'light'
+                  ? 'border-slate-200 bg-slate-50 text-[#10c7a1]'
+                  : 'border-[#10c7a1]/25 bg-[#10c7a1]/10 text-[#7df3cc]'
+              }`}>
+                <Bell className="h-5 w-5" />
+              </span>
+              <div>
+                <h1 className={`text-lg font-black ${
+                  theme === 'light' ? 'text-slate-900' : 'text-white'
+                }`}>AI Alert Center</h1>
+                <p className={`text-xs font-semibold ${theme === 'light' ? 'text-slate-500' : 'text-white/45'}`}>{unreadActiveCount} active unread notifications</p>
+              </div>
             </div>
-          </div>
 
             <nav className="flex flex-wrap gap-2">
-            {FILTERS.map((filter) => {
-              const active = activeFilter === filter.key;
-              return (
-                <button
-                  type="button"
-                  key={filter.key}
-                  onClick={() => setActiveFilter(filter.key)}
+              {FILTERS.map((filter) => {
+                const active = activeFilter === filter.key;
+                return (
+                  <button
+                    type="button"
+                    key={filter.key}
+                    onClick={() => setActiveFilter(filter.key)}
                     className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold transition ${
-                    active
-                      ? 'border border-[#10c7a1]/25 bg-[#10c7a1]/12 text-[#7df3cc]'
-                        : 'border-white/8 bg-white/[0.025] text-white/55 hover:bg-white/[0.055] hover:text-white'
-                  }`}
-                >
-                  <span>{filter.label}</span>
+                      active
+                        ? theme === 'light'
+                          ? 'border-[#10c7a1] bg-[#10c7a1]/10 text-[#0f9f80]'
+                          : 'border-[#10c7a1]/25 bg-[#10c7a1]/12 text-[#7df3cc]'
+                        : theme === 'light'
+                          ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                          : 'border-white/8 bg-white/[0.025] text-white/55 hover:bg-white/[0.055] hover:text-white'
+                    }`}
+                  >
+                    <span>{filter.label}</span>
                   {filter.key === 'unread' && unreadActiveCount > 0 && (
-                    <span className="rounded-full bg-[#ef4444]/18 px-2 py-0.5 text-[10px] text-[#ff9aaa]">{unreadActiveCount}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${
+                      theme === 'light' ? 'bg-[#ef4444]/12 text-[#ef4444]' : 'bg-[#ef4444]/18 text-[#ff9aaa]'
+                    }`}>{unreadActiveCount}</span>
                   )}
                 </button>
               );
@@ -227,26 +261,40 @@ export default function Notifications() {
         </section>
 
           {error && (
-            <div className="rounded-2xl border border-[#ef4444]/25 bg-[#ef4444]/10 p-4 text-sm font-semibold text-[#ffb4b4]">
+            <div className={`rounded-2xl border p-4 text-sm font-semibold ${
+              theme === 'light' ? 'border-red-200 bg-red-50 text-red-700' : 'border-[#ef4444]/25 bg-[#ef4444]/10 text-[#ffb4b4]'
+            }`}>
               {error}
             </div>
           )}
 
           <section className="space-y-3">
             {loading ? (
-              <div className="grid min-h-80 place-items-center rounded-[1.5rem] border border-white/10 bg-[#0b111a]/90">
+              <div className={`grid min-h-80 place-items-center rounded-[1.5rem] border transition-all duration-200 ${
+                theme === 'light' ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#0b111a]/90'
+              }`}>
                 <Loader2 className="h-8 w-8 animate-spin text-[#7df3cc]" />
               </div>
             ) : notifications.length === 0 ? (
               <EmptyState label={selectedFilter.label} />
             ) : (
-              <div className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/78 p-3 shadow-[0_24px_70px_-42px_rgba(0,0,0,0.86)] sm:p-4">
+              <div className={`rounded-[1.5rem] border p-3 sm:p-4 shadow-sm transition-all duration-200 ${
+                theme === 'light'
+                  ? 'border-slate-200 bg-white text-slate-900'
+                  : 'border-white/10 bg-[#0b111a]/78 shadow-[0_24px_70px_-42px_rgba(0,0,0,0.86)]'
+              }`}>
                 <div className="mb-3 flex items-center justify-between px-1">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-white/35">Notifications</p>
-                    <h3 className="mt-1 text-lg font-black">{selectedFilter.label} alerts</h3>
+                    <p className={`text-xs font-black uppercase tracking-[0.2em] ${
+                      theme === 'light' ? 'text-slate-500' : 'text-white/35'
+                    }`}>Notifications</p>
+                    <h3 className={`mt-1 text-lg font-black ${
+                      theme === 'light' ? 'text-slate-900' : 'text-white'
+                    }`}>{selectedFilter.label} alerts</h3>
                   </div>
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold text-white/45">
+                  <span className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                    theme === 'light' ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-white/10 bg-white/[0.04] text-white/45'
+                  }`}>
                     {notifications.length} items
                   </span>
                 </div>
@@ -271,20 +319,30 @@ export default function Notifications() {
 }
 
 function StatCard({ icon: Icon, label, value, color }) {
+  const { theme } = useTheme();
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+    <div className={`rounded-2xl border transition-all duration-200 p-4 ${
+      theme === 'light'
+        ? 'border-slate-200 bg-slate-50/50 text-slate-900'
+        : 'border-white/10 bg-white/[0.035] text-white'
+    }`}>
       <div className="flex items-center justify-between">
         <span className="grid h-10 w-10 place-items-center rounded-xl border" style={{ borderColor: `${color}45`, backgroundColor: `${color}18`, color }}>
           <Icon className="h-4 w-4" />
         </span>
-        <span className="text-2xl font-black">{value}</span>
+        <span className={`text-2xl font-black ${
+          theme === 'light' ? 'text-slate-900' : 'text-white'
+        }`}>{value}</span>
       </div>
-      <p className="mt-3 text-xs font-bold uppercase tracking-[0.18em] text-white/38">{label}</p>
+      <p className={`mt-3 text-xs font-bold uppercase tracking-[0.18em] ${
+        theme === 'light' ? 'text-slate-500' : 'text-white/38'
+      }`}>{label}</p>
     </div>
   );
 }
 
 function NotificationCard({ notification, busy, onToggleRead, onResolve, onOpen }) {
+  const { theme } = useTheme();
   const category = CATEGORY_META[notification.category] || CATEGORY_META.system;
   const priority = PRIORITY_META[notification.priority] || PRIORITY_META.medium;
   const CategoryIcon = category.icon;
@@ -292,8 +350,12 @@ function NotificationCard({ notification, busy, onToggleRead, onResolve, onOpen 
   return (
     <article className={`rounded-[1.35rem] border p-4 transition sm:p-5 ${
       notification.isRead
-        ? 'border-white/8 bg-[#0b111a]/72'
-        : 'border-white/14 bg-[#0d1520]/95 shadow-[0_24px_60px_-42px_rgba(16,199,161,0.8)]'
+        ? theme === 'light'
+          ? 'border-slate-200 bg-slate-50/50 text-slate-700'
+          : 'border-white/8 bg-[#0b111a]/72 text-white/70'
+        : theme === 'light'
+          ? 'border-[#10c7a1]/35 bg-white shadow-sm text-slate-900'
+          : 'border-white/14 bg-[#0d1520]/95 shadow-[0_24px_60px_-42px_rgba(16,199,161,0.8)] text-white'
     }`}>
       <div className="flex gap-4">
         <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-2xl border" style={{ borderColor: `${category.color}40`, backgroundColor: `${category.color}16`, color: category.color }}>
@@ -302,26 +364,40 @@ function NotificationCard({ notification, busy, onToggleRead, onResolve, onOpen 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {!notification.isRead && <span className="h-2 w-2 rounded-full bg-[#10c7a1] shadow-[0_0_10px_rgba(16,199,161,0.85)]" />}
-            <h3 className="min-w-0 flex-1 text-base font-black text-white">{notification.title}</h3>
+            <h3 className={`min-w-0 flex-1 text-base font-black ${
+              theme === 'light' ? 'text-slate-900' : 'text-white'
+            }`}>{notification.title}</h3>
             <span className="rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]" style={{ borderColor: `${priority.color}40`, backgroundColor: `${priority.color}15`, color: priority.color }}>
               {priority.label}
             </span>
           </div>
 
-          <p className="mt-2 text-sm leading-6 text-white/58">{notification.message}</p>
+          <p className={`mt-2 text-sm leading-6 ${
+            theme === 'light' ? 'text-slate-700' : 'text-white/58'
+          }`}>{notification.message}</p>
 
           {(notification.suggestion || notification.motivation) && (
-            <div className="mt-3 rounded-2xl border border-[#7b61ff]/20 bg-[#7b61ff]/8 p-3">
-              <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-[#c4b5fd]">
+            <div className={`mt-3 rounded-2xl border p-3 ${
+              theme === 'light'
+                ? 'border-[#7b61ff]/30 bg-[#7b61ff]/5'
+                : 'border-[#7b61ff]/20 bg-[#7b61ff]/8'
+            }`}>
+              <p className={`flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] ${
+                theme === 'light' ? 'text-[#7b61ff]' : 'text-[#c4b5fd]'
+              }`}>
                 <Sparkles className="h-3.5 w-3.5" />
                 Twin Suggestion
               </p>
-              <p className="mt-2 text-sm leading-6 text-white/62">{notification.suggestion || notification.motivation}</p>
+              <p className={`mt-2 text-sm leading-6 ${
+                theme === 'light' ? 'text-slate-700' : 'text-white/62'
+              }`}>{notification.suggestion || notification.motivation}</p>
             </div>
           )}
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.045] px-2.5 py-1 text-xs font-semibold text-white/45">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+              theme === 'light' ? 'bg-slate-100 text-slate-500' : 'bg-white/[0.045] text-white/45'
+            }`}>
               <Clock className="h-3.5 w-3.5" />
               {formatRelativeTime(notification.createdAt)}
             </span>
@@ -329,15 +405,41 @@ function NotificationCard({ notification, busy, onToggleRead, onResolve, onOpen 
               {category.label}
             </span>
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              <button type="button" onClick={onToggleRead} disabled={busy} className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-bold text-white/58 transition hover:bg-white/8 hover:text-white disabled:opacity-50">
+              <button
+                type="button"
+                onClick={onToggleRead}
+                disabled={busy}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition disabled:opacity-50 ${
+                  theme === 'light'
+                    ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-white/10 bg-white/[0.045] text-white/58 hover:bg-white/8 hover:text-white'
+                }`}
+              >
                 {notification.isRead ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 {notification.isRead ? 'Unread' : 'Read'}
               </button>
-              <button type="button" onClick={onResolve} disabled={busy} className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-bold text-white/58 transition hover:bg-white/8 hover:text-white disabled:opacity-50">
+              <button
+                type="button"
+                onClick={onResolve}
+                disabled={busy}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition disabled:opacity-50 ${
+                  theme === 'light'
+                    ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-white/10 bg-white/[0.045] text-white/58 hover:bg-white/8 hover:text-white'
+                }`}
+              >
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Resolve
               </button>
-              <button type="button" onClick={onOpen} className="inline-flex items-center gap-1.5 rounded-xl border border-[#10c7a1]/25 bg-[#10c7a1]/10 px-3 py-2 text-xs font-black text-[#7df3cc] transition hover:bg-[#10c7a1]/18">
+              <button
+                type="button"
+                onClick={onOpen}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black transition ${
+                  theme === 'light'
+                    ? 'border-[#10c7a1]/30 bg-[#10c7a1]/10 text-[#0f9f80] hover:bg-[#10c7a1]/20'
+                    : 'border-[#10c7a1]/25 bg-[#10c7a1]/10 text-[#7df3cc] hover:bg-[#10c7a1]/18'
+                }`}
+              >
                 Open
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
@@ -350,14 +452,27 @@ function NotificationCard({ notification, busy, onToggleRead, onResolve, onOpen 
 }
 
 function EmptyState({ label }) {
+  const { theme } = useTheme();
   return (
-    <div className="grid min-h-80 place-items-center rounded-[1.5rem] border border-white/10 bg-[#0b111a]/90 p-8 text-center">
+    <div className={`grid min-h-80 place-items-center rounded-[1.5rem] border p-8 text-center transition-all duration-200 ${
+      theme === 'light'
+        ? 'border-slate-200 bg-white text-slate-900'
+        : 'border-white/10 bg-[#0b111a]/90'
+    }`}>
       <div>
-        <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-white/10 bg-white/[0.045] text-white/25">
+        <span className={`mx-auto grid h-16 w-16 place-items-center rounded-2xl border ${
+          theme === 'light'
+            ? 'border-slate-200 bg-slate-50 text-slate-400'
+            : 'border-white/10 bg-white/[0.045] text-white/25'
+        }`}>
           <Inbox className="h-7 w-7" />
         </span>
-        <h3 className="mt-4 text-xl font-black">No {label} alerts</h3>
-        <p className="mt-2 text-sm text-white/45">Your Digital Twin will show new alerts here as soon as they are generated.</p>
+        <h3 className={`mt-4 text-xl font-black ${
+          theme === 'light' ? 'text-slate-900' : 'text-white'
+        }`}>No {label} alerts</h3>
+        <p className={`mt-2 text-sm ${
+          theme === 'light' ? 'text-slate-500' : 'text-white/45'
+        }`}>Your Digital Twin will show new alerts here as soon as they are generated.</p>
       </div>
     </div>
   );

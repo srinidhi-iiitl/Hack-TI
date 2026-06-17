@@ -1,16 +1,20 @@
+import { useTheme } from '../context/ThemeContext';
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { useGamification } from '../context/GamificationContext';
 
-const glassCardClass = 'rounded-2xl border border-white/10 bg-[#0f1320]/84 shadow-[0_20px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#c8a84b]/30 hover:shadow-[0_28px_70px_rgba(0,0,0,0.52)]';
-
+const getGlassCardClass = (theme) =>
+  theme === 'light'
+    ? 'rounded-2xl border border-[#e2e8f0] bg-white shadow-sm'
+    : 'rounded-2xl border border-white/10 bg-[#0f1320]/84 shadow-[0_20px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 /* ═══════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════ */
 function Finance() {
+  const { theme } = useTheme();
   const { triggerReward, history = [], unlockedBadges = [], availableBadges = [] } = useGamification();
 
   // ── Bank connection state ──
@@ -229,7 +233,7 @@ function Finance() {
   // ═════════════════════════════════════════════
 
   const financeHistory = history.filter(log => ['🏦', '💰', '📉', '🛡️', '💳'].includes(log.emoji)).slice(0, 4);
-  
+
   const fallbackBadges = [
     { id: 'f1', title: 'Savings Champion', requirement: 'Save 20% of income', xpNeeded: 200, icon: '💰' },
     { id: 'f2', title: 'Credit Prime', requirement: 'Reach 750+ Credit Score', xpNeeded: 500, icon: '🏦' },
@@ -246,197 +250,214 @@ function Finance() {
   // RENDER
   // ═══════════════════════════════════════════════
   return (
-    <div className="relative min-h-full overflow-hidden bg-[#05070d] px-5 py-6 text-white sm:px-6 lg:px-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(200,168,75,0.16),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(123,97,255,0.10),transparent_26%),radial-gradient(circle_at_center,rgba(15,143,132,0.08),transparent_30%)]" />
+    <div
+      className={`relative min-h-full overflow-hidden px-5 py-6 sm:px-6 lg:px-8 ${theme === 'light'
+        ? 'bg-[#f8fafc] text-[#0f172a]'
+        : 'bg-[#05070d] text-white'
+        }`}
+    >      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(200,168,75,0.16),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(123,97,255,0.10),transparent_26%),radial-gradient(circle_at_center,rgba(15,143,132,0.08),transparent_30%)]" />
       <div className="relative">
 
-      {/* Header Section */}
-      <section className="mb-6">
-        <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-white">Finance Intelligence</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/90">
-            Autonomous tracking of behavioral spending metrics, global macroeconomic factors, and AI-powered financial projections.
-          </p>
-        </div>
-      </section>
-
-      {/* ── 🏆 Autonomous Achievements ── */}
-      <section className="mb-6">
-        <article className="rounded-2xl border border-[#c8a84b]/20 bg-gradient-to-br from-[#c8a84b]/5 to-[#05070d] p-6 shadow-[0_18px_48px_rgba(200,168,75,0.08)] backdrop-blur-xl">
-          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
-            <div>
-              <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-                <span className="text-2xl">🏆</span> Autonomous Financial Achievements
-              </h2>
-              <p className="mt-1 text-sm text-white/80">Your connected banking APIs automatically validate your financial milestones.</p>
-            </div>
+        {/* Header Section */}
+        <section className="mb-6">
+          <div>
+            <h1 className={`text-4xl font-semibold tracking-tight ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Finance Intelligence</h1>
+            <p className={`mt-2 max-w-2xl text-sm leading-6 ${theme === 'light' ? 'text-[#334155]' : 'text-white/90'}`}>
+              Autonomous tracking of behavioral spending metrics, global macroeconomic factors, and AI-powered financial projections.
+            </p>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Recent Validations */}
-            <div className="bg-black/20 rounded-xl p-4 border border-white/5">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-white/60 mb-3">Recent Validations</h3>
-              <div className="space-y-2">
-                {financeHistory.length > 0 ? financeHistory.map((log, i) => (
-                  <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-white/5 border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{log.emoji}</span>
-                      <span className="text-sm font-medium text-white/90">{log.activity}</span>
-                    </div>
-                    <span className="text-xs font-bold text-[#c8a84b]">+{log.points} XP</span>
-                  </div>
-                )) : (
-                  <p className="text-sm text-white/50 italic">No financial syncs logged yet. APIs run autonomously in the background.</p>
-                )}
+        {/* ── 🏆 Autonomous Achievements ── */}
+        <section className="mb-6">
+          <article
+            className={`rounded-2xl border border-[#c8a84b]/20 ${theme === 'light'
+              ? 'bg-white'
+              : 'bg-gradient-to-br from-[#c8a84b]/5 to-[#05070d]'
+              } p-6 shadow-[0_18px_48px_rgba(200,168,75,0.08)] backdrop-blur-xl`}
+          >
+            <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+              <div>
+                <h2 className={`text-xl font-bold flex items-center gap-2 ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>
+                  <span className="text-2xl">🏆</span> Autonomous Financial Achievements
+                </h2>
+                <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/80'}`}>Your connected banking APIs automatically validate your financial milestones.</p>
               </div>
             </div>
 
-            {/* Financial Badges */}
-            <div className="bg-black/20 rounded-xl p-4 border border-white/5">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-white/60 mb-3">Financial Badges</h3>
-              <div className="grid grid-cols-1 gap-3">
-                {financeBadges.map(badge => {
-                  const isUnlocked = unlockedBadges.includes(badge.id);
-                  return (
-                    <div key={badge.id} className={`flex items-center gap-3 p-3 rounded-lg border ${isUnlocked ? 'bg-[#c8a84b]/10 border-[#c8a84b]/30' : 'bg-white/5 border-white/5 opacity-60'}`}>
-                      <span className="text-2xl">{badge.icon}</span>
-                      <div>
-                        <p className={`text-sm font-bold ${isUnlocked ? 'text-[#c8a84b]' : 'text-white/80'}`}>{badge.title}</p>
-                        <p className="text-[10px] text-white/60">{badge.requirement}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Recent Validations */}
+              <div className="bg-black/20 rounded-xl p-4 border border-white/5">
+                <h3 className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/60'} mb-3`}>Recent Validations</h3>
+                <div className="space-y-2">
+                  {financeHistory.length > 0 ? financeHistory.map((log, i) => (
+                    <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-white/5 border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{log.emoji}</span>
+                        <span className={`text-sm font-medium ${theme === 'light' ? 'text-[#334155]' : 'text-white/90'}`}>{log.activity}</span>
                       </div>
+                      <span className="text-xs font-bold text-[#c8a84b]">+{log.points} XP</span>
                     </div>
-                  );
-                })}
+                  )) : (
+                    <p className={`text-sm ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/50'} italic`}>No financial syncs logged yet. APIs run autonomously in the background.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Financial Badges */}
+              <div className="bg-black/20 rounded-xl p-4 border border-white/5">
+                <h3 className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/60'} mb-3`}>Financial Badges</h3>
+                <div className="grid grid-cols-1 gap-3">
+                  {financeBadges.map(badge => {
+                    const isUnlocked = unlockedBadges.includes(badge.id);
+                    return (
+                      <div key={badge.id} className={`flex items-center gap-3 p-3 rounded-lg border ${isUnlocked ? 'bg-[#c8a84b]/10 border-[#c8a84b]/30' : 'bg-white/5 border-white/5 opacity-60'}`}>
+                        <span className="text-2xl">{badge.icon}</span>
+                        <div>
+                          <p className={`text-sm font-bold ${isUnlocked ? 'text-[#c8a84b]' : (theme === 'light' ? 'text-[#334155]' : 'text-white/80')}`}>{badge.title}</p>
+                          <p className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/60'}`}>{badge.requirement}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        </article>
-      </section>
+          </article>
+        </section>
 
-      {/* ── Overview Metrics ── */}
-      <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {overviewMetrics.map((metric) => (
-          <OverviewCard key={metric.label} metric={metric} />
-        ))}
-      </section>
+        {/* ── Overview Metrics ── */}
+        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {overviewMetrics.map((metric) => (
+            <OverviewCard key={metric.label} metric={metric} />
+          ))}
+        </section>
 
-      {/* ── ⚠️ Retail Therapy Alert + 📈 Live Market Snapshot ── */}
+        {/* ── ⚠️ Retail Therapy Alert + 📈 Live Market Snapshot ── */}
 
-      {/* ── Unusual Spending Spike Detector + Macro Market Analysis ── */}
-      <section className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <article className={`${glassCardClass} p-6 xl:col-span-8`}>
-          <SpendingSpikeDetector
-            intelligence={documentIntelligence}
-            loading={documentIntelligenceLoading}
-            onAnalyze={fetchDocumentIntelligence}
-          />
-        </article>
+        {/* ── Unusual Spending Spike Detector + Macro Market Analysis ── */}
+        <section className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <article className={`${getGlassCardClass(theme)} p-6 xl:col-span-8`}>
+            <SpendingSpikeDetector
+              intelligence={documentIntelligence}
+              loading={documentIntelligenceLoading}
+              onAnalyze={fetchDocumentIntelligence}
+            />
+          </article>
 
-        <article className={`${glassCardClass} flex flex-col p-6 xl:col-span-4`}>
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Macro Market Analysis</h2>
-              <p className="mt-1 text-sm text-white/80">Global catalysts: Political, Legal, Conflict, & Health updates</p>
-            </div>
-            <button
-              type="button"
-              onClick={fetchMarketAnalysis}
-              disabled={marketLoading}
-              className="shrink-0 rounded-xl border border-[#c8a84b]/30 bg-[#c8a84b]/10 px-3 py-2 text-xs font-bold text-[#f5d76e] transition hover:bg-[#c8a84b]/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {marketLoading ? 'Loading...' : marketData ? 'Refresh' : 'Analyze'}
-            </button>
-          </div>
-          <div className="flex-1 space-y-4 overflow-y-auto max-h-[280px] pr-1">
-            {marketLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="finance-pulse-skeleton h-14 rounded-lg bg-white/5" />
-                ))}
-              </div>
-            ) : marketData?.impacts && marketData.impacts.length > 0 ? (
-              marketData.impacts.map((imp, idx) => (
-                <MarketImpactRow key={idx} title={imp.title} detail={imp.detail} type={imp.type} />
-              ))
-            ) : (
-              <p className="text-sm text-white/50 italic">Click Analyze to generate market impact insights.</p>
-            )}
-          </div>
-        </article>
-      </section>
-
-      {/* ── Finance Observation & Suggestions + Cross Intelligence ── */}
-      <section className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <article className={`${glassCardClass} p-6 xl:col-span-6`}>
-          <h2 className="mb-4 text-xl font-semibold text-white">Finance Observation & Suggestions</h2>
-          <div className="space-y-4">
-            <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#7b61ff]/15 text-[#7b61ff]">
-                <BoltIcon className="h-4 w-4" />
-              </div>
+          <article className={`${getGlassCardClass(theme)} flex flex-col p-6 xl:col-span-4`}>
+            <div className="mb-5 flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-white">Impulse Spending Trigger Mitigated</p>
-                <p className="mt-1 text-xs leading-5 text-white/80">Identified a loop of 10 PM social media surfing causing stress buys. Restricting shopping apps after 9 PM could yield up to $140/mo in direct savings.</p>
+                <h2 className={`text-xl font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Macro Market Analysis</h2>
+                <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/80'}`}>Global catalysts: Political, Legal, Conflict, & Health updates</p>
+              </div>
+              <button
+                type="button"
+                onClick={fetchMarketAnalysis}
+                disabled={marketLoading}
+                className="shrink-0 rounded-xl border border-[#c8a84b]/30 bg-[#c8a84b]/10 px-3 py-2 text-xs font-bold text-[#f5d76e] transition hover:bg-[#c8a84b]/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {marketLoading ? 'Loading...' : marketData ? 'Refresh' : 'Analyze'}
+              </button>
+            </div>
+            <div className="flex-1 space-y-4 overflow-y-auto max-h-[280px] pr-1">
+              {marketLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="finance-pulse-skeleton h-14 rounded-lg bg-white/5" />
+                  ))}
+                </div>
+              ) : marketData?.impacts && marketData.impacts.length > 0 ? (
+                marketData.impacts.map((imp, idx) => (
+                  <MarketImpactRow key={idx} title={imp.title} detail={imp.detail} type={imp.type} />
+                ))
+              ) : (
+                <p className={`text-sm ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/50'} italic`}>Click Analyze to generate market impact insights.</p>
+              )}
+            </div>
+          </article>
+        </section>
+
+        {/* ── Finance Observation & Suggestions + Cross Intelligence ── */}
+        <section className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <article className={`${getGlassCardClass(theme)} p-6 xl:col-span-6`}>
+            <h2 className={`mb-4 text-xl font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Finance Observation & Suggestions</h2>
+            <div className="space-y-4">
+              <div className={`flex items-start gap-4 rounded-2xl p-4 ${theme === 'light'
+                ? 'border border-[#e2e8f0] bg-[#f8fafc]'
+                : 'border border-white/10 bg-white/5'
+                }`}>                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#7b61ff]/15 text-[#7b61ff]">
+                  <BoltIcon className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className={`mb-4 text-xl font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>
+                    Impulse Spending Trigger Mitigated
+                  </h2>
+                  <p className={`mt-1 text-xs leading-5 ${theme === 'light' ? 'text-[#64748b]' : 'text-white/80'}`}>Identified a loop of 10 PM social media surfing causing stress buys. Restricting shopping apps after 9 PM could yield up to $140/mo in direct savings.</p>
+                </div>
+              </div>
+              <div className={`flex items-start gap-4 rounded-2xl p-4 ${theme === 'light'
+                ? 'border border-[#e2e8f0] bg-[#f8fafc]'
+                : 'border border-white/10 bg-white/5'
+                }`}>                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#c8a84b]/15 text-[#c8a84b]">
+                  <VerifiedIcon className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className={`mb-4 text-xl font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>
+                    Liquidity Optimization Target
+                  </h2>
+                  <p className={`mt-1 text-xs leading-5 ${theme === 'light' ? 'text-[#64748b]' : 'text-white/80'}`}>To counter market volatility, freeze all speculative certification/luxury purchases for 90 days. Redirect excess funds entirely into your Savings Shield.</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#c8a84b]/15 text-[#c8a84b]">
-                <VerifiedIcon className="h-4 w-4" />
-              </div>
+          </article>
+
+          <article className={`${getGlassCardClass(theme)} p-6 space-y-4 xl:col-span-6`}>
+            <CrossIntelligencePanel
+              documentIntelligence={documentIntelligence}
+              financeData={financeData}
+              healthData={healthData}
+              careerData={careerData}
+              loading={documentIntelligenceLoading || financeLoading || healthLoading || careerLoading}
+            />
+          </article>
+        </section>
+
+        {/* ── Financial Trajectory ── */}
+        <section className="grid grid-cols-1 gap-6">
+          <article className={`${getGlassCardClass(theme)} p-6`}>
+            <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="text-sm font-semibold text-white">Liquidity Optimization Target</p>
-                <p className="mt-1 text-xs leading-5 text-white/80">To counter market volatility, freeze all speculative certification/luxury purchases for 90 days. Redirect excess funds entirely into your Savings Shield.</p>
+                <h2 className={`text-xl font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Financial Trajectory</h2>
+                <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/80'}`}>AI forecasting based on current lifestyle habits versus optimized stability tracks</p>
+              </div>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <Legend color="#c8a84b" label="Current path" />
+                <Legend color="#7df3cc" label="Stable path" />
               </div>
             </div>
-          </div>
-        </article>
-
-        <article className={`${glassCardClass} p-6 space-y-4 xl:col-span-6`}>
-          <CrossIntelligencePanel
-            documentIntelligence={documentIntelligence}
-            financeData={financeData}
-            healthData={healthData}
-            careerData={careerData}
-            loading={documentIntelligenceLoading || financeLoading || healthLoading || careerLoading}
-          />
-        </article>
-      </section>
-
-      {/* ── Financial Trajectory ── */}
-      <section className="grid grid-cols-1 gap-6">
-        <article className={`${glassCardClass} p-6`}>
-          <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Financial Trajectory</h2>
-              <p className="mt-1 text-sm text-white/80">AI forecasting based on current lifestyle habits versus optimized stability tracks</p>
+            <div className="relative h-72">
+              <svg className="h-full w-full" viewBox="0 0 800 240" preserveAspectRatio="none">
+                <line stroke="#ffffff" strokeOpacity="0.08" strokeWidth="1" x1="0" x2="800" y1="205" y2="205" />
+                <line stroke="#ffffff" strokeOpacity="0.08" strokeWidth="1" x1="0" x2="800" y1="145" y2="145" />
+                <line stroke="#ffffff" strokeOpacity="0.08" strokeWidth="1" x1="0" x2="800" y1="85" y2="85" />
+                <path d="M0 168 Q200 178 400 194 T800 226" fill="none" opacity="0.55" stroke="#c8a84b" strokeDasharray="8 6" strokeWidth="3" />
+                <path d="M0 168 Q200 152 400 120 T800 48" fill="none" stroke="#7df3cc" strokeLinecap="round" strokeWidth="4" />
+                <circle cx="400" cy="120" fill="#7df3cc" r="7" />
+              </svg>
+              <div className={`absolute inset-x-0 bottom-0 flex justify-between text-[11px] font-bold uppercase tracking-[0.14em] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/70'}`}>
+                <span>Current</span>
+                <span>6 months</span>
+                <span>1 year</span>
+                <span>2 years</span>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-4 text-sm">
-              <Legend color="#c8a84b" label="Current path" />
-              <Legend color="#7df3cc" label="Stable path" />
+            <div className="mt-6 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/80'}`}>Projected difference in 24 months:</p>
+              <span className="text-xl font-semibold text-[#c8a84b]">+₹1,50,000.00</span>
             </div>
-          </div>
-          <div className="relative h-72">
-            <svg className="h-full w-full" viewBox="0 0 800 240" preserveAspectRatio="none">
-              <line stroke="#ffffff" strokeOpacity="0.08" strokeWidth="1" x1="0" x2="800" y1="205" y2="205" />
-              <line stroke="#ffffff" strokeOpacity="0.08" strokeWidth="1" x1="0" x2="800" y1="145" y2="145" />
-              <line stroke="#ffffff" strokeOpacity="0.08" strokeWidth="1" x1="0" x2="800" y1="85" y2="85" />
-              <path d="M0 168 Q200 178 400 194 T800 226" fill="none" opacity="0.55" stroke="#c8a84b" strokeDasharray="8 6" strokeWidth="3" />
-              <path d="M0 168 Q200 152 400 120 T800 48" fill="none" stroke="#7df3cc" strokeLinecap="round" strokeWidth="4" />
-              <circle cx="400" cy="120" fill="#7df3cc" r="7" />
-            </svg>
-            <div className="absolute inset-x-0 bottom-0 flex justify-between text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">
-              <span>Current</span>
-              <span>6 months</span>
-              <span>1 year</span>
-              <span>2 years</span>
-            </div>
-          </div>
-          <div className="mt-6 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-sm text-white/80">Projected difference in 24 months:</p>
-            <span className="text-xl font-semibold text-[#c8a84b]">+₹1,50,000.00</span>
-          </div>
-        </article>
-      </section>
+          </article>
+        </section>
       </div>
     </div>
   );
@@ -538,6 +559,7 @@ function buildMonthlyExpenseDetail(financeData) {
 }
 
 function SpendingSpikeDetector({ intelligence, loading, onAnalyze }) {
+  const { theme } = useTheme();
   const status = intelligence?.status;
   const spikes = intelligence?.spikes || [];
   const categoryAnalysis = intelligence?.categoryAnalysis || [];
@@ -604,12 +626,12 @@ function SpendingSpikeDetector({ intelligence, loading, onAnalyze }) {
                 <WarningIcon className="mt-0.5 h-5 w-5 shrink-0" style={{ color: severityColor(item.severity) }} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-base font-semibold text-white">{item.title}</p>
+                    <p className={`text-base font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{item.title}</p>
                     <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: severityColor(item.severity) }}>
                       {item.severity}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-white/90">{item.description}</p>
+                  <p className={`mt-1 text-sm leading-6 ${theme === 'light' ? 'text-[#334155]' : 'text-white/90'}`}>{item.description}</p>
                 </div>
               </div>
             </div>
@@ -628,6 +650,7 @@ function SpendingSpikeDetector({ intelligence, loading, onAnalyze }) {
 }
 
 function CrossIntelligencePanel({ documentIntelligence, financeData, healthData, careerData, loading }) {
+  const { theme } = useTheme();
   const insights = buildCrossDomainFinanceInsights({ financeData, healthData, careerData, documentIntelligence });
 
   if (loading) {
@@ -662,7 +685,7 @@ function CrossIntelligencePanel({ documentIntelligence, financeData, healthData,
       <PanelTitle title="Cross Intelligence" subtitle="Finance × Health × Career signals" badge="Live Twin Data" />
       <ul className="space-y-3">
         {insights.slice(0, 5).map((insight, index) => (
-          <li key={`${insight}-${index}`} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/88">
+          <li key={`${insight}-${index}`} className={`rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 ${theme === 'light' ? 'text-[#334155]' : 'text-white/88'}`}>
             <span className="mr-2 text-[#7df3cc]">•</span>{insight}
           </li>
         ))}
@@ -735,14 +758,20 @@ function parsePercent(value) {
 }
 
 function PanelTitle({ title, subtitle, badge }) {
+  const { theme } = useTheme();
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h2 className="text-xl font-semibold text-white">{title}</h2>
-        <p className="mt-1 text-sm text-white/80">{subtitle}</p>
+        <h2 className={`text-xl font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{title}</h2>
+        <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/80'}`}>{subtitle}</p>
       </div>
+
       {badge && (
-        <span className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#c8a84b]">
+        <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] ${theme === 'light'
+          ? 'border border-[#e2e8f0] bg-[#f8fafc] text-[#c8a84b]'
+          : 'border border-white/10 bg-white/5 text-[#c8a84b]'
+          }`}>
           {badge}
         </span>
       )}
@@ -751,6 +780,8 @@ function PanelTitle({ title, subtitle, badge }) {
 }
 
 function EmptyFinanceState({ title, detail }) {
+  const { theme } = useTheme();
+
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
       <div className="flex items-start gap-3">
@@ -758,8 +789,8 @@ function EmptyFinanceState({ title, detail }) {
           <VerifiedIcon className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-white/70">{detail}</p>
+          <p className={`text-sm font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{title}</p>
+          <p className={`mt-1 text-sm leading-6 ${theme === 'light' ? 'text-[#64748b]' : 'text-white/70'}`}>{detail}</p>
         </div>
       </div>
     </div>
@@ -790,25 +821,40 @@ function formatRs(value) {
    SUB-COMPONENTS (preserved from original)
    ═══════════════════════════════════════════════ */
 function MarketImpactRow({ title, detail, type }) {
-  let badgeColor = "bg-white/5 text-white/90 border-white/10";
-  if (type === "danger") badgeColor = "bg-[#111722] text-[#c8a84b] border-[#c8a84b]/20";
-  if (type === "warning") badgeColor = "bg-[#111722] text-[#ffb38a] border-[#ff7a00]/20";
+  const { theme } = useTheme();
+
+  let cardClasses = "";
+  let titleClasses = "";
+  let bodyClasses = "";
+
+  if (theme === 'light') {
+    cardClasses = "bg-white border-[#e2e8f0]";
+    titleClasses = "text-[#0f172a]";
+    bodyClasses = "text-[#64748b]";
+  } else {
+    let badgeColor = "bg-white/5 text-white/90 border-white/10";
+    if (type === "danger") badgeColor = "bg-[#111722] text-[#c8a84b] border-[#c8a84b]/20";
+    if (type === "warning") badgeColor = "bg-[#111722] text-[#ffb38a] border-[#ff7a00]/20";
+    cardClasses = badgeColor;
+    bodyClasses = "text-white/80";
+  }
 
   return (
-    <div className={`flex flex-col gap-1 rounded-lg border p-3 ${badgeColor}`}>
-      <h4 className="text-xs font-bold uppercase tracking-wider">{title}</h4>
-      <p className="text-sm leading-relaxed text-white/80">{detail}</p>
+    <div className={`flex flex-col gap-1 rounded-lg border p-3 ${cardClasses}`}>
+      <h4 className={`text-xs font-bold uppercase tracking-wider ${titleClasses}`}>{title}</h4>
+      <p className={`text-sm leading-relaxed ${bodyClasses}`}>{detail}</p>
     </div>
   );
 }
 
 function OverviewCard({ metric }) {
+  const { theme } = useTheme();
   const Icon = metric.icon;
   const tone = metric.tone === 'warm' ? '#c8a84b' : '#7df3cc';
 
   if (metric.loading) {
     return (
-      <article className={`${glassCardClass} relative overflow-hidden p-5`}>
+      <article className={`${getGlassCardClass(theme)} relative overflow-hidden p-5`}>
         <div className="space-y-3">
           <div className="finance-pulse-skeleton h-3 w-24 rounded bg-white/8" />
           <div className="finance-pulse-skeleton h-8 w-20 rounded bg-white/8" />
@@ -820,13 +866,13 @@ function OverviewCard({ metric }) {
   }
 
   return (
-    <article className={`${glassCardClass} relative overflow-hidden p-5`}>
+    <article className={`${getGlassCardClass(theme)} relative overflow-hidden p-5`}>
       <div className="absolute right-0 top-0 h-24 w-24 -translate-y-12 translate-x-10 rounded-full bg-[#c8a84b]/10" />
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">{metric.label}</p>
+          <p className={`mb-1 text-[11px] font-bold uppercase tracking-[0.14em] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/70'}`}>{metric.label}</p>
           <h3 className="text-2xl font-semibold" style={{ color: tone }}>{metric.value}</h3>
-          <p className="mt-2 flex items-center gap-1 text-sm text-white/80">
+          <p className={`mt-2 flex items-center gap-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/80'}`}>
             {metric.tone === 'primary' && <ArrowUpIcon className="h-4 w-4 text-[#7df3cc]" />}
             {metric.detail}
           </p>
@@ -879,10 +925,11 @@ function ProgressRing({ value, color }) {
 }
 
 function MiniStat({ label, value, delta }) {
+  const { theme } = useTheme();
   return (
-      <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-      <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">{label}</p>
-      <p className="text-lg font-semibold text-white">
+    <div className={`rounded-lg border p-4 ${theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/5'}`}>
+      <p className={`mb-1 text-[11px] font-bold uppercase tracking-[0.14em] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/70'}`}>{label}</p>
+      <p className={`text-lg font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>
         {value} {delta && <span className="text-sm text-[#c8a84b]">{delta}</span>}
       </p>
     </div>
@@ -890,8 +937,9 @@ function MiniStat({ label, value, delta }) {
 }
 
 function Legend({ color, label }) {
+  const { theme } = useTheme();
   return (
-    <div className="flex items-center gap-2 text-white/80">
+    <div className={`flex items-center gap-2 ${theme === 'light' ? 'text-[#64748b]' : 'text-white/80'}`}>
       <span className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
       <span>{label}</span>
     </div>

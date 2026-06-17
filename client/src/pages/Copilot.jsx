@@ -7,6 +7,7 @@ import {
   RefreshCw, Paperclip, FileText, Activity, DollarSign
 } from 'lucide-react';
 import LiveBiometricScanner from '../components/LiveBiometricScanner';
+import { useTheme } from '../context/ThemeContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -39,6 +40,7 @@ const FOLLOW_UP_CHIPS = {
 // ─── Chat Bubble ──────────────────────────────────────────────────────────────
 function ChatBubble({ msg }) {
   const isUser = msg.role === 'user';
+  const { theme } = useTheme();
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -48,17 +50,27 @@ function ChatBubble({ msg }) {
       </div>
       <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
         isUser
-          ? 'bg-[#7b61ff]/15 border border-[#7b61ff]/25 text-white/90 rounded-tr-sm'
-          : 'bg-white/5 border border-white/10 text-white/85 rounded-tl-sm'
+          ? theme === 'light'
+            ? 'bg-[#7b61ff]/10 border border-[#7b61ff]/20 text-slate-800 rounded-tr-sm'
+            : 'bg-[#7b61ff]/15 border border-[#7b61ff]/25 text-white/90 rounded-tr-sm'
+          : theme === 'light'
+            ? 'bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-sm shadow-sm'
+            : 'bg-white/5 border border-white/10 text-white/85 rounded-tl-sm'
       }`}>
         {/* If user message has attachment, show it */}
         {isUser && msg.attachmentPreview && (
-          <div className="mb-2 max-w-xs overflow-hidden rounded-lg border border-white/10">
+          <div className={`mb-2 max-w-xs overflow-hidden rounded-lg border ${
+            theme === 'light' ? 'border-slate-200 shadow-sm' : 'border-white/10'
+          }`}>
             <img src={msg.attachmentPreview} alt="attachment" className="max-h-40 w-full object-cover" />
           </div>
         )}
         {isUser && msg.attachmentName && !msg.attachmentPreview && (
-          <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-white/70">
+          <div className={`mb-2 flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs ${
+            theme === 'light'
+              ? 'bg-slate-100 border border-slate-200 text-slate-600'
+              : 'bg-white/5 border border-white/10 text-white/70'
+          }`}>
             <FileText className="h-4 w-4 text-[#7b61ff]" />
             <span className="truncate max-w-[180px]">{msg.attachmentName}</span>
           </div>
@@ -75,6 +87,7 @@ function ChatBubble({ msg }) {
 
 // ─── Oracle response renderer (full) ──────────────────────────────────────────
 function OracleResponse({ data }) {
+  const { theme } = useTheme();
   const getRiskStyles = (level) => {
     switch(level?.toLowerCase()) {
       case 'low':  return { border: 'border-[#10c7a1]/40', bg: 'bg-[#10c7a1]/10', text: 'text-[#10c7a1]' };
@@ -91,21 +104,29 @@ function OracleResponse({ data }) {
           <AlertTriangle className="h-3.5 w-3.5" />
           Copilot Verdict · Risk: {data.riskLevel || 'Medium'}
         </p>
-        <p className="text-sm font-semibold text-white leading-relaxed">{data.verdict}</p>
+        <p className={`text-sm font-semibold leading-relaxed ${
+          theme === 'light' ? 'text-slate-800' : 'text-white'
+        }`}>{data.verdict}</p>
       </div>
 
       {data.impacts?.length > 0 && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className={`rounded-xl border p-4 ${
+          theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-white/10 bg-white/5'
+        }`}>
           <p className="text-xs font-bold uppercase tracking-widest text-[#7b61ff] mb-3">Cross-Domain Impacts</p>
           <div className="space-y-2">
             {data.impacts.map((imp, i) => (
               <div key={i} className="flex gap-2.5 items-start text-xs">
-                <div className="mt-0.5 rounded bg-white/10 p-1">
+                <div className={`mt-0.5 rounded p-1 ${
+                  theme === 'light' ? 'bg-slate-100' : 'bg-white/10'
+                }`}>
                   {imp.domain?.toLowerCase() === 'health' ? <Activity className="h-3 w-3 text-[#ff4d7d]" /> :
                    imp.domain?.toLowerCase() === 'finance' ? <DollarSign className="h-3 w-3 text-[#10c7a1]" /> :
                    <BrainCircuit className="h-3 w-3 text-[#c8a84b]" />}
                 </div>
-                <p className="text-white/80"><strong className="text-white">{imp.domain}:</strong> {imp.detail}</p>
+                <p className={theme === 'light' ? 'text-slate-600' : 'text-white/80'}>
+                  <strong className={theme === 'light' ? 'text-slate-800' : 'text-white'}>{imp.domain}:</strong> {imp.detail}
+                </p>
               </div>
             ))}
           </div>
@@ -113,11 +134,17 @@ function OracleResponse({ data }) {
       )}
 
       {data.action && (
-        <div className="rounded-xl border border-[#10c7a1]/30 bg-gradient-to-br from-[#11131a] to-[#10c7a1]/10 p-4">
+        <div className={`rounded-xl border p-4 bg-gradient-to-br ${
+          theme === 'light'
+            ? 'border-[#10c7a1]/40 from-[#f0fdf4] to-[#10c7a1]/5'
+            : 'border-[#10c7a1]/30 from-[#11131a] to-[#10c7a1]/10'
+        }`}>
           <p className="text-xs font-bold uppercase tracking-widest text-[#10c7a1] mb-1 flex items-center gap-1.5">
             <Zap className="h-3.5 w-3.5" /> Recommended Action
           </p>
-          <p className="text-xs text-white/90 leading-relaxed">{data.action}</p>
+          <p className={`text-xs leading-relaxed ${
+            theme === 'light' ? 'text-slate-700' : 'text-white/90'
+          }`}>{data.action}</p>
         </div>
       )}
     </div>
@@ -126,6 +153,7 @@ function OracleResponse({ data }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Copilot() {
+  const { theme } = useTheme();
   const [view, setView]                           = useState('scanner');
   const [chatFile, setChatFile]                   = useState(null);
   const [chatFilePreview, setChatFilePreview]     = useState(null);
@@ -372,7 +400,53 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
   const followUps = getFollowUps();
 
   return (
-    <div className="min-h-screen bg-[#05070d] px-4 py-8 text-white sm:px-8 flex flex-col justify-between">
+    <div className={`min-h-screen px-4 py-8 sm:px-8 flex flex-col justify-between transition-colors duration-200 ${
+      theme === 'light' ? 'bg-[#f8fafc] text-slate-900' : 'bg-[#05070d] text-white'
+    }`}>
+      {theme === 'light' && (
+        <style>{`
+          .biometric-scanner-wrap > div {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
+          }
+          .biometric-scanner-wrap h4,
+          .biometric-scanner-wrap h5,
+          .biometric-scanner-wrap strong,
+          .biometric-scanner-wrap .text-white {
+            color: #0f172a !important;
+          }
+          .biometric-scanner-wrap .text-gray-400 {
+            color: #64748b !important;
+          }
+          .biometric-scanner-wrap .text-gray-300 {
+            color: #334155 !important;
+          }
+          .biometric-scanner-wrap .bg-white\\/5 {
+            background-color: #f8fafc !important;
+          }
+          .biometric-scanner-wrap .border-white\\/10,
+          .biometric-scanner-wrap .border-white\\/5 {
+            border-color: #e2e8f0 !important;
+          }
+          .biometric-scanner-wrap button.bg-white {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+          }
+          .biometric-scanner-wrap button.bg-white:hover {
+            background-color: #1e293b !important;
+          }
+          .biometric-scanner-wrap .text-white\\/40 {
+            color: #64748b !important;
+          }
+          .biometric-scanner-wrap .bg-white\\/10 {
+            background-color: #e2e8f0 !important;
+            color: #475569 !important;
+          }
+        `}</style>
+      )}
+
       {/* Ambient */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 right-0 h-80 w-80 rounded-full bg-[#7b61ff]/8 blur-[120px]" />
@@ -387,7 +461,9 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
             <BrainCircuit className="h-7 w-7 text-white" />
           </div>
           <h1 className="text-3xl font-black tracking-tight">Twin Copilot Oracle</h1>
-          <p className="mt-1.5 text-white/50 text-xs">
+          <p className={`mt-1.5 text-xs ${
+            theme === 'light' ? 'text-slate-500' : 'text-white/50'
+          }`}>
             Ask details, upload meals or bank statements in the chat below. AI will sync with your digital twin goals.
           </p>
         </motion.header>
@@ -396,20 +472,28 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
         <div className="flex justify-center gap-3 mb-6 relative z-10">
           <button
             onClick={() => setView('scanner')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer border ${
               view === 'scanner'
-                ? 'bg-[#7b61ff] text-white shadow-lg shadow-[#7b61ff]/20 border border-white/10'
-                : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
+                ? theme === 'light'
+                  ? 'bg-[#7b61ff] text-white shadow-lg shadow-[#7b61ff]/20 border-[#7b61ff]'
+                  : 'bg-[#7b61ff] text-white shadow-lg shadow-[#7b61ff]/20 border-white/10'
+                : theme === 'light'
+                  ? 'bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200/80'
+                  : 'bg-white/5 text-white/60 hover:text-white border-white/5'
             }`}
           >
             Biometric Scanner
           </button>
           <button
             onClick={() => setView('chat')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer border ${
               view === 'chat'
-                ? 'bg-[#7b61ff] text-white shadow-lg shadow-[#7b61ff]/20 border border-white/10'
-                : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
+                ? theme === 'light'
+                  ? 'bg-[#7b61ff] text-white shadow-lg shadow-[#7b61ff]/20 border-[#7b61ff]'
+                  : 'bg-[#7b61ff] text-white shadow-lg shadow-[#7b61ff]/20 border-white/10'
+                : theme === 'light'
+                  ? 'bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200/80'
+                  : 'bg-white/5 text-white/60 hover:text-white border-white/5'
             }`}
           >
             Copilot Chat
@@ -424,7 +508,7 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.2 }}
-              className="w-full flex justify-center py-4"
+              className="biometric-scanner-wrap w-full flex justify-center py-4"
             >
               <LiveBiometricScanner onAskCopilot={handleAskCopilotFromScan} />
             </motion.div>
@@ -441,36 +525,56 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
               <AnimatePresence>
                 {savedGoalUpdate && (
                   <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-                    className="mb-4 flex items-center gap-3 rounded-xl border border-[#10c7a1]/40 bg-[#10c7a1]/15 px-5 py-3.5 shadow-lg">
+                    className={`mb-4 flex items-center gap-3 rounded-xl border px-5 py-3.5 shadow-lg ${
+                      theme === 'light'
+                        ? 'border-[#10c7a1]/50 bg-emerald-50'
+                        : 'border-[#10c7a1]/40 bg-[#10c7a1]/15 animate-none'
+                    }`}>
                     <Target className="h-5 w-5 text-[#10c7a1] flex-shrink-0 animate-bounce" />
                     <div>
                       <p className="text-xs font-bold text-[#10c7a1]">Goal Progress Auto-Updated!</p>
-                      <p className="text-[11px] text-white/70">
+                      <p className={`text-[11px] ${
+                        theme === 'light' ? 'text-slate-700' : 'text-white/70'
+                      }`}>
                         Your goal <strong>"{savedGoalUpdate.title}"</strong> updated to {savedGoalUpdate.currentMetric} / {savedGoalUpdate.targetMetric} {savedGoalUpdate.unit}.
                       </p>
                     </div>
-                    <button onClick={() => setSavedGoalUpdate(null)} className="ml-auto text-white/40 hover:text-white"><X className="h-4 w-4" /></button>
+                    <button onClick={() => setSavedGoalUpdate(null)} className={`ml-auto ${
+                      theme === 'light' ? 'text-slate-400 hover:text-slate-700' : 'text-white/40 hover:text-white'
+                    }`}><X className="h-4 w-4" /></button>
                   </motion.div>
                 )}
               </AnimatePresence>
 
               {/* ── Chat Window ── */}
-              <section className={`flex-1 flex flex-col justify-between ${glass} p-5 mb-4 min-h-[520px] max-h-[70vh]`}>
+              <section className={`flex-1 flex flex-col justify-between p-5 mb-4 min-h-[520px] max-h-[70vh] ${
+                theme === 'light'
+                  ? 'rounded-2xl border border-slate-200 bg-white shadow-lg backdrop-blur-xl text-slate-900'
+                  : 'rounded-2xl border border-white/10 bg-[#0f1320]/84 shadow-[0_20px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl text-white'
+              }`}>
                 
                 {/* Chat header */}
-                <header className="mb-4 flex items-center justify-between border-b border-white/5 pb-3">
+                <header className={`mb-4 flex items-center justify-between border-b pb-3 ${
+                  theme === 'light' ? 'border-slate-200' : 'border-white/5'
+                }`}>
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10c7a1] opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10c7a1]"></span>
                     </span>
-                    <p className="text-xs font-bold uppercase tracking-wider text-white/60">
+                    <p className={`text-xs font-bold uppercase tracking-wider ${
+                      theme === 'light' ? 'text-slate-500' : 'text-white/60'
+                    }`}>
                       {activeGoals.length > 0 ? `${activeGoals.length} goals loaded as context` : 'Oracle Active'}
                     </p>
                   </div>
                   {chatHistory.length > 0 && (
                     <button onClick={() => setChatHistory([])}
-                      className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-semibold text-white/50 hover:text-white transition">
+                      className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                        theme === 'light'
+                          ? 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-800'
+                          : 'border-white/10 bg-white/5 text-white/50 hover:text-white'
+                      }`}>
                       <RefreshCw className="h-3 w-3" /> Reset Conversation
                     </button>
                   )}
@@ -479,10 +583,16 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
                 {/* Message List */}
                 <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-1 scrollbar-thin scrollbar-thumb-white/10">
                   {chatHistory.length === 0 ? (
-                    <div className="flex h-full flex-col items-center justify-center text-center text-sm text-white/30 px-6">
-                      <Bot className="h-12 w-12 text-[#7b61ff]/40 mb-3 animate-pulse" />
-                      <p className="font-semibold text-white/50">Welcome to your Twin Copilot</p>
-                      <p className="text-xs max-w-sm mt-1">
+                    <div className="flex h-full flex-col items-center justify-center text-center text-sm px-6">
+                      <Bot className={`h-12 w-12 mb-3 animate-pulse ${
+                        theme === 'light' ? 'text-[#7b61ff]/60' : 'text-[#7b61ff]/40'
+                      }`} />
+                      <p className={`font-semibold ${
+                        theme === 'light' ? 'text-slate-800' : 'text-white/50'
+                      }`}>Welcome to your Twin Copilot</p>
+                      <p className={`text-xs max-w-sm mt-1 ${
+                        theme === 'light' ? 'text-slate-600' : 'text-white/30'
+                      }`}>
                         Upload an image of your meal to analyze nutritional additions, upload a bank statement to plan next month, or ask questions relative to your SMART goals.
                       </p>
                     </div>
@@ -496,7 +606,11 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#10c7a1]/20 text-[#10c7a1]">
                         <Bot className="h-4 w-4" />
                       </div>
-                      <div className="rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-3">
+                      <div className={`rounded-2xl rounded-tl-sm border px-4 py-3 ${
+                        theme === 'light'
+                          ? 'border-slate-200 bg-slate-50'
+                          : 'border-white/10 bg-white/5'
+                      }`}>
                         <div className="flex gap-1 items-center">
                           {[0, 1, 2].map(i => (
                             <motion.div key={i} className="h-1.5 w-1.5 rounded-full bg-[#7b61ff]"
@@ -517,7 +631,11 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex gap-2 flex-wrap max-h-24 overflow-y-auto">
                         {followUps.map((chip, i) => (
                           <button key={i} onClick={() => handleAskOracle(chip)} disabled={isConsulting}
-                            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/60 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40">
+                            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                              theme === 'light'
+                                ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                                : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                            }`}>
                             <ChevronRight className="h-3 w-3 text-[#7b61ff]" /> {chip}
                           </button>
                         ))}
@@ -527,21 +645,39 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
 
                   {/* Chat Attachment Preview */}
                   {chatFile && (
-                    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/15 bg-white/5 p-2.5">
+                    <div className={`flex items-center justify-between gap-3 rounded-xl border p-2.5 ${
+                      theme === 'light'
+                        ? 'border-slate-200 bg-slate-50'
+                        : 'border-white/15 bg-white/5'
+                    }`}>
                       <div className="flex items-center gap-2.5">
                         {chatFilePreview ? (
-                          <img src={chatFilePreview} alt="Preview" className="h-10 w-10 rounded-lg object-cover border border-white/10" />
+                          <img src={chatFilePreview} alt="Preview" className={`h-10 w-10 rounded-lg object-cover border ${
+                            theme === 'light' ? 'border-slate-200' : 'border-white/10'
+                          }`} />
                         ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white/50 border border-white/10">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-lg border ${
+                            theme === 'light'
+                              ? 'bg-slate-100 text-slate-500 border-slate-200'
+                              : 'bg-white/10 text-white/50 border-white/10'
+                          }`}>
                             <FileText className="h-5 w-5 text-[#7b61ff]" />
                           </div>
                         )}
                         <div className="text-left">
-                          <p className="text-xs font-bold text-white max-w-[200px] truncate">{chatFile.name}</p>
-                          <p className="text-[10px] text-white/40">{(chatFile.size / 1024).toFixed(1)} KB</p>
+                          <p className={`text-xs font-bold max-w-[200px] truncate ${
+                            theme === 'light' ? 'text-slate-800' : 'text-white'
+                          }`}>{chatFile.name}</p>
+                          <p className={`text-[10px] ${
+                            theme === 'light' ? 'text-slate-400' : 'text-white/40'
+                          }`}>{(chatFile.size / 1024).toFixed(1)} KB</p>
                         </div>
                       </div>
-                      <button onClick={clearChatFile} className="rounded-full bg-white/10 p-1 hover:bg-white/20 text-white/60 hover:text-white transition">
+                      <button onClick={clearChatFile} className={`rounded-full p-1 transition ${
+                        theme === 'light'
+                          ? 'bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800'
+                          : 'bg-white/10 hover:bg-white/20 text-white/60 hover:text-white'
+                      }`}>
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -554,7 +690,11 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
                       onChange={handleChatFileSelect} />
                     
                     <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isConsulting}
-                      className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition disabled:opacity-40">
+                      className={`flex h-12 w-12 items-center justify-center rounded-xl border transition disabled:opacity-40 ${
+                        theme === 'light'
+                          ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                          : 'border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                      }`}>
                       <Paperclip className="h-5 w-5" />
                     </button>
 
@@ -567,12 +707,22 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
                           }
                         }}
                         placeholder={isListening ? 'Listening...' : 'Type a question or ask about an attached file...'}
-                        className={`w-full h-12 rounded-xl border pl-4 pr-12 text-xs text-white placeholder-white/25 bg-white/5 focus:outline-none transition-colors ${
-                          isListening ? 'border-[#ff4d7d]/50 bg-[#ff4d7d]/5' : 'border-white/10 focus:border-[#7b61ff]'}`}
+                        className={`w-full h-12 rounded-xl border pl-4 pr-12 text-xs transition-colors focus:outline-none ${
+                          isListening
+                            ? 'border-[#ff4d7d]/50 bg-[#ff4d7d]/5 text-white'
+                            : theme === 'light'
+                              ? 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-[#7b61ff] focus:bg-white'
+                              : 'border-white/10 bg-white/5 text-white placeholder-white/25 focus:border-[#7b61ff]'
+                        }`}
                         disabled={isConsulting} />
                       <button type="button" onClick={toggleListening} disabled={isConsulting}
                         className={`absolute right-3.5 top-1/2 -translate-y-1/2 flex h-7.5 w-7.5 items-center justify-center rounded-lg transition-all ${
-                          isListening ? 'bg-[#ff4d7d] text-white animate-pulse' : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'}`}>
+                          isListening
+                            ? 'bg-[#ff4d7d] text-white animate-pulse'
+                            : theme === 'light'
+                              ? 'bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-800'
+                              : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                        }`}>
                         {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                       </button>
                     </div>
@@ -586,11 +736,17 @@ Provide a personalized grounding protocol, empathetic advice, and immediate acti
 
                 {/* TTS button for last oracle response */}
                 {chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'assistant' && (
-                  <div className="mt-2.5 flex justify-end border-t border-white/5 pt-2">
+                  <div className={`mt-2.5 flex justify-end border-t pt-2 ${
+                    theme === 'light' ? 'border-slate-200' : 'border-white/5'
+                  }`}>
                     <button onClick={() => {
                       const last = chatHistory[chatHistory.length - 1].content;
                       handleSpeak(`${last.verdict}. ${last.action || ''}`);
-                    }} className="flex items-center gap-1.5 rounded-lg border border-[#7b61ff]/20 bg-[#7b61ff]/5 px-2.5 py-1.5 text-xs font-semibold text-white/50 hover:text-white transition">
+                    }} className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                      theme === 'light'
+                        ? 'border-[#7b61ff]/35 bg-[#7b61ff]/10 text-[#7b61ff] hover:bg-[#7b61ff]/20'
+                        : 'border-[#7b61ff]/20 bg-[#7b61ff]/5 px-2.5 py-1.5 text-xs font-semibold text-white/50 hover:text-white'
+                    }`}>
                       {isSpeaking ? <StopCircle className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
                       {isSpeaking ? 'Stop Reading' : 'Read Aloud'}
                     </button>

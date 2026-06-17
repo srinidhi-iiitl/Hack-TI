@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+﻿import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import OnboardingRoute from './components/OnboardingRoute';
@@ -22,6 +22,7 @@ import DocumentUpload from './pages/DocumentUpload';
 import { GamificationProvider } from './context/GamificationContext';
 import { IntegrationProvider } from './context/IntegrationContext';
 import { DashboardSyncProvider } from './context/DashboardSyncContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ToastOverlay from './components/ToastOverlay';
 import axios from 'axios';
 
@@ -66,49 +67,51 @@ import PageTranslationHost from './components/PageTranslationHost.jsx';
 
 function App() {
   return (
-    // ✅ The Provider MUST wrap everything!
-    <GamificationProvider>
-      <IntegrationProvider>
-        <DashboardSyncProvider>
-          <LanguageProvider>
-          <BrowserRouter>
-        <PageTranslationHost />
-        <Routes>
-          <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
-          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-          <Route
-            path="/onboarding"
-            element={
-              <OnboardingRoute>
-                <Onboarding />
-              </OnboardingRoute>
-            }
-          />
+    // The Provider MUST wrap everything!
+    <ThemeProvider>
+      <GamificationProvider>
+        <IntegrationProvider>
+          <DashboardSyncProvider>
+            <LanguageProvider>
+            <BrowserRouter>
+          <PageTranslationHost />
+          <Routes>
+            <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+            <Route
+              path="/onboarding"
+              element={
+                <OnboardingRoute>
+                  <Onboarding />
+                </OnboardingRoute>
+              }
+            />
 
-          <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/health" element={<ErrorBoundary><Health /></ErrorBoundary>} />
-            <Route path="/finance" element={<Finance />} />
-            <Route path="/career" element={<Career />} />
-            <Route path="/goals" element={<Goals />} />
-            <Route path="/intelligence" element={<Intelligence />} />
-            <Route path="/ai-intelligence" element={<Intelligence />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/copilot" element={<Copilot />} />
-            <Route path="/simulation" element={<Simulation />} />
-            <Route path="/daily-update" element={<DailyUpdate />} />
-            <Route path="/document-upload" element={<DocumentUpload />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-          </LanguageProvider>
-    
-      <ToastOverlay />
-        </DashboardSyncProvider>
-      </IntegrationProvider>
-    </GamificationProvider>
+            <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/health" element={<ErrorBoundary><Health /></ErrorBoundary>} />
+              <Route path="/finance" element={<Finance />} />
+              <Route path="/career" element={<Career />} />
+              <Route path="/goals" element={<Goals />} />
+              <Route path="/intelligence" element={<Intelligence />} />
+              <Route path="/ai-intelligence" element={<Intelligence />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/copilot" element={<Copilot />} />
+              <Route path="/simulation" element={<Simulation />} />
+              <Route path="/daily-update" element={<DailyUpdate />} />
+              <Route path="/document-upload" element={<DocumentUpload />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+            </LanguageProvider>
+        
+        <ToastOverlay />
+          </DashboardSyncProvider>
+        </IntegrationProvider>
+      </GamificationProvider>
+    </ThemeProvider>
   );
 }
 

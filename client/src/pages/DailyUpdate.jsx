@@ -6,6 +6,8 @@ import { fetchTodayDailyUpdate, submitDailyUpdate } from '../features/dailyUpdat
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import mealPlanApi from '../services/mealPlanApi';
+import { useTheme } from '../context/ThemeContext';
+
 
 const concernOptions = ['Headache', 'Fever', 'Fatigue', 'Stress', 'Anxiety', 'Sleep Issues', 'Other'];
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -44,6 +46,7 @@ const initialForm = {
 };
 
 function DailyUpdate() {
+  const { theme } = useTheme();
   const dispatch = useDispatch();
   const { activeGoals, completed, dailyUpdateLastSubmittedAt, error, loading, success } = useSelector((state) => state.dailyUpdate);
   const isSmoker = useSelector((state) => state.auth?.user?.smokingProfile?.smoker === true);
@@ -175,15 +178,25 @@ function DailyUpdate() {
     const adherencePercent = Math.round((completedCount / 4) * 100);
 
     return (
-      <div className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92 p-5 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] sm:p-6 space-y-5">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+      <div className={`rounded-[1.5rem] p-5 sm:p-6 space-y-5 ${
+        theme === 'light'
+          ? 'border border-slate-200 bg-white shadow-sm text-slate-900'
+          : 'border border-white/10 bg-[#0b111a]/92 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] text-white'
+      }`}>
+        <div className={`flex items-center justify-between border-b pb-4 ${
+          theme === 'light' ? 'border-slate-200' : 'border-white/10'
+        }`}>
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-[#10c7a1]">
+            <span className={`flex h-11 w-11 items-center justify-center rounded-2xl border ${
+              theme === 'light'
+                ? 'border-slate-200 bg-slate-50 text-[#10c7a1]'
+                : 'border-white/10 bg-white/8 text-[#10c7a1]'
+            }`}>
               <Activity className="h-5 w-5" />
             </span>
             <div>
               <h2 className="text-xl font-black">Today's Meal Plan</h2>
-              <p className="text-xs text-white/40">Track your daily meal adherence</p>
+              <p className={`text-xs ${theme === 'light' ? 'text-slate-500' : 'text-white/40'}`}>Track your daily meal adherence</p>
             </div>
           </div>
           <div className="text-right">
@@ -197,7 +210,7 @@ function DailyUpdate() {
         {weather && weather.temp !== null && weather.temp !== undefined && (
           <div className="rounded-xl border border-[#7b61ff]/30 bg-[#7b61ff]/10 px-4 py-3 flex items-start gap-2.5">
             <Sun className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-white/80 leading-relaxed">
+            <p className={`text-xs leading-relaxed ${theme === 'light' ? 'text-slate-700' : 'text-white/80'}`}>
               <strong>Weather Alert ({weather.temp}°C, {weather.condition}):</strong>{' '}
               {weather.isHot 
                 ? 'AI recommends: Increase water intake to 3.5L+, avoid heavy oily lunches, and prefer cooling foods like fruits and curd.'
@@ -226,18 +239,30 @@ function DailyUpdate() {
                 onClick={() => handleToggleMealItem(item.key)}
                 className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${
                   checked
-                    ? 'border-[#10c7a1]/55 bg-[#10c7a1]/10 shadow-[0_12px_30px_-20px_rgba(16,199,161,0.5)]'
-                    : 'border-white/10 bg-white/[0.04] hover:border-white/15 hover:bg-white/[0.06]'
+                    ? theme === 'light'
+                      ? 'border-[#10c7a1]/60 bg-[#10c7a1]/8 text-[#0e9f80]'
+                      : 'border-[#10c7a1]/55 bg-[#10c7a1]/10 shadow-[0_12px_30px_-20px_rgba(16,199,161,0.5)]'
+                    : theme === 'light'
+                      ? 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-800'
+                      : 'border-white/10 bg-white/[0.04] hover:border-white/15 hover:bg-white/[0.06] text-white'
                 }`}
               >
                 <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
-                  checked ? 'border-[#10c7a1] bg-[#10c7a1] text-[#06110f]' : 'border-white/15 bg-black/20 text-transparent'
+                  checked
+                    ? theme === 'light'
+                      ? 'border-[#10c7a1] bg-[#10c7a1] text-white'
+                      : 'border-[#10c7a1] bg-[#10c7a1] text-[#06110f]'
+                    : theme === 'light'
+                      ? 'border-slate-200 bg-slate-50 text-transparent'
+                      : 'border-white/15 bg-black/20 text-transparent'
                 }`}>
                   ✓
                 </span>
                 <div className="min-w-0 flex-1">
-                  <span className="block text-xs font-black text-white">{item.label}</span>
-                  <span className="block text-[10px] text-white/40 mt-1 line-clamp-2 leading-relaxed">
+                  <span className={`block text-xs font-black ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{item.label}</span>
+                  <span className={`block text-[10px] mt-1 line-clamp-2 leading-relaxed ${
+                    theme === 'light' ? 'text-slate-500' : 'text-white/40'
+                  }`}>
                     {menuStr || 'Target menu items'}
                   </span>
                 </div>
@@ -294,11 +319,17 @@ function DailyUpdate() {
 
   if (completed || success) {
     return (
-      <div className="min-h-[calc(100vh-112px)] bg-[#05070d] px-4 py-8 text-white sm:px-6 lg:px-8 space-y-6">
-        <div className="mx-auto flex max-w-3xl flex-col items-center rounded-[1.75rem] border border-[#10c7a1]/25 bg-[#0b111a]/95 p-10 text-center shadow-[0_24px_70px_-36px_rgba(0,0,0,0.9)]">
+      <div className={`min-h-[calc(100vh-112px)] px-4 py-8 sm:px-6 lg:px-8 space-y-6 transition-colors duration-200 ${
+        theme === 'light' ? 'bg-[#f8fafc] text-slate-900' : 'bg-[#05070d] text-white'
+      }`}>
+        <div className={`mx-auto flex max-w-3xl flex-col items-center rounded-[1.75rem] border p-10 text-center transition ${
+          theme === 'light'
+            ? 'border-slate-200 bg-white shadow-sm'
+            : 'border-[#10c7a1]/25 bg-[#0b111a]/95 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.9)]'
+        }`}>
           <CheckCircle2 className="h-16 w-16 text-[#10c7a1]" />
-          <h1 className="mt-5 text-3xl font-black">Today's Twin Check-In Completed</h1>
-          <p className="mt-3 text-white/58">{cooldownText}</p>
+          <h1 className={`mt-5 text-3xl font-black ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>Today's Twin Check-In Completed</h1>
+          <p className={`mt-3 ${theme === 'light' ? 'text-slate-500' : 'text-white/58'}`}>{cooldownText}</p>
         </div>
         {activeMealPlan && (
           <div className="mx-auto max-w-3xl w-full">
@@ -310,13 +341,25 @@ function DailyUpdate() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-112px)] bg-[#05070d] px-4 py-6 text-white sm:px-6 lg:px-8">
+    <div className={`min-h-[calc(100vh-112px)] px-4 py-6 sm:px-6 lg:px-8 transition-colors duration-200 ${
+      theme === 'light' ? 'bg-[#f8fafc] text-slate-900' : 'bg-[#05070d] text-white'
+    }`}>
       <div className="pointer-events-none fixed inset-0 left-[20rem] bg-[radial-gradient(circle_at_16%_0%,rgba(16,199,161,0.12),transparent_28%),radial-gradient(circle_at_86%_12%,rgba(123,97,255,0.12),transparent_30%)]" />
       <form onSubmit={handleSubmit} className="relative mx-auto max-w-6xl space-y-6">
-        <header className="rounded-[1.75rem] border border-white/10 bg-[#080d15]/95 p-6 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85)] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7df3cc]/70">Daily Update</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">Daily Twin Check-In</h1>
-          <p className="mt-3 text-sm leading-6 text-white/58">Help your Digital Twin stay updated with today's activities.</p>
+        <header className={`rounded-[1.75rem] border p-6 sm:p-8 transition ${
+          theme === 'light'
+            ? 'border-slate-200 bg-white shadow-sm'
+            : 'border-white/10 bg-[#080d15]/95 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85)]'
+        }`}>
+          <p className={`text-xs font-bold uppercase tracking-[0.28em] ${
+            theme === 'light' ? 'text-[#0f9f80]' : 'text-[#7df3cc]/70'
+          }`}>Daily Update</p>
+          <h1 className={`mt-2 text-3xl font-black tracking-tight sm:text-5xl ${
+            theme === 'light' ? 'text-slate-900' : 'text-white'
+          }`}>Daily Twin Check-In</h1>
+          <p className={`mt-3 text-sm leading-6 ${
+            theme === 'light' ? 'text-slate-500' : 'text-white/58'
+          }`}>Help your Digital Twin stay updated with today's activities.</p>
         </header>
 
         {error && <div className="rounded-2xl border border-[#ff4d7d]/30 bg-[#ff4d7d]/10 p-4 text-sm font-semibold text-[#ffb3ca]">{error}</div>}
@@ -338,7 +381,11 @@ function DailyUpdate() {
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {concernOptions.map((option) => (
-                  <label key={option} className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/78">
+                  <label key={option} className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
+                    theme === 'light'
+                      ? 'border-slate-200 bg-slate-50 text-slate-700'
+                      : 'border-white/10 bg-white/[0.045] text-white/78'
+                  }`}>
                     <input
                       type="checkbox"
                       checked={form.health.concernTypes.includes(option)}
@@ -353,7 +400,11 @@ function DailyUpdate() {
                   value={form.health.concernDescription}
                   onChange={(event) => update('health.concernDescription', event.target.value, setForm)}
                   placeholder="Describe your symptoms, discomfort, or concerns..."
-                  className="min-h-28 w-full rounded-2xl border border-white/10 bg-[#080d15] p-4 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#10c7a1]/55"
+                  className={`min-h-28 w-full rounded-2xl border p-4 text-sm outline-none transition ${
+                    theme === 'light'
+                      ? 'border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 focus:border-[#10c7a1]'
+                      : 'border-white/10 bg-[#080d15] text-white placeholder:text-white/25 focus:border-[#10c7a1]/55'
+                  }`}
                 />
               )}
             </div>
@@ -385,10 +436,16 @@ function DailyUpdate() {
         <Section icon={Target} title="Goal Check-In">
           {activeGoals.length > 0 ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+              <div className={`flex items-center justify-between gap-3 rounded-2xl border p-4 ${
+                theme === 'light'
+                  ? 'border-slate-200 bg-slate-50'
+                  : 'border-white/10 bg-white/[0.045]'
+              }`}>
                 <div>
-                  <p className="text-sm font-black text-white">Completed goals today</p>
-                  <p className="mt-1 text-xs font-semibold text-white/48">
+                  <p className={`text-sm font-black ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>Completed goals today</p>
+                  <p className={`mt-1 text-xs font-semibold ${
+                    theme === 'light' ? 'text-slate-500' : 'text-white/48'
+                  }`}>
                     {selectedGoals.length ? `${selectedGoals.length} selected` : 'Select every goal you completed today'}
                   </p>
                 </div>
@@ -396,7 +453,11 @@ function DailyUpdate() {
                   <button
                     type="button"
                     onClick={() => update('goal.goalIds', [], setForm)}
-                    className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-white/52 transition hover:border-[#ff4d7d]/35 hover:text-[#ffb3ca]"
+                    className={`rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-[0.14em] transition ${
+                      theme === 'light'
+                        ? 'border-slate-200 bg-slate-100 text-slate-500 hover:border-[#ff4d7d]/50 hover:text-[#ff4d7d]'
+                        : 'border-white/10 bg-black/20 text-white/52 hover:border-[#ff4d7d]/35 hover:text-[#ffb3ca]'
+                    }`}
                   >
                     Clear
                   </button>
@@ -413,23 +474,37 @@ function DailyUpdate() {
                       onClick={() => toggleGoal(goal._id, setForm)}
                       className={`flex min-h-28 items-start gap-3 rounded-2xl border p-4 text-left transition ${
                         selected
-                          ? 'border-[#10c7a1]/55 bg-[#10c7a1]/12 shadow-[0_18px_45px_-32px_rgba(16,199,161,0.9)]'
-                          : 'border-white/10 bg-white/[0.045] hover:border-white/20 hover:bg-white/[0.065]'
+                          ? theme === 'light'
+                            ? 'border-[#10c7a1]/60 bg-[#10c7a1]/8 shadow-sm text-slate-800'
+                            : 'border-[#10c7a1]/55 bg-[#10c7a1]/12 shadow-[0_18px_45px_-32px_rgba(16,199,161,0.9)] text-white'
+                          : theme === 'light'
+                            ? 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-800'
+                            : 'border-white/10 bg-white/[0.045] hover:border-white/20 hover:bg-white/[0.065] text-white'
                       }`}
                       aria-pressed={selected}
                     >
                       <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border ${
-                        selected ? 'border-[#10c7a1] bg-[#10c7a1] text-[#06110f]' : 'border-white/15 bg-black/20 text-transparent'
+                        selected
+                          ? theme === 'light'
+                            ? 'border-[#10c7a1] bg-[#10c7a1] text-white'
+                            : 'border-[#10c7a1] bg-[#10c7a1] text-[#06110f]'
+                          : theme === 'light'
+                            ? 'border-slate-200 bg-slate-50 text-transparent'
+                            : 'border-white/15 bg-black/20 text-transparent'
                       }`}
                       >
                         <CheckCircle2 className="h-4 w-4" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block break-words text-sm font-black text-white">{goal.title}</span>
-                        <span className="mt-2 block text-xs font-semibold text-white/50">
+                        <span className="block break-words text-sm font-black">{goal.title}</span>
+                        <span className={`mt-2 block text-xs font-semibold ${
+                          theme === 'light' ? 'text-slate-500' : 'text-white/50'
+                        }`}>
                           Progress: {goal.progress}% · Today's target: {goal.todayTarget}
                         </span>
-                        <span className="mt-3 block h-2 overflow-hidden rounded-full bg-white/10">
+                        <span className={`mt-3 block h-2 overflow-hidden rounded-full ${
+                          theme === 'light' ? 'bg-slate-100' : 'bg-white/10'
+                        }`}>
                           <span
                             className="block h-full rounded-full bg-[#10c7a1]"
                             style={{ width: `${Math.min(Math.max(goal.progress || 0, 0), 100)}%` }}
@@ -442,7 +517,11 @@ function DailyUpdate() {
               </div>
             </div>
           ) : (
-            <p className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-white/60">No active goals found. Create a goal to start tracking progress.</p>
+            <p className={`rounded-2xl border p-4 ${
+              theme === 'light'
+                ? 'border-slate-200 bg-slate-50 text-slate-500'
+                : 'border-white/10 bg-white/[0.045] text-white/60'
+            }`}>No active goals found. Create a goal to start tracking progress.</p>
           )}
         </Section>
 
@@ -451,7 +530,11 @@ function DailyUpdate() {
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#10c7a1]/35 bg-[#10c7a1] px-5 py-4 text-sm font-black text-[#06110f] shadow-[0_20px_50px_-25px_rgba(16,199,161,0.9)] transition hover:-translate-y-0.5 hover:bg-[#7df3cc] disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/10 disabled:text-white/35 disabled:shadow-none"
+          className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl border px-5 py-4 text-sm font-black transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:shadow-none ${
+            theme === 'light'
+              ? 'border-transparent bg-[#10c7a1] text-[#06110f] hover:bg-[#7df3cc] shadow-md disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400'
+              : 'border-[#10c7a1]/35 bg-[#10c7a1] text-[#06110f] shadow-[0_20px_50px_-25px_rgba(16,199,161,0.9)] hover:bg-[#7df3cc] disabled:border-white/10 disabled:bg-white/10 disabled:text-white/35'
+          }`}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Submit Daily Twin Check-In
@@ -462,10 +545,21 @@ function DailyUpdate() {
 }
 
 function Section({ icon: Icon, title, children }) {
+  const { theme } = useTheme();
   return (
-    <section className="rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92 p-5 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] sm:p-6">
-      <div className="mb-5 flex items-center gap-3 border-b border-white/10 pb-5">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-[#7df3cc]">
+    <section className={`rounded-[1.5rem] p-5 sm:p-6 transition ${
+      theme === 'light'
+        ? 'border border-slate-200 bg-white shadow-sm text-slate-900'
+        : 'border border-white/10 bg-[#0b111a]/92 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] text-white'
+    }`}>
+      <div className={`mb-5 flex items-center gap-3 border-b pb-5 ${
+        theme === 'light' ? 'border-slate-200' : 'border-white/10'
+      }`}>
+        <span className={`flex h-11 w-11 items-center justify-center rounded-2xl border ${
+          theme === 'light'
+            ? 'border-slate-200 bg-slate-50 text-[#0f9f80]'
+            : 'border-white/10 bg-white/8 text-[#7df3cc]'
+        }`}>
           <Icon className="h-5 w-5" />
         </span>
         <h2 className="text-2xl font-black">{title}</h2>
@@ -484,30 +578,56 @@ function TextField({ label, value, onChange }) {
 }
 
 function Field({ label, type, value, onChange }) {
+  const { theme } = useTheme();
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-white/40">{label}</span>
+      <span className={`mb-2 block text-xs font-bold uppercase tracking-[0.18em] ${
+        theme === 'light' ? 'text-slate-500' : 'text-white/40'
+      }`}>{label}</span>
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-12 w-full rounded-xl border border-white/10 bg-[#080d15] px-4 text-sm font-semibold text-white outline-none placeholder:text-white/25 focus:border-[#10c7a1]/55"
+        className={`h-12 w-full rounded-xl border px-4 text-sm font-semibold outline-none transition ${
+          theme === 'light'
+            ? 'border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 focus:border-[#10c7a1]'
+            : 'border-white/10 bg-[#080d15] text-white placeholder:text-white/25 focus:border-[#10c7a1]/55'
+        }`}
       />
     </label>
   );
 }
 
 function ToggleField({ label, value, onChange }) {
+  const { theme } = useTheme();
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4">
-      <span className="text-sm font-bold text-white/82">{label}</span>
-      <div className="flex rounded-xl border border-white/10 bg-black/20 p-1">
+    <div className={`flex items-center justify-between gap-4 rounded-2xl border p-4 ${
+      theme === 'light'
+        ? 'border-slate-200 bg-slate-50'
+        : 'border-white/10 bg-white/[0.045]'
+    }`}>
+      <span className={`text-sm font-bold ${
+        theme === 'light' ? 'text-slate-700' : 'text-white/82'
+      }`}>{label}</span>
+      <div className={`flex rounded-xl border p-1 ${
+        theme === 'light'
+          ? 'border-slate-200 bg-slate-100'
+          : 'border-white/10 bg-black/20'
+      }`}>
         {[true, false].map((option) => (
           <button
             type="button"
             key={String(option)}
             onClick={() => onChange(option)}
-            className={`rounded-lg px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition ${value === option ? 'bg-[#10c7a1] text-[#06110f]' : 'text-white/45 hover:text-white'}`}
+            className={`rounded-lg px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition ${
+              value === option
+                ? theme === 'light'
+                  ? 'bg-[#10c7a1] text-white shadow-sm'
+                  : 'bg-[#10c7a1] text-[#06110f]'
+                : theme === 'light'
+                  ? 'text-slate-500 hover:text-slate-800'
+                  : 'text-white/45 hover:text-white'
+            }`}
           >
             {option ? 'Yes' : 'No'}
           </button>
