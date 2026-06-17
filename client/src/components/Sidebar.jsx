@@ -29,7 +29,7 @@ const navItems = [
 
 const settingsItem = { label: 'Settings', href: '/settings', icon: SettingsIcon };
 
-function Sidebar() {
+function Sidebar({ mobileMenuOpen, setMobileMenuOpen }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const dispatch = useDispatch();
   const unreadNotificationCount = useNotificationCount();
@@ -43,10 +43,10 @@ function Sidebar() {
 
   return (
     <aside
-      className={`relative hidden h-screen shrink-0 overflow-hidden px-4 py-6 transition-[width] duration-300 lg:block ${theme === 'light'
+      className={`fixed inset-y-0 left-0 z-50 h-screen shrink-0 overflow-hidden px-4 py-6 transition-all duration-300 lg:relative lg:block ${theme === 'light'
           ? 'border-r border-slate-200 bg-white text-slate-900 shadow-[0_0_30px_rgba(0,0,0,0.06)]'
           : 'border-r border-white/10 bg-[#130b1c] text-white shadow-[24px_0_80px_-40px_rgba(0,0,0,0.65)]'
-        } ${isCollapsed ? 'w-20' : 'w-68'}`}
+        } ${isCollapsed ? 'lg:w-20 w-68' : 'w-68'} ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,122,0,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,0,127,0.12),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_22%)]" />
       <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent" />
@@ -73,16 +73,30 @@ function Sidebar() {
           </NavLink>
 
           {!isCollapsed && (
-            <button
-              type="button"
-              onClick={() => setIsCollapsed(true)}
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${theme === 'light'
-                  ? 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                  : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
-                }`} aria-label="Collapse sidebar"
-            >
-              <ChevronLeftIcon className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Mobile close button */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen?.(false)}
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition lg:hidden ${theme === 'light'
+                    ? 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                    : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                  }`} aria-label="Close sidebar"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setIsCollapsed(true)}
+                className={`hidden lg:flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${theme === 'light'
+                    ? 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                    : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                  }`} aria-label="Collapse sidebar"
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+              </button>
+            </div>
           )}
         </div>
 
@@ -271,6 +285,10 @@ function ChevronLeftIcon({ className }) {
 
 function ChevronRightIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none"><path d="m9 18 6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function XIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>;
 }
 
 // ✅ NEW: Added Chevron Down for the dropdown accordion

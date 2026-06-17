@@ -15,7 +15,7 @@ const pageTitles = {
   '/settings': 'Settings',
 };
 
-function Navbar() {
+function Navbar({ setMobileMenuOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
   const unreadCount = useNotificationCount();
@@ -31,14 +31,26 @@ function Navbar() {
           ? 'border-b border-slate-200 bg-white text-slate-900'
           : 'border-b border-violet-500/20 bg-[#1a103d]/90 text-white'
         }`}
-    >     <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+    >      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="space-y-2">
-          <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-xl ${theme === 'light'
-              ? 'border border-slate-200 bg-slate-100 text-slate-500'
-              : 'border border-white/10 bg-white/5 text-white/55'
-            }`}>
-            <span className="h-1.5 w-1.5 rounded-full bg-[#10c7a1] shadow-[0_0_18px_rgba(16,199,161,0.85)]" />
-            DigitalTwin workspace
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen?.(true)}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition lg:hidden ${theme === 'light'
+                  ? 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              aria-label="Open sidebar"
+            >
+              <MenuIcon className="h-5 w-5" />
+            </button>
+            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-xl ${theme === 'light'
+                ? 'border border-slate-200 bg-slate-100 text-slate-500'
+                : 'border border-white/10 bg-white/5 text-white/55'
+              }`}>
+              <span className="h-1.5 w-1.5 rounded-full bg-[#10c7a1] shadow-[0_0_18px_rgba(16,199,161,0.85)]" />
+              DigitalTwin workspace
+            </div>
           </div>
           <p className={`text-sm font-semibold tracking-[0.18em] ${theme === 'light' ? 'text-slate-500' : 'text-white/60'
             }`}>{greeting}, {firstName}</p>
@@ -104,6 +116,10 @@ function getTimeGreeting() {
 
 function BellIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none"><path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function MenuIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>;
 }
 
 export default Navbar;
