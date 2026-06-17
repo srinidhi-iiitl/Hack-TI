@@ -17,6 +17,7 @@ import { useIntegrations } from '../context/IntegrationContext';
 import { useDashboardSync } from '../context/DashboardSyncContext';
 import useNotificationCount from '../hooks/useNotificationCount';
 import LanguageSelector from '../components/LanguageSelector';
+import { useTheme } from '../context/ThemeContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -45,6 +46,7 @@ const fallbackProfile = {
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
 function Dashboard() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const { dashboardData, isLoading: isLoadingDashboard, refreshDashboard } = useDashboardSync();
   const [liveFinanceData, setLiveFinanceData] = useState(null);
   const user = getStoredUser();
@@ -110,14 +112,16 @@ function Dashboard() {
   }, []);
 
   return (
-    <div className="flex min-h-screen min-w-0 flex-1 overflow-hidden bg-[#05070c] text-white" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+    <div className={`flex min-h-screen min-w-0 flex-1 overflow-hidden ${theme === 'light' ? 'bg-[#f8fafc] text-[#0f172a]' : 'bg-[#05070c] text-white'}`} style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
       {/* Background */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.016)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.016)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black,transparent)]" />
-        <div className="absolute -left-40 top-0 h-[480px] w-[480px] rounded-full bg-[#7b61ff]/6 blur-[130px]" />
-        <div className="absolute -right-40 bottom-0 h-[560px] w-[560px] rounded-full bg-[#10c7a1]/5 blur-[150px]" />
-        <div className="absolute left-1/3 top-1/2 h-[280px] w-[280px] rounded-full bg-[#c8a84b]/3 blur-[100px]" />
-      </div>
+      {theme === 'dark' && (
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.016)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.016)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black,transparent)]" />
+          <div className="absolute -left-40 top-0 h-[480px] w-[480px] rounded-full bg-[#7b61ff]/6 blur-[130px]" />
+          <div className="absolute -right-40 bottom-0 h-[560px] w-[560px] rounded-full bg-[#10c7a1]/5 blur-[150px]" />
+          <div className="absolute left-1/3 top-1/2 h-[280px] w-[280px] rounded-full bg-[#c8a84b]/3 blur-[100px]" />
+        </div>
+      )}
 
       <section className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
@@ -128,7 +132,7 @@ function Dashboard() {
           onNotificationClick={() => navigate('/notifications')}
         />
 
-        <main className="flex-1 overflow-y-auto px-4 pb-10 pt-5 sm:px-6 lg:px-8" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+        <main className="flex-1 overflow-y-auto px-4 pb-10 pt-5 sm:px-6 lg:px-8" style={{ scrollbarWidth: 'thin', scrollbarColor: theme === 'light' ? 'rgba(0,0,0,0.1) transparent' : 'rgba(255,255,255,0.1) transparent' }}>
           <motion.div className="mx-auto w-full max-w-[1480px] space-y-5" variants={pageVariants} initial="hidden" animate="show">
 
             {/* ── HERO ── */}
@@ -169,13 +173,13 @@ function Dashboard() {
 
             {/* ── ROW 2: Gamified Journey Map (With Motivating XP Vault) ── */}
             <motion.div variants={itemVariants}>
-              <GamifiedJourneyMap 
-                totalXP={totalXP} 
-                level={level} 
-                history={history} 
-                unlockedBadges={unlockedBadges} 
-                availableBadges={availableBadges} 
-                profile={profile} 
+              <GamifiedJourneyMap
+                totalXP={totalXP}
+                level={level}
+                history={history}
+                unlockedBadges={unlockedBadges}
+                availableBadges={availableBadges}
+                profile={profile}
                 liveIntegrations={integrations}
               />
             </motion.div>
@@ -212,22 +216,23 @@ function Dashboard() {
 
 // ─── Gamified Journey Map (UPGRADED MASSIVE XP VAULT) ───────────────────────
 function GamifiedJourneyMap({ totalXP, level, history, unlockedBadges, availableBadges, profile, liveIntegrations }) {
+  const { theme } = useTheme();
   const [activeFilter, setActiveFilter] = useState('all');
   const [shareTip, setShareTip] = useState(null);
 
   // Safely calculate today's XP directly from the backend history logs
   const todayXP = history.reduce((sum, log) => sum + (log.points || 0), 0);
-  
+
   // Calculate readiness titles
   const readinessTitle = level < 3 ? 'Initiate' : level < 6 ? 'Intermediate' : level < 9 ? 'Advanced' : 'Vanguard';
-  const remainingToNext = 500 - (totalXP % 500); 
+  const remainingToNext = 500 - (totalXP % 500);
   const progressPercent = Math.min(((totalXP % 500) / 500) * 100, 100);
 
   // Use live context first, fall back to profile for SSR / loading state
   const isConnected = (key) => {
     if (liveIntegrations?.[key]?.status === 'connected') return true;
     if (profile?.integrations?.[key]?.status === 'connected') return true;
-    
+
     const linkKeys = {
       github: 'githubUsername',
       leetcode: 'leetcodeUsername',
@@ -253,17 +258,17 @@ function GamifiedJourneyMap({ totalXP, level, history, unlockedBadges, available
 
   // Merge backend badges with our UI rules
   const MASTER_MILESTONES = availableBadges.length > 0 ? availableBadges.map(b => ({
-     id: b.id,
-     filterKey: b.id.includes('github') ? 'github' : b.id.includes('sleep') ? 'fitbit' : b.id.includes('spend') ? 'banking' : 'all',
-     title: b.title,
-     req: b.requirement,
-     xp: b.xpNeeded,
-     icon: b.icon,
-     completed: unlockedBadges.includes(b.id)
+    id: b.id,
+    filterKey: b.id.includes('github') ? 'github' : b.id.includes('sleep') ? 'fitbit' : b.id.includes('spend') ? 'banking' : 'all',
+    title: b.title,
+    req: b.requirement,
+    xp: b.xpNeeded,
+    icon: b.icon,
+    completed: unlockedBadges.includes(b.id)
   })) : fallbackMilestones;
 
-  const filteredMilestones = activeFilter === 'all' 
-    ? MASTER_MILESTONES 
+  const filteredMilestones = activeFilter === 'all'
+    ? MASTER_MILESTONES
     : MASTER_MILESTONES.filter(m => m.filterKey === activeFilter);
 
   // Social Share Simulator
@@ -273,69 +278,85 @@ function GamifiedJourneyMap({ totalXP, level, history, unlockedBadges, available
   };
 
   const getFilterColor = (key) => {
-    if (key === activeFilter) return 'bg-[#10c7a1]/20 text-[#10c7a1] border-[#10c7a1]/40';
-    if (isConnected(key)) return 'bg-white/10 text-white border-white/20';
-    return 'bg-white/5 text-white/40 border-white/5 hover:bg-white/10';
+    if (key === activeFilter) {
+      return theme === 'light'
+        ? 'bg-[#10c7a1]/15 text-[#0d9488] border-[#10c7a1]/40'
+        : 'bg-[#10c7a1]/20 text-[#10c7a1] border-[#10c7a1]/40';
+    }
+    if (isConnected(key)) {
+      return theme === 'light'
+        ? 'bg-[#f1f5f9] text-[#0f172a] border-[#e2e8f0]'
+        : 'bg-white/10 text-white border-white/20';
+    }
+    return theme === 'light'
+      ? 'bg-white text-[#94a3b8] border-[#e2e8f0] hover:bg-[#f8fafc]'
+      : 'bg-white/5 text-white/40 border-white/5 hover:bg-white/10';
   };
 
   return (
-    <div className="flex flex-col xl:flex-row gap-5 rounded-[1.75rem] border border-white/10 bg-[#0d1018]/90 backdrop-blur-2xl p-6 lg:p-8 relative overflow-hidden">
+    <div className={`flex flex-col xl:flex-row gap-5 rounded-[1.75rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-[#0d1018]/90 backdrop-blur-2xl'} p-6 lg:p-8 relative overflow-hidden`}>
       {/* Background Decor */}
-      <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 bg-[#10c7a1]/5 blur-[80px] rounded-full" />
-      
+      {theme === 'dark' && (
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 bg-[#10c7a1]/5 blur-[80px] rounded-full" />
+      )}
+
       {/* Left Column: Visual Map & Stats */}
       <div className="flex-1 flex flex-col min-w-[50%]">
-        
+
         {/* ✅ THE MASSIVE GLOWING XP VAULT (Motivator) */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8 p-5 rounded-2xl bg-gradient-to-br from-[#c8a84b]/15 to-transparent border border-[#c8a84b]/30 relative overflow-hidden shadow-[0_0_40px_rgba(200,168,75,0.08)]">
-           <div className="absolute right-0 top-0 w-48 h-full bg-gradient-to-l from-[#c8a84b]/20 to-transparent pointer-events-none" />
-           <Flame className="absolute -bottom-4 -left-4 w-24 h-24 text-[#c8a84b] opacity-10 pointer-events-none" />
-           
-           <div className="relative z-10">
-              <div className="flex items-center gap-1.5 mb-1 text-[10px] font-black uppercase tracking-widest text-[#c8a84b]">
-                 <Target className="w-3.5 h-3.5" /> Total Earned Experience
-              </div>
-              <div className="text-5xl font-black text-white tracking-tighter drop-shadow-[0_0_15px_rgba(200,168,75,0.4)] flex items-baseline gap-2">
-                 {totalXP} <span className="text-xl text-[#c8a84b] pb-1">XP</span>
-              </div>
-              
-              {/* Animated Today Badge */}
-              <AnimatePresence>
-                 {todayXP > 0 && (
-                    <motion.div 
-                       initial={{ scale: 0.8, opacity: 0, y: 10 }} 
-                       animate={{ scale: 1, opacity: 1, y: 0 }} 
-                       className="absolute -top-3 -right-12 bg-gradient-to-r from-[#10c7a1] to-emerald-400 text-[#05070c] px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wider shadow-[0_0_15px_rgba(16,199,161,0.6)] transform rotate-12"
-                    >
-                       +{todayXP} TODAY!
-                    </motion.div>
-                 )}
-              </AnimatePresence>
-           </div>
+        <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8 p-5 rounded-2xl bg-gradient-to-br ${theme === 'light' ? 'from-[#c8a84b]/10 to-[#fdf8e6]' : 'from-[#c8a84b]/15 to-transparent'} border ${theme === 'light' ? 'border-[#c8a84b]/40 shadow-sm' : 'border-[#c8a84b]/30 shadow-[0_0_40px_rgba(200,168,75,0.08)]'} relative overflow-hidden`}>
+          <div className="absolute right-0 top-0 w-48 h-full bg-gradient-to-l from-[#c8a84b]/20 to-transparent pointer-events-none" />
+          <Flame className="absolute -bottom-4 -left-4 w-24 h-24 text-[#c8a84b] opacity-10 pointer-events-none" />
 
-           <div className="hidden sm:block w-px h-14 bg-white/10 mx-2" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-1.5 mb-1 text-[10px] font-black uppercase tracking-widest text-[#c8a84b]">
+              <Target className="w-3.5 h-3.5" /> Total Earned Experience
+            </div>
+            <div className={`text-5xl font-black ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'} tracking-tighter drop-shadow-[0_0_15px_rgba(200,168,75,0.4)] flex items-baseline gap-2`}>
+              {totalXP} <span className="text-xl text-[#c8a84b] pb-1">XP</span>
+            </div>
 
-           <div className="flex-1 w-full relative z-10">
-              <div className="flex justify-between items-end mb-2 text-xs font-bold">
-                 <span className="text-white/60">Level {level} <span className="text-white tracking-wider uppercase text-[10px] bg-white/10 px-2 py-0.5 rounded ml-1">{readinessTitle}</span></span>
-                 <span className="text-[#c8a84b]">{remainingToNext} XP to next level</span>
-              </div>
-              <div className="h-3 w-full bg-black/60 rounded-full overflow-hidden border border-white/10 p-0.5">
-                 <motion.div 
-                    initial={{ width: 0 }} 
-                    animate={{ width: `${progressPercent}%` }} 
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-[#c8a84b] to-[#fde047] rounded-full shadow-[0_0_10px_rgba(200,168,75,0.8)]"
-                 />
-              </div>
-           </div>
+            {/* Animated Today Badge */}
+            <AnimatePresence>
+              {todayXP > 0 && (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0, y: 10 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  className="absolute -top-3 -right-12 bg-gradient-to-r from-[#10c7a1] to-emerald-400 text-[#05070c] px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wider shadow-[0_0_15px_rgba(16,199,161,0.6)] transform rotate-12"
+                >
+                  +{todayXP} TODAY!
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className={`hidden sm:block w-px h-14 ${theme === 'light' ? 'bg-[#e2e8f0]' : 'bg-white/10'} mx-2`} />
+
+          <div className="flex-1 w-full relative z-10">
+            <div className="flex justify-between items-end mb-2 text-xs font-bold">
+              <span className={theme === 'light' ? 'text-[#64748b]' : 'text-white/60'}>
+                Level {level}{' '}
+                <span className={`tracking-wider uppercase text-[10px] ${theme === 'light' ? 'bg-[#f8fafc] border border-[#e2e8f0] text-[#64748b]' : 'bg-white/10 text-white'} px-2 py-0.5 rounded ml-1`}>                  {readinessTitle}
+                </span>
+              </span>
+              <span className="text-[#c8a84b]">{remainingToNext} XP to next level</span>
+            </div>
+            <div className={`h-3 w-full ${theme === 'light' ? 'bg-[#f1f5f9]' : 'bg-black/60'} rounded-full overflow-hidden border ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/10'} p-0.5`}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="h-full bg-gradient-to-r from-[#c8a84b] to-[#fde047] rounded-full shadow-[0_0_10px_rgba(200,168,75,0.8)]"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Filters */}
         <div className="flex flex-wrap gap-2 mb-6">
           {['all', 'github', 'leetcode', 'fitbit', 'linkedin', 'banking'].map(key => (
-            <button 
-              key={key} 
+            <button
+              key={key}
               onClick={() => setActiveFilter(key)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-300 capitalize ${getFilterColor(key)}`}
             >
@@ -345,22 +366,22 @@ function GamifiedJourneyMap({ totalXP, level, history, unlockedBadges, available
         </div>
 
         {/* Central Visual Map (The Pathway) */}
-        <div className="relative mt-auto mb-4 py-8 px-4 border border-white/5 bg-[#05070c]/50 rounded-2xl overflow-hidden">
+        <div className={`relative mt-auto mb-4 py-8 px-4 border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/5 bg-[#05070c]/50'} rounded-2xl overflow-hidden`}>
           {/* SVG Connecting Line */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-            <path 
-              d="M 50,60 C 150,60 200,120 350,120 C 500,120 550,60 750,60" 
-              fill="none" 
-              stroke="rgba(255,255,255,0.08)" 
-              strokeWidth="4" 
+            <path
+              d="M 50,60 C 150,60 200,120 350,120 C 500,120 550,60 750,60"
+              fill="none"
+              stroke={theme === 'light' ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255,255,255,0.08)'}
+              strokeWidth="4"
               strokeDasharray="8 8"
             />
             {/* Highlight line based on filter (Simulated) */}
-            <path 
-              d="M 50,60 C 150,60 200,120 350,120 C 500,120 550,60 750,60" 
-              fill="none" 
-              stroke={activeFilter !== 'all' ? "#10c7a1" : "url(#glowGradient)"} 
-              strokeWidth="4" 
+            <path
+              d="M 50,60 C 150,60 200,120 350,120 C 500,120 550,60 750,60"
+              fill="none"
+              stroke={activeFilter !== 'all' ? "#10c7a1" : "url(#glowGradient)"}
+              strokeWidth="4"
               className="transition-all duration-700"
               style={{ strokeDasharray: activeFilter === 'all' ? '100% 0' : '20% 80%', strokeDashoffset: activeFilter === 'github' ? '0%' : '-30%' }}
             />
@@ -387,11 +408,11 @@ function GamifiedJourneyMap({ totalXP, level, history, unlockedBadges, available
               return (
                 <div key={node.id} className={`flex flex-col items-center transition-all duration-500 ${node.yOffset} ${isTargeted ? 'scale-110 opacity-100' : 'scale-90 opacity-40'}`}>
                   <div className={`h-12 w-12 rounded-full border-[3px] flex items-center justify-center text-lg shadow-xl relative
-                    ${connected ? 'bg-[#10c7a1]/20 border-[#10c7a1] text-white shadow-[0_0_20px_rgba(16,199,161,0.3)]' : 'bg-[#0a0e18] border-white/20 text-white/30'}`}>
+                    ${connected ? 'bg-[#10c7a1]/20 border-[#10c7a1] text-white shadow-[0_0_20px_rgba(16,199,161,0.3)]' : (theme === 'light' ? 'bg-[#f1f5f9] border-[#e2e8f0] text-black/30' : 'bg-[#0a0e18] border-white/20 text-white/30')}`}>
                     {node.icon}
                     {connected && <CheckCircle2 className="absolute -bottom-1 -right-1 h-4 w-4 bg-black rounded-full text-[#10c7a1]" />}
                   </div>
-                  <span className="text-[10px] mt-2 font-bold tracking-widest uppercase text-white/50">{node.id}</span>
+                  <span className={`text-[10px] mt-2 font-bold tracking-widest uppercase ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/55'}`}>{node.id}</span>
                 </div>
               );
             })}
@@ -400,74 +421,80 @@ function GamifiedJourneyMap({ totalXP, level, history, unlockedBadges, available
       </div>
 
       {/* Right Column: Milestones List */}
-      <div className="flex-1 lg:max-w-[45%] flex flex-col bg-white/[0.02] border border-white/5 rounded-2xl p-5 relative overflow-hidden">
-        <h3 className="text-sm font-bold text-white tracking-widest uppercase mb-4 flex items-center gap-2">
+      <div className={`flex-1 lg:max-w-[45%] flex flex-col ${theme === 'light' ? 'bg-[#f8fafc] border-[#e2e8f0]' : 'bg-white/[0.02] border-white/5'} border rounded-2xl p-5 relative overflow-hidden`}>
+        <h3 className={`text-sm font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'} tracking-widest uppercase mb-4 flex items-center gap-2`}>
           <Trophy className="h-4 w-4 text-[#c8a84b]" /> Milestone Unlocks & Rewards
         </h3>
-        
+
         <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin">
           <AnimatePresence mode="popLayout">
             {filteredMilestones.map((m) => (
-              <motion.div 
+              <motion.div
                 key={m.id}
                 layout
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
-                className={`p-4 rounded-xl border flex flex-col gap-3 relative overflow-hidden transition-all duration-300
-                  ${m.completed ? 'bg-gradient-to-r from-white/5 to-[#10c7a1]/5 border-[#10c7a1]/30' : 'bg-black/20 border-white/5'}`}
+                className={`p-4 rounded-xl border flex flex-col gap-3 relative overflow-hidden transition-all duration-300 ${theme === 'light'
+                  ? m.completed
+                    ? 'bg-gradient-to-r from-white to-[#10c7a1]/5 border-[#10c7a1]/40'
+                    : 'bg-[#f1f5f9]/50 border-[#e2e8f0]'
+                  : m.completed
+                    ? 'bg-gradient-to-r from-white/5 to-[#10c7a1]/5 border-[#10c7a1]/30'
+                    : 'bg-black/20 border-white/5'
+                  }`}
               >
                 {/* Milestone Details */}
                 <div className="flex gap-4 items-start">
                   <div className={`h-10 w-10 shrink-0 rounded-lg flex items-center justify-center text-xl 
-                    ${m.completed ? 'bg-[#10c7a1]/20 text-white' : 'bg-white/5 text-white/20'}`}>
+                    ${m.completed ? (theme === 'light' ? 'bg-[#10c7a1]/15 text-[#0d9488]' : 'bg-[#10c7a1]/20 text-white') : (theme === 'light' ? 'bg-[#f1f5f9] text-[#94a3b8]' : 'bg-white/5 text-white/20')}`}>
                     {m.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
-                      <h4 className={`text-sm font-bold truncate ${m.completed ? (m.isUltimate ? 'text-[#c8a84b]' : 'text-white') : 'text-white/40'}`}>
+                      <h4 className={`text-sm font-bold truncate ${m.completed ? (m.isUltimate ? 'text-[#c8a84b]' : (theme === 'light' ? 'text-[#0f172a]' : 'text-white')) : (theme === 'light' ? 'text-[#94a3b8]' : 'text-white/40')}`}>
                         {m.title}
                       </h4>
                       {m.completed ? (
-                         <span className="shrink-0 ml-2 px-2 py-0.5 rounded text-[9px] font-bold tracking-wider bg-[#10c7a1]/20 text-[#10c7a1] border border-[#10c7a1]/30">Unlocked</span>
+                        <span className={`shrink-0 ml-2 px-2 py-0.5 rounded text-[9px] font-bold tracking-wider ${theme === 'light' ? 'bg-[#10c7a1]/15 text-[#0d9488] border-[#10c7a1]/30' : 'bg-[#10c7a1]/20 text-[#10c7a1] border-[#10c7a1]/30'} border`}>Unlocked</span>
                       ) : (
-                         <span className="shrink-0 ml-2 px-2 py-0.5 rounded text-[9px] font-bold tracking-wider bg-white/5 text-white/30 border border-white/10 flex items-center gap-1"><Lock className="h-2 w-2"/> Locked</span>
+                        <span className={`shrink-0 ml-2 px-2 py-0.5 rounded text-[9px] font-bold tracking-wider ${theme === 'light' ? 'bg-[#f1f5f9] text-[#94a3b8] border-[#e2e8f0]' : 'bg-white/5 text-white/30 border border-white/10'} border flex items-center gap-1`}><Lock className="h-2 w-2" /> Locked</span>
                       )}
                     </div>
-                    <p className="text-[11px] text-white/50 leading-relaxed mb-2">{m.req}</p>
+                    <p className={`text-[11px] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/50'} leading-relaxed mb-2`}>{m.req}</p>
                     <p className="text-xs font-mono font-semibold text-[#7b61ff]">Earn {m.xp} XP {m.isUltimate && '& Vanguard Title'}</p>
                   </div>
                 </div>
 
                 {/* Simulated Interaction Panel (Only shows if completed) */}
                 {m.completed && (
-                  <div className="pt-3 border-t border-white/10 flex items-center justify-between mt-auto">
-                    <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">Share Achievement</span>
+                  <div className={`pt-3 border-t ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/10'} flex items-center justify-between mt-auto`}>
+                    <span className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/40'} font-semibold uppercase tracking-wider`}>Share Achievement</span>
                     <div className="flex gap-2 relative">
                       {[
                         { name: 'WhatsApp', icon: MessageCircle, color: 'text-green-400 hover:bg-green-400/20' },
                         { name: 'Instagram', icon: Camera, color: 'text-pink-400 hover:bg-pink-400/20' },
                         { name: 'Twitter', icon: Send, color: 'text-sky-400 hover:bg-sky-400/20' }
                       ].map(social => (
-                         <button 
-                           key={social.name}
-                           onClick={() => handleShare(social.name, m.id)}
-                           className={`h-7 w-7 rounded-md flex items-center justify-center bg-white/5 transition-colors ${social.color}`}
-                         >
-                           <social.icon className="h-3.5 w-3.5" />
-                         </button>
+                        <button
+                          key={social.name}
+                          onClick={() => handleShare(social.name, m.id)}
+                          className={`h-7 w-7 rounded-md flex items-center justify-center ${theme === 'light' ? 'bg-[#f1f5f9]' : 'bg-white/5'} transition-colors ${social.color}`}
+                        >
+                          <social.icon className="h-3.5 w-3.5" />
+                        </button>
                       ))}
-                      
+
                       {/* Tooltip Simulation */}
                       {shareTip?.id === m.id && (
-                        <motion.div 
+                        <motion.div
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-[#05070c] border border-[#10c7a1]/40 rounded-lg shadow-2xl z-20 text-center"
+                          className={`absolute right-0 bottom-full mb-2 w-48 p-2 ${theme === 'light' ? 'bg-white border-[#e2e8f0] shadow-xl text-[#0f172a]' : 'bg-[#05070c] border-[#10c7a1]/40 text-white'} border rounded-lg z-20 text-center`}
                         >
-                           <p className="text-[10px] font-bold text-white">Opening {shareTip.platform}...</p>
-                           <p className="text-[9px] text-white/60 mt-0.5">Simulated share operation successful!</p>
+                          <p className="text-[10px] font-bold">Opening {shareTip.platform}...</p>
+                          <p className={`text-[9px] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/60'} mt-0.5`}>Simulated share operation successful!</p>
                         </motion.div>
                       )}
                     </div>
@@ -484,11 +511,12 @@ function GamifiedJourneyMap({ totalXP, level, history, unlockedBadges, available
 
 // ─── Header ─────────────────────────────────────────────────────────────────
 function DashboardHeader({ today, firstName, onSearchClick, onNotificationClick }) {
+  const { theme } = useTheme();
   const unreadNotificationCount = useNotificationCount();
 
   return (
     <motion.header
-      className="flex shrink-0 items-center justify-between border-b border-white/8 bg-[#070a10]/80 px-4 py-3.5 backdrop-blur-xl lg:px-8"
+      className={`flex shrink-0 items-center justify-between border-b ${theme === 'light' ? 'border-[#e2e8f0] bg-white' : 'border-white/8 bg-[#070a10]/80 backdrop-blur-xl'} px-4 py-3.5 lg:px-8`}
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
@@ -497,23 +525,23 @@ function DashboardHeader({ today, firstName, onSearchClick, onNotificationClick 
         <button
           type="button"
           onClick={onSearchClick}
-          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white/40 transition hover:bg-white/8 hover:border-white/15 hover:text-white/60"
+          className={`flex w-full items-center gap-3 rounded-2xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc] text-[#94a3b8] hover:bg-[#f1f5f9]' : 'border-white/10 bg-white/5 text-white/40 hover:bg-white/8 hover:border-white/15 hover:text-white/60'} px-4 py-2.5 text-sm transition`}
         >
           <Search className="h-4 w-4 shrink-0" />
           <span>Ask your Twin Copilot…</span>
-          <span className="ml-auto flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold tracking-widest text-white/30">⌘K</span>
+          <span className={`ml-auto flex items-center gap-1 rounded-lg border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f1f5f9] text-[#94a3b8]' : 'border-white/10 bg-white/5 text-white/30'} px-2 py-0.5 text-[10px] font-bold tracking-widest`}>⌘K</span>
         </button>
       </div>
       <div className="ml-4 flex items-center gap-2.5">
         <LanguageSelector compact />
-        <div className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/55 sm:flex">
+        <div className={`hidden items-center gap-2 rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]' : 'border-white/10 bg-white/5 text-white/55'} px-3 py-2 text-xs font-medium sm:flex`}>
           <CalendarDays className="h-3.5 w-3.5 text-[#c8a84b]" />
           {today}
         </div>
         <button
           type="button"
           onClick={onNotificationClick}
-          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white"
+          className={`relative flex h-9 w-9 items-center justify-center rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-white text-[#64748b] hover:bg-[#f8fafc]' : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'} transition`}
         >
           <Bell className="h-4 w-4" />
           {unreadNotificationCount > 0 && (
@@ -522,7 +550,7 @@ function DashboardHeader({ today, firstName, onSearchClick, onNotificationClick 
             </span>
           )}
         </button>
-        <div className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-gradient-to-br from-[#7b61ff] to-[#10c7a1] text-sm font-bold text-white shadow-[0_0_12px_rgba(16,199,161,0.25)]">
+        <div className={`grid h-9 w-9 place-items-center rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/10'} bg-gradient-to-br from-[#7b61ff] to-[#10c7a1] text-sm font-bold text-white shadow-[0_0_12px_rgba(16,199,161,0.25)]`}>
           {firstName.slice(0, 1).toUpperCase()}
         </div>
       </div>
@@ -531,20 +559,25 @@ function DashboardHeader({ today, firstName, onSearchClick, onNotificationClick 
 }
 
 function HeroSection({ firstName, insights, isLoading, navigate }) {
+  const { theme } = useTheme();
   const alignmentColor = insights.burnoutRisk > 70 ? '#ff4d7d' : insights.financeScore < 40 ? '#c8a84b' : '#10c7a1';
 
   return (
-    <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0a0e18]/90 backdrop-blur-2xl">
+    <div className={`overflow-hidden rounded-[1.75rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-[#0a0e18]/90 backdrop-blur-2xl'}`}>
       <div className="relative px-6 py-7 lg:px-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(123,97,255,0.06),transparent_40%)]" />
-        <motion.div className="pointer-events-none absolute right-8 top-4 h-32 w-32 rounded-full bg-[#c8a84b]/10 blur-3xl" animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 9, repeat: Infinity }} />
+        {theme === 'dark' && (
+          <>
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(123,97,255,0.06),transparent_40%)]" />
+            <motion.div className="pointer-events-none absolute right-8 top-4 h-32 w-32 rounded-full bg-[#c8a84b]/10 blur-3xl" animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 9, repeat: Infinity }} />
+          </>
+        )}
 
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-3">
-            <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+            <h1 className={`text-3xl font-semibold tracking-tight ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'} md:text-4xl`}>
               Good morning, {firstName}.
             </h1>
-            <p className="max-w-lg text-sm leading-relaxed text-white/60">
+            <p className={`max-w-lg text-sm leading-relaxed ${theme === 'light' ? 'text-[#64748b]' : 'text-white/60'}`}>
               Your signals are in{' '}
               <span className="font-semibold drop-shadow-[0_0_8px_currentColor]" style={{ color: alignmentColor }}>
                 {insights.alignmentLabel}
@@ -561,12 +594,12 @@ function HeroSection({ firstName, insights, isLoading, navigate }) {
           </div>
         </div>
 
-        <div className="relative z-10 mt-6 flex flex-wrap items-center gap-4 border-t border-white/8 pt-5">
+        <div className={`relative z-10 mt-6 flex flex-wrap items-center gap-4 border-t ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/8'} pt-5`}>
           <StatusPill icon="🧬" label="Burnout Risk" value={`${insights.burnoutRisk}%`} colorState={insights.thresholds.burnout.colorState} />
           <StatusPill icon="💧" label="Recovery" value={`${insights.recoveryScore}%`} colorState={insights.thresholds.wellness.colorState} />
           <StatusPill icon="💎" label="Savings Rate" value={`${insights.savingsRate}%`} colorState={insights.savingsState.colorState} />
           <StatusPill icon="🎯" label="Productivity" value={`${insights.productivityScore}%`} colorState={insights.thresholds.productivity.colorState} />
-          <div className="ml-auto flex items-center gap-2 rounded-xl border border-[#10c7a1]/20 bg-[#10c7a1]/8 px-3 py-1.5 text-xs font-semibold text-[#10c7a1]">
+          <div className={`ml-auto flex items-center gap-2 rounded-xl border ${theme === 'light' ? 'border-[#10c7a1]/30 bg-[#10c7a1]/8 text-[#0d9488]' : 'border-[#10c7a1]/20 bg-[#10c7a1]/8 text-[#10c7a1]'} px-3 py-1.5 text-xs font-semibold`}>
             <CheckCircle2 className="h-3.5 w-3.5" />
             Premium Sync Active
           </div>
@@ -577,18 +610,60 @@ function HeroSection({ firstName, insights, isLoading, navigate }) {
 }
 
 function HeroButton({ label, onClick, primary, accent }) {
+  const { theme } = useTheme();
   const base = 'rounded-xl px-4 py-2 text-sm font-semibold transition-all';
-  if (primary) return <button type="button" onClick={onClick} className={`${base} bg-white text-black hover:bg-white/90`}>{label}</button>;
-  if (accent) return <button type="button" onClick={onClick} className={`${base} border border-[#10c7a1]/30 bg-[#10c7a1]/10 text-[#10c7a1] hover:bg-[#10c7a1]/20`}>{label}</button>;
-  return <button type="button" onClick={onClick} className={`${base} border border-white/10 bg-white/5 text-white/80 hover:bg-white/10`}>{label}</button>;
+
+  if (primary) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`${base} ${theme === 'light'
+          ? 'border border-[#e2e8f0] bg-white text-[#0f172a] hover:bg-[#f8fafc]'
+          : 'bg-white text-black hover:bg-white/90'
+          }`}
+      >
+        {label}
+      </button>
+    );
+  }
+
+  if (accent) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`${base} border ${theme === 'light'
+          ? 'border-[#10c7a1] bg-[#10c7a1]/10 text-[#0d9488] hover:bg-[#10c7a1]/20'
+          : 'border-[#10c7a1]/30 bg-[#10c7a1]/10 text-[#10c7a1] hover:bg-[#10c7a1]/20'
+          }`}
+      >
+        {label}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${base} border ${theme === 'light'
+        ? 'border-[#e2e8f0] bg-white text-[#0f172a] hover:bg-[#f8fafc]'
+        : 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10'
+        }`}
+    >
+      {label}
+    </button>
+  );
 }
 
 function StatusPill({ icon, label, value, colorState }) {
+  const { theme } = useTheme();
   const c = colorStateToHex(colorState);
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-1.5">
+    <div className={`flex items-center gap-2 rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/8 bg-white/[0.03]'} px-3 py-1.5`}>
       <span className="text-sm">{icon}</span>
-      <span className="text-xs text-white/45 font-medium">{label}</span>
+      <span className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'} font-medium`}>{label}</span>
       <span className="text-xs font-bold" style={{ color: c }}>{value}</span>
     </div>
   );
@@ -615,23 +690,25 @@ function ScoreCard({ title, value, emoji, colorState, subtitle, onClick }) {
     return () => cancelAnimationFrame(frameId);
   }, [value]);
 
+  const { theme } = useTheme();
+
   return (
     <motion.article
       onClick={onClick}
       whileHover={{ y: -4, scale: 1.015 }}
-      className="cursor-pointer rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl transition-colors hover:border-white/20"
-      style={{ boxShadow: `0 0 0 1px ${c}08` }}
+      className={`cursor-pointer rounded-[1.5rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-white/[0.02] backdrop-blur-xl'} p-5 transition-colors ${theme === 'light' ? 'hover:border-[#cbd5e1]' : 'hover:border-white/20'}`}
+      style={{ boxShadow: theme === 'light' ? 'none' : `0 0 0 1px ${c}08` }}
     >
       <div className="flex items-start justify-between mb-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{title}</p>
-          <p className="mt-1.5 text-3xl font-semibold text-white">{displayed}<span className="text-lg text-white/40">%</span></p>
+          <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/40'}`}>{title}</p>
+          <p className={`mt-1.5 text-3xl font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{displayed}<span className={`text-lg ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/40'}`}>%</span></p>
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-xl text-lg" style={{ background: `${c}15`, border: `1px solid ${c}25` }}>
           {emoji}
         </div>
       </div>
-      <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-white/8">
+      <div className={`mb-3 h-1.5 w-full overflow-hidden rounded-full ${theme === 'light' ? 'bg-[#f1f5f9]' : 'bg-white/8'}`}>
         <motion.div
           className="h-full rounded-full"
           style={{ background: `linear-gradient(90deg, ${c}80, ${c})` }}
@@ -641,7 +718,7 @@ function ScoreCard({ title, value, emoji, colorState, subtitle, onClick }) {
         />
       </div>
       <div className="flex items-center justify-between">
-        <p className="text-xs text-white/40">{subtitle}</p>
+        <p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'}`}>{subtitle}</p>
         <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: c }}>
           <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: c }} />
           <span className="text-[10px] font-bold uppercase tracking-widest">{colorState === 'green' ? 'Good' : colorState === 'orange' ? 'Watch' : 'Alert'}</span>
@@ -652,6 +729,7 @@ function ScoreCard({ title, value, emoji, colorState, subtitle, onClick }) {
 }
 
 function DigitalTwinAvatar({ insights }) {
+  const { theme } = useTheme();
   const burnout = insights.burnoutRisk;
   const health = insights.healthScore;
   const finance = insights.financeScore;
@@ -670,7 +748,8 @@ function DigitalTwinAvatar({ insights }) {
       aura: '#ff4d7d', auraOpacity: 0.18, eyeOffset: 2,
       mouthPath: 'M 38 62 Q 50 58 62 62', eyeScale: 0.7,
       glowColor: 'rgba(255,77,125,0.22)',
-      skinGradFrom: '#2a1a1f', skinGradTo: '#1a0e14',
+      skinGradFrom: theme === 'light' ? '#fff1f2' : '#2a1a1f',
+      skinGradTo: theme === 'light' ? '#ffe4e6' : '#1a0e14',
       advice: 'Recovery signals low. A 20-min nap can reset cortisol.',
       label: '😴 Fatigued',
     },
@@ -678,7 +757,8 @@ function DigitalTwinAvatar({ insights }) {
       aura: '#c8a84b', auraOpacity: 0.2, eyeOffset: 0,
       mouthPath: 'M 40 62 Q 50 64 60 62', eyeScale: 1,
       glowColor: 'rgba(200,168,75,0.22)',
-      skinGradFrom: '#1e1a10', skinGradTo: '#13100a',
+      skinGradFrom: theme === 'light' ? '#fffbeb' : '#1e1a10',
+      skinGradTo: theme === 'light' ? '#fef3c7' : '#13100a',
       advice: 'Moderate stress detected. Hydrate and take a 5-min break.',
       label: '⚠️ Alert Mode',
     },
@@ -686,7 +766,8 @@ function DigitalTwinAvatar({ insights }) {
       aura: '#c8a84b', auraOpacity: 0.22, eyeOffset: 1,
       mouthPath: 'M 38 63 Q 50 59 62 63', eyeScale: 0.85,
       glowColor: 'rgba(200,168,75,0.2)',
-      skinGradFrom: '#1c1a10', skinGradTo: '#121008',
+      skinGradFrom: theme === 'light' ? '#fffbeb' : '#1c1a10',
+      skinGradTo: theme === 'light' ? '#fef3c7' : '#121008',
       advice: 'Finance stress detected. Set one budget goal today.',
       label: '💸 Finance Stress',
     },
@@ -694,7 +775,8 @@ function DigitalTwinAvatar({ insights }) {
       aura: '#10c7a1', auraOpacity: 0.22, eyeOffset: 0,
       mouthPath: 'M 38 60 Q 50 68 62 60', eyeScale: 1,
       glowColor: 'rgba(16,199,161,0.28)',
-      skinGradFrom: '#0e1e1a', skinGradTo: '#071310',
+      skinGradFrom: theme === 'light' ? '#f0fdf4' : '#0e1e1a',
+      skinGradTo: theme === 'light' ? '#dcfce7' : '#071310',
       advice: 'All systems aligned. Consistency compounds.',
       label: '✨ Optimal',
     },
@@ -770,13 +852,13 @@ function DigitalTwinAvatar({ insights }) {
         </motion.svg>
       </div>
       <motion.div key={mood} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
-        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.18em]"
+        className={`rounded-full border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/10 bg-white/5'} px-3 py-1 text-[9px] font-bold uppercase tracking-[0.18em]`}
         style={{ color: cfg.aura }}>
         {cfg.label}
       </motion.div>
       <motion.div key={cfg.advice} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-        className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-center text-[11px] leading-5 text-white/60 backdrop-blur-md w-full"
-        style={{ boxShadow: `0 0 16px ${cfg.glowColor}` }}
+        className={`rounded-2xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]' : 'border-white/8 bg-white/[0.03] text-white/60 backdrop-blur-md'} px-4 py-3 text-center text-[11px] leading-5 w-full`}
+        style={{ boxShadow: theme === 'light' ? 'none' : `0 0 16px ${cfg.glowColor}` }}
       >
         <span className="mr-1 font-bold" style={{ color: cfg.aura }}>Twin:</span>
         {cfg.advice}
@@ -786,14 +868,15 @@ function DigitalTwinAvatar({ insights }) {
 }
 
 function DigitalTwinPanel({ insights }) {
+  const { theme } = useTheme();
   return (
-    <motion.article whileHover={{ y: -3, scale: 1.01 }} className="flex h-full flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
+    <motion.article whileHover={{ y: -3, scale: 1.01 }} className={`flex h-full flex-col rounded-[1.5rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-white/[0.02] backdrop-blur-xl'} p-5`}>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-white">Digital Twin</h3>
-          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Live Signal</p>
+          <h3 className={`text-base font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Digital Twin</h3>
+          <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'}`}>Live Signal</p>
         </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-base">🤖</div>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/10 bg-white/5'} text-base`}>🤖</div>
       </div>
       <div className="flex flex-1 items-center justify-center">
         <DigitalTwinAvatar insights={insights} />
@@ -803,6 +886,7 @@ function DigitalTwinPanel({ insights }) {
 }
 
 function LifeBalanceRadar({ insights }) {
+  const { theme } = useTheme();
   const data = [
     { subject: 'Health', A: insights.healthScore, emoji: '🧬', color: '#10c7a1', desc: 'Biometric + recovery' },
     { subject: 'Finance', A: insights.financeScore, emoji: '💎', color: '#c8a84b', desc: 'Savings + buffer' },
@@ -812,22 +896,22 @@ function LifeBalanceRadar({ insights }) {
   ];
 
   return (
-    <motion.article whileHover={{ y: -3 }} className="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
+    <motion.article whileHover={{ y: -3 }} className={`flex flex-col rounded-[1.5rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-white/[0.02] backdrop-blur-xl'} p-5`}>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-white">Life Balance</h3>
-          <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/35 mt-0.5">Hover axes for details</p>
+          <h3 className={`text-base font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Life Balance</h3>
+          <p className={`text-[10px] font-medium uppercase tracking-[0.18em] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'} mt-0.5`}>Hover axes for details</p>
         </div>
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-base">⚡</span>
+        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc] text-[#0f172a]' : 'border-white/10 bg-white/5 text-base text-white'}`}>⚡</span>
       </div>
       <div className="grid flex-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="min-h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
-              <PolarGrid stroke="rgba(255,255,255,0.06)" />
+              <PolarGrid stroke={theme === 'light' ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255,255,255,0.06)'} />
               <PolarAngleAxis dataKey="subject" tick={({ x, y, payload }) => {
                 const entry = data.find(d => d.subject === payload.value);
-                return <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fill={entry?.color || 'rgba(255,255,255,0.45)'} fontSize={9.5} fontWeight={700} letterSpacing="0.08em">{payload.value}</text>;
+                return <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fill={entry?.color || (theme === 'light' ? '#64748b' : 'rgba(255,255,255,0.45)')} fontSize={9.5} fontWeight={700} letterSpacing="0.08em">{payload.value}</text>;
               }} />
               <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
               <RechartsTooltip content={<LifeBalanceTooltip data={data} />} />
@@ -837,20 +921,20 @@ function LifeBalanceRadar({ insights }) {
         </div>
         <div className="flex flex-col gap-2">
           {data.map((item, i) => (
-            <motion.div key={item.subject} whileHover={{ x: 3 }} className="flex items-center justify-between rounded-xl border border-white/6 bg-white/[0.025] px-3.5 py-2.5 transition hover:border-white/12">
+            <motion.div key={item.subject} whileHover={{ x: 3 }} className={`flex items-center justify-between rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc] hover:border-[#cbd5e1]' : 'border-white/6 bg-white/[0.025] hover:border-white/12'} px-3.5 py-2.5 transition`}>
               <div className="flex items-center gap-2.5">
                 <span className="text-sm">{item.emoji}</span>
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/35">{item.subject}</p>
-                  <p className="text-sm font-semibold text-white">{item.A}%</p>
+                  <p className={`text-[9px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'}`}>{item.subject}</p>
+                  <p className={`text-sm font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{item.A}%</p>
                 </div>
               </div>
-              <div className="h-1 w-14 overflow-hidden rounded-full bg-white/8">
+              <div className={`h-1 w-14 overflow-hidden rounded-full ${theme === 'light' ? 'bg-[#e2e8f0]' : 'bg-white/8'}`}>
                 <motion.div className="h-full rounded-full" style={{ backgroundColor: item.color }} initial={{ width: 0 }} animate={{ width: `${item.A}%` }} transition={{ duration: 1.1, delay: i * 0.08 }} />
               </div>
             </motion.div>
           ))}
-          <div className="mt-auto rounded-xl border border-white/8 bg-white/[0.02] p-3 text-[11px] text-white/45 leading-5">
+          <div className={`mt-auto rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]' : 'border-white/8 bg-white/[0.02] text-white/45'} p-3 text-[11px] leading-5`}>
             <span className="text-[#10c7a1] font-semibold">Balance note:</span> Recovery and resilience are shaping today's priorities.
           </div>
         </div>
@@ -860,17 +944,18 @@ function LifeBalanceRadar({ insights }) {
 }
 
 function LifeBalanceTooltip({ active, payload, data }) {
+  const { theme } = useTheme();
   if (!active || !payload?.length) return null;
   const entry = data.find(d => d.subject === payload[0]?.payload?.subject);
   if (!entry) return null;
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0a0e17]/95 px-3.5 py-2.5 backdrop-blur-xl text-left" style={{ boxShadow: `0 0 18px ${entry.color}30` }}>
+    <div className={`rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-lg' : 'border-white/10 bg-[#0a0e17]/95 backdrop-blur-xl'} px-3.5 py-2.5 text-left`} style={{ boxShadow: theme === 'light' ? 'none' : `0 0 18px ${entry.color}30` }}>
       <div className="flex items-center gap-1.5 mb-1">
         <span>{entry.emoji}</span>
         <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: entry.color }}>{entry.subject}</span>
       </div>
-      <p className="text-xl font-bold text-white">{entry.A}<span className="text-sm font-normal text-white/45 ml-0.5">%</span></p>
-      <p className="mt-0.5 text-[10px] text-white/40">{entry.desc}</p>
+      <p className={`text-xl font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{entry.A}<span className={`text-sm font-normal ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'} ml-0.5`}>%</span></p>
+      <p className={`mt-0.5 text-[10px] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'}`}>{entry.desc}</p>
     </div>
   );
 }
@@ -926,24 +1011,26 @@ function DailyCalendarStreak({ insights }) {
   );
   const calendar = useMemo(() => buildRitualCalendar(now, streakInsights), [now, streakInsights]);
 
+  const { theme } = useTheme();
+
   return (
-    <motion.article whileHover={{ y: -3 }} className="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
+    <motion.article whileHover={{ y: -3 }} className={`flex flex-col rounded-[1.5rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-white/[0.02] backdrop-blur-xl'} p-5`}>
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h3 className="text-base font-semibold text-white">Daily Streak</h3>
-          <p className="mt-0.5 font-mono text-[10px] text-white/35">{formatTimeLeft(now)} remaining today</p>
+          <h3 className={`text-base font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Daily Streak</h3>
+          <p className={`mt-0.5 font-mono text-[10px] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/35'}`}>{formatTimeLeft(now)} remaining today</p>
           {calendar.streakStarted && (
             <p className="mt-1 text-xs font-bold text-[#10c7a1]">🔥 {calendar.currentStreak} day streak</p>
           )}
         </div>
-        <div className="flex flex-col items-center rounded-xl border border-white/10 bg-white/5 p-2.5 min-w-[50px]">
-          <span className="text-lg font-bold text-white leading-none">{calendar.today}</span>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 mt-0.5">{calendar.monthShort}</span>
+        <div className={`flex flex-col items-center rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/10 bg-white/5'} p-2.5 min-w-[50px]`}>
+          <span className={`text-lg font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'} leading-none`}>{calendar.today}</span>
+          <span className={`text-[9px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'} mt-0.5`}>{calendar.monthShort}</span>
         </div>
       </div>
       <div className="grid grid-cols-7 gap-y-2.5 gap-x-1">
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <div key={`${d}-${i}`} className="text-center text-[10px] font-bold text-white/30">{d}</div>
+          <div key={`${d}-${i}`} className={`text-center text-[10px] font-bold ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>{d}</div>
         ))}
         {calendar.days.map(day => (
           <div key={day.key} className="grid h-7 place-items-center">
@@ -952,7 +1039,7 @@ function DailyCalendarStreak({ insights }) {
         ))}
       </div>
       {!calendar.streakStarted && (
-        <p className="mt-4 rounded-xl border border-white/6 bg-white/[0.025] px-3 py-2.5 text-center text-[11px] text-white/45">
+        <p className={`mt-4 rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]' : 'border-white/6 bg-white/[0.025] text-white/45'} px-3 py-2.5 text-center text-[11px]`}>
           Complete today's goals to begin your streak.
         </p>
       )}
@@ -961,36 +1048,38 @@ function DailyCalendarStreak({ insights }) {
 }
 
 function CalendarDay({ day }) {
+  const { theme } = useTheme();
   if (day.state === 'today-complete') return <span className="grid h-7 w-7 place-items-center rounded-full bg-[#10c7a1] text-xs font-bold text-[#05070c] shadow-[0_0_10px_rgba(16,199,161,0.5)]">{day.value}</span>;
   if (day.state === 'today') return <span className="grid h-7 w-7 place-items-center rounded-full border border-[#10c7a1] bg-[#10c7a1]/10 text-xs font-bold text-[#10c7a1]">{day.value}</span>;
-  if (day.state === 'done') return <span className="grid h-7 w-7 place-items-center rounded-full border border-white/15 text-white/40 text-[10px]">✓</span>;
-  if (day.state === 'missed') return <span className="relative grid h-7 w-7 place-items-center text-xs text-white/35">{day.value}<span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-[#ff4d7d]" /></span>;
-  return <span className="text-xs text-white/40">{day.value}</span>;
+  if (day.state === 'done') return <span className={`grid h-7 w-7 place-items-center rounded-full border ${theme === 'light' ? 'border-[#e2e8f0] text-[#10c7a1]' : 'border-white/15 text-white/40'} text-[10px]`}>✓</span>;
+  if (day.state === 'missed') return <span className={`relative grid h-7 w-7 place-items-center text-xs ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'}`}>{day.value}<span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-[#ff4d7d]" /></span>;
+  return <span className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'}`}>{day.value}</span>;
 }
 
 function FinanceChart({ insights, onOpen }) {
+  const { theme } = useTheme();
   const [range, setRange] = useState('1M');
   const [hovered, setHovered] = useState(null);
   const chart = insights.financeRanges[range];
   const finStyle = getVisualState(insights.thresholds.financial.colorState);
 
   return (
-    <motion.article whileHover={{ y: -3 }} onClick={onOpen} className="cursor-pointer rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl transition hover:border-white/18">
+    <motion.article whileHover={{ y: -3 }} onClick={onOpen} className={`cursor-pointer rounded-[1.5rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-white/[0.02] backdrop-blur-xl'} p-5 transition ${theme === 'light' ? 'hover:border-[#cbd5e1]' : 'hover:border-white/18'}`}>
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-white">Financial Trajectory</h3>
+          <h3 className={`text-base font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Financial Trajectory</h3>
           <p className={`text-xs mt-0.5 ${finStyle.text}`}>{chart.summary}</p>
         </div>
-        <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+        <div className={`flex gap-1 rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/10 bg-white/5'} p-1`}>
           {['1W', '1M'].map(r => (
             <button key={r} onClick={e => { e.stopPropagation(); setRange(r); }} type="button"
-              className={`rounded-lg px-3 py-1 text-[10px] font-bold uppercase transition ${range === r ? 'bg-white/15 text-white' : 'text-white/35 hover:text-white/60'}`}>{r}</button>
+              className={`rounded-lg px-3 py-1 text-[10px] font-bold uppercase transition ${range === r ? (theme === 'light' ? 'bg-white text-[#0f172a] shadow-sm border border-[#e2e8f0]' : 'bg-white/15 text-white') : (theme === 'light' ? 'text-[#64748b] hover:text-[#0f172a]' : 'text-white/35 hover:text-white/60')}`}>{r}</button>
           ))}
         </div>
       </div>
-      <div className="relative h-48 overflow-hidden rounded-xl border border-white/5 bg-white/[0.01] px-4 pb-7 pt-4">
+      <div className={`relative h-48 overflow-hidden rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/5 bg-white/[0.01]'} px-4 pb-7 pt-4`}>
         <div className="absolute inset-x-4 top-4 bottom-7 grid grid-rows-4">
-          {[0, 1, 2, 3].map(i => <div key={i} className="border-t border-white/[0.04]" />)}
+          {[0, 1, 2, 3].map(i => <div key={i} className={`border-t ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/[0.04]'}`} />)}
         </div>
         <div className="absolute inset-x-4 bottom-7 top-4 flex items-end gap-2">
           {chart.bars.map((h, i) => (
@@ -1002,19 +1091,19 @@ function FinanceChart({ insights, onOpen }) {
         </div>
         <svg className="pointer-events-none absolute inset-x-4 bottom-7 top-4" viewBox="0 0 368 140" preserveAspectRatio="none" style={{ height: 'calc(100% - 44px)', width: 'calc(100% - 32px)' }}>
           <polyline points={chart.linePoints} fill="none" stroke={finStyle.stroke} strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
-          {chart.pointData.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#0a0e17" stroke={finStyle.stroke} strokeWidth="2.5" />)}
+          {chart.pointData.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.5" fill={theme === 'light' ? '#ffffff' : '#0a0e17'} stroke={finStyle.stroke} strokeWidth="2.5" />)}
         </svg>
-        <div className="absolute inset-x-4 bottom-2 flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/30">
+        <div className={`absolute inset-x-4 bottom-2 flex justify-between text-[9px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>
           {chart.labels.map(l => <span key={l}>{l}</span>)}
         </div>
       </div>
-      <div className="mt-4 flex gap-6 border-t border-white/6 pt-4">
+      <div className={`mt-4 flex gap-6 border-t ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/6'} pt-4`}>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35 mb-1">Savings Rate</p>
+          <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'} mb-1`}>Savings Rate</p>
           <p className={`text-lg font-bold ${finStyle.text}`}>{insights.savingsRate}%</p>
         </div>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35 mb-1">Monthly Buffer</p>
+          <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'} mb-1`}>Monthly Buffer</p>
           <p className={`text-lg font-bold ${getVisualState(insights.bufferState.colorState).text}`}>{insights.monthlyBuffer}</p>
         </div>
       </div>
@@ -1023,12 +1112,13 @@ function FinanceChart({ insights, onOpen }) {
 }
 
 function AIInsightsPanel({ insights, navigate }) {
+  const { theme } = useTheme();
   return (
-    <motion.article whileHover={{ y: -3 }} className="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
+    <motion.article whileHover={{ y: -3 }} className={`flex flex-col rounded-[1.5rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-white/[0.02] backdrop-blur-xl'} p-5`}>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-white">AI Insights</h3>
-          <p className="text-[10px] font-medium uppercase tracking-widest text-white/35 mt-0.5">Live signal feed</p>
+          <h3 className={`text-base font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>AI Insights</h3>
+          <p className={`text-[10px] font-medium uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'} mt-0.5`}>Live signal feed</p>
         </div>
         <button type="button" onClick={() => navigate('/intelligence')} className="flex items-center gap-1.5 rounded-xl border border-[#7b61ff]/25 bg-[#7b61ff]/10 px-3 py-1.5 text-[11px] font-bold text-[#7b61ff] transition hover:bg-[#7b61ff]/20">
           <Brain className="h-3.5 w-3.5" /> Full Intelligence <ArrowUpRight className="h-3 w-3" />
@@ -1039,25 +1129,25 @@ function AIInsightsPanel({ insights, navigate }) {
           const state = getVisualState(item.colorState);
           const isNeg = item.sentiment === 'negative';
           return (
-            <motion.div key={i} whileHover={{ scale: 1.01 }} className={`rounded-xl border bg-white/[0.025] p-3.5 ${state.card}`}>
+            <motion.div key={i} whileHover={{ scale: 1.01 }} className={`rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc] hover:border-[#cbd5e1]' : `bg-white/[0.025] ${state.card}`} p-3.5`}>
               <div className="flex items-start justify-between gap-2 mb-2">
                 <span className={`rounded-lg px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${state.badge}`}>{item.label}</span>
-                <span className="text-[9px] text-white/30 shrink-0">{item.time}</span>
+                <span className={`text-[9px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'} shrink-0`}>{item.time}</span>
               </div>
-              <p className={`text-xs leading-5 ${isNeg ? state.text : 'text-white/75'}`}>{item.title}</p>
+              <p className={`text-xs leading-5 ${isNeg ? state.text : (theme === 'light' ? 'text-[#64748b]' : 'text-white/75')}`}>{item.title}</p>
             </motion.div>
           );
         })}
       </div>
-      <div className="mt-4 rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
-        <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/35">Weekly Alignment</p>
+      <div className={`mt-4 rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/8 bg-white/[0.02]'} p-3.5`}>
+        <p className={`mb-2 text-[9px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'}`}>Weekly Alignment</p>
         <div className="flex h-16 items-end gap-1">
           {insights.alignmentBars.map((h, i) => {
             const s = getVisualState(alignmentColorState(h));
             return <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, backgroundColor: s.stroke, opacity: 0.45 + i * 0.1 }} />;
           })}
         </div>
-        <div className="mt-1.5 flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/25">
+        <div className={`mt-1.5 flex justify-between text-[9px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/25'}`}>
           <span>Mon</span><span>Today</span>
         </div>
       </div>
@@ -1066,6 +1156,7 @@ function AIInsightsPanel({ insights, navigate }) {
 }
 
 function CommandPortals({ navigate }) {
+  const { theme } = useTheme();
   const portals = [
     { title: 'Vitality Chamber', desc: 'Biometrics & Recovery', path: '/health', icon: '🧬', color: '#ff4d7d', particles: ['💊', '🏃', '💤'] },
     { title: 'Wealth Nexus', desc: 'Cashflow & Assets', path: '/finance', icon: '💎', color: '#10c7a1', particles: ['📈', '💳', '🏦'] },
@@ -1074,8 +1165,8 @@ function CommandPortals({ navigate }) {
   return (
     <section>
       <div className="mb-3.5 flex items-center gap-3">
-        <h2 className="text-base font-semibold text-white">Command Center</h2>
-        <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+        <h2 className={`text-base font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Command Center</h2>
+        <div className={`h-px flex-1 bg-gradient-to-r ${theme === 'light' ? 'from-[#e2e8f0]' : 'from-white/10'} to-transparent`} />
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {portals.map(p => <PortalCard key={p.title} portal={p} navigate={navigate} />)}
@@ -1085,21 +1176,24 @@ function CommandPortals({ navigate }) {
 }
 
 function PortalCard({ portal: p, navigate }) {
+  const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
   return (
     <motion.div onClick={() => navigate(p.path)} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} whileHover={{ y: -6, scale: 1.02 }} transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-      className="group cursor-pointer overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-6 backdrop-blur-xl" style={{ borderColor: hovered ? `${p.color}40` : undefined, boxShadow: hovered ? `0 0 32px ${p.color}12` : undefined, transition: 'border-color 0.3s, box-shadow 0.3s' }}>
-      <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full blur-2xl transition-all duration-400" style={{ backgroundColor: p.color, opacity: hovered ? 0.14 : 0.05 }} />
+      className={`group cursor-pointer overflow-hidden rounded-[1.5rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-white/[0.02]'} p-6 backdrop-blur-xl`} style={{ borderColor: hovered ? `${p.color}40` : undefined, boxShadow: hovered ? (theme === 'light' ? `0 10px 25px -5px ${p.color}18` : `0 0 32px ${p.color}12`) : undefined, transition: 'border-color 0.3s, box-shadow 0.3s' }}>
+      {theme === 'dark' && (
+        <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full blur-2xl transition-all duration-400" style={{ backgroundColor: p.color, opacity: hovered ? 0.14 : 0.05 }} />
+      )}
       <div className="relative">
         <div className="flex items-start justify-between mb-5">
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">{p.desc}</p>
-            <h3 className="mt-1 text-xl font-bold text-white">{p.title}</h3>
+            <p className={`text-[9px] font-bold uppercase tracking-[0.22em] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'}`}>{p.desc}</p>
+            <h3 className={`mt-1 text-xl font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{p.title}</h3>
           </div>
-          <motion.div animate={{ rotate: hovered ? 8 : 0, scale: hovered ? 1.08 : 1 }} transition={{ type: 'spring', stiffness: 280 }} className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-xl" style={{ boxShadow: hovered ? `0 0 16px ${p.color}35` : undefined }}>{p.icon}</motion.div>
+          <motion.div animate={{ rotate: hovered ? 8 : 0, scale: hovered ? 1.08 : 1 }} transition={{ type: 'spring', stiffness: 280 }} className={`flex h-12 w-12 items-center justify-center rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/10 bg-white/5'} text-xl`} style={{ boxShadow: hovered ? `0 0 16px ${p.color}35` : undefined }}>{p.icon}</motion.div>
         </div>
         <div className="flex gap-1.5 mb-5">
-          {p.particles.map((part, i) => <motion.span key={i} animate={{ y: hovered ? [0, -3, 0] : 0 }} transition={{ duration: 0.5, delay: i * 0.08, repeat: hovered ? Infinity : 0, repeatType: 'reverse' }} className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/8 bg-white/[0.03] text-xs">{part}</motion.span>)}
+          {p.particles.map((part, i) => <motion.span key={i} animate={{ y: hovered ? [0, -3, 0] : 0 }} transition={{ duration: 0.5, delay: i * 0.08, repeat: hovered ? Infinity : 0, repeatType: 'reverse' }} className={`flex h-7 w-7 items-center justify-center rounded-lg border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-white/8 bg-white/[0.03]'} text-xs`}>{part}</motion.span>)}
         </div>
         <div className="flex items-center gap-1.5 text-sm font-semibold transition-all" style={{ color: p.color }}>
           Enter Portal <motion.div animate={{ x: hovered ? 4 : 0 }}><ChevronRight className="h-4 w-4" /></motion.div>
@@ -1110,10 +1204,11 @@ function PortalCard({ portal: p, navigate }) {
 }
 
 function AdaptiveRecommendations({ insights }) {
+  const { theme } = useTheme();
   return (
-    <section className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0a0e18]/80 p-5 sm:p-6 backdrop-blur-2xl">
+    <section className={`relative overflow-hidden rounded-[1.5rem] border ${theme === 'light' ? 'border-[#e2e8f0] bg-white shadow-sm' : 'border-white/10 bg-[#0a0e18]/80'} p-5 sm:p-6 backdrop-blur-2xl`}>
       <div className="mb-5 flex items-center justify-between gap-4">
-        <h2 className="text-base font-semibold text-white">Adaptive Recommendations</h2>
+        <h2 className={`text-base font-semibold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Adaptive Recommendations</h2>
         <div className="flex items-center gap-2 rounded-xl border border-[#10c7a1]/20 bg-[#10c7a1]/8 px-3 py-1.5">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#10c7a1]" />
           <span className="text-[9px] font-bold uppercase tracking-widest text-[#10c7a1]">Deep Sync Active</span>
@@ -1123,19 +1218,21 @@ function AdaptiveRecommendations({ insights }) {
         {insights.recommendations.slice(0, 3).map(item => {
           const s = getVisualState(item.colorState);
           return (
-            <motion.div key={item.title} whileHover={{ y: -3, scale: 1.01 }} className={`overflow-hidden rounded-xl border bg-white/[0.025] ${s.card}`}>
-              <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
+            <motion.div key={item.title} whileHover={{ y: -3, scale: 1.01 }} className={`overflow-hidden rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-[#f8fafc] hover:border-[#cbd5e1]' : `bg-white/[0.025] ${s.card}`}`}>
+              <div className={`flex items-center justify-between border-b ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/5'} px-5 py-4`}>
                 <h4 className={`text-sm font-semibold ${s.text}`}>{item.title}</h4>
                 <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${s.icon}`}>{item.icon && <item.icon className="h-4 w-4" />}</div>
               </div>
               <div className="px-5 py-4">
-                <p className="text-xs leading-5.5 text-white/55">{item.detail}</p>
+                <p className={`text-xs leading-5.5 ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'}`}>{item.detail}</p>
               </div>
             </motion.div>
           );
         })}
       </div>
-      <div className="pointer-events-none absolute -bottom-12 -right-8 h-40 w-40 rounded-full bg-[#7b61ff]/8 blur-3xl" />
+      {theme === 'dark' && (
+        <div className="pointer-events-none absolute -bottom-12 -right-8 h-40 w-40 rounded-full bg-[#7b61ff]/8 blur-3xl" />
+      )}
     </section>
   );
 }

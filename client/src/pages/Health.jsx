@@ -3,6 +3,7 @@ import axios from 'axios';
 import healthApi from '../services/healthIntegrationApi.js';
 import { useDispatch, useSelector } from 'react-redux';
 import { useGamification } from '../context/GamificationContext';
+import { useTheme } from '../context/ThemeContext';
 import {
   disconnectHealthIntegration,
   fetchHealthIntegration,
@@ -20,8 +21,15 @@ const LS_PREGNANCY = 'ltPregnancy';
 const DEFAULT_HEALTH_DEVICE_NAME = 'Health Device';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
-const card = 'rounded-2xl border border-white/10 bg-[#11131a]/84 shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl';
-const iCard = `${card} transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#ff7a00]/30 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5)] cursor-pointer active:scale-[0.98]`;
+const getCardClass = (theme) =>
+  theme === 'light'
+    ? 'rounded-2xl border border-[#e2e8f0] bg-white shadow-sm'
+    : 'rounded-2xl border border-white/10 bg-[#11131a]/84 shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl';
+
+const getICardClass = (theme) =>
+  theme === 'light'
+    ? 'rounded-2xl border border-[#e2e8f0] bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#ff7a00]/30 hover:shadow-lg cursor-pointer active:scale-[0.98]'
+    : 'rounded-2xl border border-white/10 bg-[#11131a]/84 shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[#ff7a00]/30 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5)] cursor-pointer active:scale-[0.98]';
 
 // ─── Key used everywhere for persisted wearable state ─────────────────────────
 const LS_FITBIT    = 'ltFitbitConnected';  // { username, connectedAt }  — set on connect
@@ -142,14 +150,16 @@ function formatHealthDeviceName(integrationLink = '', provider = '') {
 // ─── Empty state card when device not connected ───────────────────────────────
 // onConnect is only passed when the user has NOT yet dismissed/connected — never nag.
 function NoDataCell({ label, icon: Icon, onConnect }) {
+  const { theme } = useTheme();
+  const cardClass = getCardClass(theme);
   return (
-    <article className={`${card} p-5 text-center flex flex-col items-center justify-center gap-3 min-h-[140px]`}>
-      <div className="h-14 w-14 rounded-full border-2 border-dashed border-white/15 flex items-center justify-center">
-        <Icon className="h-6 w-6 text-white/20" />
+    <article className={`${cardClass} p-5 text-center flex flex-col items-center justify-center gap-3 min-h-[140px]`}>
+      <div className={`h-14 w-14 rounded-full border-2 border-dashed ${theme === 'light' ? 'border-slate-200' : 'border-white/15'} flex items-center justify-center`}>
+        <Icon className={`h-6 w-6 ${theme === 'light' ? 'text-slate-300' : 'text-white/20'}`} />
       </div>
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-white/30">{label}</p>
-        <p className="text-[11px] text-white/20 mt-0.5">No device data</p>
+        <p className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>{label}</p>
+        <p className={`text-[11px] ${theme === 'light' ? 'text-[#94a3b8]/80' : 'text-white/20'} mt-0.5`}>No device data</p>
       </div>
       {/* Only render the CTA when onConnect is provided (first-time user only) */}
       {onConnect && (
@@ -165,6 +175,9 @@ function NoDataCell({ label, icon: Icon, onConnect }) {
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Health() {
+  const { theme } = useTheme();
+  const card = getCardClass(theme);
+  const iCard = getICardClass(theme);
   const authState = useSelector((state) => state.auth);
   
   const dispatch = useDispatch();
@@ -584,16 +597,16 @@ export default function Health() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="relative min-h-full overflow-hidden bg-[#06080f] px-6 py-8 text-white sm:px-8 lg:px-12">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,122,0,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(15,143,132,0.12),transparent_24%)]" />
+    <div className={`relative min-h-full overflow-hidden ${theme === 'light' ? 'bg-[#f8fafc] text-[#64748b]' : 'bg-[#06080f] text-white'} px-6 py-8 sm:px-8 lg:px-12`}>
+      <div className={`pointer-events-none absolute inset-0 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_top_left,rgba(255,122,0,0.05),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(15,143,132,0.04),transparent_24%)]' : 'bg-[radial-gradient(circle_at_top_left,rgba(255,122,0,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(15,143,132,0.12),transparent_24%)]'}`} />
 
       <div className="relative space-y-8">
 
         {/* ── HEADER ── */}
         <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-4xl font-semibold tracking-tight text-white">Health Dashboard</h1>
-            <p className="mt-2 max-w-2xl text-base leading-relaxed text-white/55">
+            <h1 className={`text-4xl font-semibold tracking-tight ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Health Dashboard</h1>
+            <p className={`mt-2 max-w-2xl text-base leading-relaxed ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'}`}>
               {profileLoading ? 'Waking up your Digital Twin…'
                : wearableReady && burnoutRisk !== null && burnoutRisk > 65
                 ? `Burnout risk is at ${burnoutRisk}% — your Fitbit is showing the strain. Let's make today a recovery day.`
@@ -627,8 +640,8 @@ export default function Health() {
               </div>
             ) : healthIntegration.loading ? (
               // 🔄 Was connected before but sync hasn't resolved yet — quiet spinner
-              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/35">
-                <div className="h-3 w-3 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+              <div className={`flex items-center gap-2 rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-100 text-[#94a3b8]' : 'border-white/10 bg-white/5 text-white/35'} px-4 py-2 text-xs font-semibold`}>
+                <div className={`h-3 w-3 rounded-full border-2 ${theme === 'light' ? 'border-slate-200 border-t-slate-500' : 'border-white/20 border-t-white/60'} animate-spin`} />
                 Syncing…
               </div>
             ) : (
@@ -641,7 +654,7 @@ export default function Health() {
               )
             )}
             {wearableReady && (
-              <p className="text-[10px] text-white/25 text-right">
+              <p className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/25'} text-right`}>
                 Last sync: just now · {wearable.steps?.toLocaleString()} steps logged
               </p>
             )}
@@ -649,15 +662,15 @@ export default function Health() {
         </section>
 
         <section>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
+          <div className={`rounded-2xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-white' : 'border-white/10 bg-white/[0.045]'} p-5`}>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/8 text-[#34d399]">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-slate-50' : 'border-white/10 bg-white/8'} text-[#34d399]`}>
                   <Wifi className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-white">Health API Integration</h2>
-                  <p className={`mt-1 text-[11px] font-bold uppercase tracking-[0.16em] ${healthIntegration.connected ? 'text-[#10c7a1]' : 'text-white/35'}`}>
+                  <h2 className={`text-base font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Health API Integration</h2>
+                  <p className={`mt-1 text-[11px] font-bold uppercase tracking-[0.16em] ${healthIntegration.connected ? 'text-[#10c7a1]' : (theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35')}`}>
                     {healthIntegration.connected ? `${connectedDeviceName} Connected` : 'Connect Health Device'}
                   </p>
                 </div>
@@ -667,9 +680,9 @@ export default function Health() {
                   type="button"
                   onClick={() => dispatch(fetchHealthIntegration())}
                   disabled={healthIntegration.loading}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white/50 transition hover:bg-white/8 hover:text-white disabled:opacity-40"
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-slate-50 text-[#64748b] hover:bg-slate-100 hover:text-[#0f172a]' : 'border-white/10 bg-white/5 text-white/50 hover:bg-white/8 hover:text-white'} px-3 py-2 text-xs font-bold transition disabled:opacity-40`}
                 >
-                  <span className={`h-3 w-3 rounded-full border-2 border-white/20 border-t-white/60 ${healthIntegration.loading ? 'animate-spin' : ''}`} />
+                  <span className={`h-3 w-3 rounded-full border-2 ${theme === 'light' ? 'border-slate-200 border-t-slate-500' : 'border-white/20 border-t-white/60'} ${healthIntegration.loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
               )}
@@ -678,10 +691,10 @@ export default function Health() {
             {healthIntegration.connected ? (
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                 <div className="min-w-0 w-full">
-                  <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/30">
+                  <p className={`mb-2 text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>
                     Connected Link
                   </p>
-                  <p className="w-full truncate rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-white/65">
+                  <p className={`w-full truncate rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-slate-50 text-[#334155]' : 'border-white/10 bg-black/20 text-white/65'} px-4 py-3 text-sm font-semibold`}>
                     {healthIntegration.integrationLink || `${connectedDeviceName} connected`}
                   </p>
                 </div>
@@ -697,7 +710,7 @@ export default function Health() {
             ) : (
               <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
                 <div>
-                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-white/30">
+                  <label className={`mb-2 block text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>
                     Health Integration Link
                   </label>
                   <input
@@ -706,7 +719,7 @@ export default function Health() {
                     onChange={(event) => setHealthLinkDraft(event.target.value)}
                     onKeyDown={(event) => event.key === 'Enter' && saveHealthFromPage()}
                     placeholder="anjali_fitband or https://fitband-provider/user/12345"
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3.5 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/20 focus:border-[#34d399]/50"
+                    className={`w-full rounded-xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-slate-50 text-[#0f172a] placeholder:text-slate-400' : 'border-white/10 bg-black/30 text-white placeholder:text-white/20'} px-3.5 py-3 text-sm font-semibold outline-none transition focus:border-[#34d399]/50`}
                   />
                   {healthPageError && <p className="mt-2 text-xs font-semibold text-[#ea580c]">{healthPageError}</p>}
                 </div>
@@ -724,10 +737,10 @@ export default function Health() {
             )}
 
             {healthIntegration.connected && (
-              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-white/50">
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">Provider: {connectedDeviceName}</span>
+              <div className={`mt-3 flex flex-wrap gap-2 text-xs font-semibold ${theme === 'light' ? 'text-[#64748b]' : 'text-white/50'}`}>
+                <span className={`rounded-full border ${theme === 'light' ? 'border-[#e2e8f0] bg-slate-100' : 'border-white/10 bg-white/5'} px-3 py-1.5`}>Provider: {connectedDeviceName}</span>
                 <span className="rounded-full border border-[#10c7a1]/20 bg-[#10c7a1]/10 px-3 py-1.5 text-[#10c7a1]">Status: Synced</span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                <span className={`rounded-full border ${theme === 'light' ? 'border-[#e2e8f0] bg-slate-100' : 'border-white/10 bg-white/5'} px-3 py-1.5`}>
                   Last sync: {healthIntegration.lastSync ? new Date(healthIntegration.lastSync).toLocaleString() : 'Just now'}
                 </span>
               </div>
@@ -744,8 +757,8 @@ export default function Health() {
                   <Wifi className="h-4 w-4 text-[#ff4d7d]" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">Connect your wearable for live data</p>
-                  <p className="text-xs text-white/40 mt-0.5">Your Digital Twin reads steps, sleep, heart rate, and HRV automatically once connected.</p>
+                  <p className={`text-sm font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Connect your wearable for live data</p>
+                  <p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'} mt-0.5`}>Your Digital Twin reads steps, sleep, heart rate, and HRV automatically once connected.</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
@@ -754,7 +767,7 @@ export default function Health() {
                   Connect now
                 </button>
                 <button onClick={dismissBanner}
-                  className="h-7 w-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/30 hover:text-white/60 transition-all text-xs"
+                  className={`h-7 w-7 rounded-full ${theme === 'light' ? 'bg-slate-200 hover:bg-slate-300 text-slate-500 hover:text-slate-700' : 'bg-white/5 hover:bg-white/10 text-white/30 hover:text-white/60'} flex items-center justify-center transition-all text-xs`}
                   title="Dismiss — you can reconnect from Settings anytime">
                   ✕
                 </button>
@@ -765,11 +778,11 @@ export default function Health() {
 
         {/* ── DEV TOOLBAR ── */}
         {import.meta.env.DEV && (
-          <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/2 px-5 py-3">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Demo controls</span>
+          <section className={`flex flex-wrap items-center gap-3 rounded-2xl border border-dashed ${theme === 'light' ? 'border-[#e2e8f0] bg-slate-50' : 'border-white/10 bg-white/2'} px-5 py-3`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/25'}`}>Demo controls</span>
             <div className="flex flex-wrap gap-2 ml-2">
               <button onClick={fetchWearable} disabled={syncStatus === 'syncing'}
-                className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/35 hover:bg-white/8 transition-all disabled:opacity-40">
+                className={`flex items-center gap-2 rounded-lg border ${theme === 'light' ? 'border-[#e2e8f0] bg-white text-slate-600 hover:bg-slate-50' : 'border-white/10 bg-white/5 text-white/35 hover:bg-white/8'} px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-40`}>
                 ⌚ Re-sync Mock Data
               </button>
             </div>
@@ -789,13 +802,13 @@ export default function Health() {
 
         {/* ── GAMIFICATION: Achievements & XP ── */}
         <section>
-          <article className={`${card} border-[#10c7a1]/20 bg-gradient-to-br from-[#10c7a1]/5 to-[#06080f] p-6`}>
-            <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
+          <article className={`rounded-2xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-gradient-to-br from-[#10c7a1]/5 to-white shadow-sm' : 'border-[#10c7a1]/20 bg-gradient-to-br from-[#10c7a1]/5 to-[#06080f]'} p-6`}>
+            <div className={`mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${theme === 'light' ? 'border-slate-100' : 'border-white/5'} pb-4`}>
               <div>
-                <h2 className="text-xl font-bold flex items-center gap-2 text-white">
+                <h2 className={`text-xl font-bold flex items-center gap-2 ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>
                   <TrophyIcon className="h-5 w-5 text-[#10c7a1]" /> Health Achievements
                 </h2>
-                <p className="mt-1 text-sm text-white/50">
+                <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/50'}`}>
                   {wearableReady
                     ? `Synced from your device · ${wearable.steps?.toLocaleString()} steps · ${wearable.sleepHours}h sleep · HRV ${wearable.hrv != null ? `${wearable.hrv}ms` : 'unavailable'}`
                     : 'Your milestones are validated the moment your device data arrives — no manual logging needed.'}
@@ -809,17 +822,17 @@ export default function Health() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="rounded-xl bg-black/20 border border-white/5 p-4">
-                <p className="text-xs font-bold uppercase tracking-widest text-white/30 mb-4">Recent Rewards</p>
+              <div className={`rounded-xl ${theme === 'light' ? 'bg-slate-50 border border-slate-100' : 'bg-black/20 border border-white/5'} p-4`}>
+                <p className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'} mb-4`}>Recent Rewards</p>
                 {healthHistory.length > 0 ? (
                   <div className="space-y-2.5">
                     {healthHistory.map((log, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/8 transition-all">
+                      <div key={i} className={`flex items-center justify-between p-3 rounded-lg ${theme === 'light' ? 'bg-white border border-slate-100 hover:bg-slate-50' : 'bg-white/5 border border-white/5 hover:bg-white/8'} transition-all`}>
                         <div className="flex items-center gap-3">
                           <span className="text-xl">{log.emoji}</span>
                           <div>
-                            <p className="text-sm font-semibold text-white/85">{log.activity}</p>
-                            <p className="text-[10px] text-white/30">Validated from wearable</p>
+                            <p className={`text-sm font-semibold ${theme === 'light' ? 'text-[#334155]' : 'text-white/85'}`}>{log.activity}</p>
+                            <p className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>Validated from wearable</p>
                           </div>
                         </div>
                         <span className="text-sm font-bold text-[#10c7a1] bg-[#10c7a1]/10 px-3 py-1 rounded-full">+{log.points} XP</span>
@@ -828,26 +841,26 @@ export default function Health() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <WifiOff className="h-8 w-8 text-white/10 mb-3" />
-                    <p className="text-sm text-white/30">No rewards validated yet.</p>
-                    <p className="text-xs text-white/20 mt-1">Hit your goals and rewards appear here automatically.</p>
+                    <WifiOff className={`h-8 w-8 ${theme === 'light' ? 'text-slate-300' : 'text-white/10'} mb-3`} />
+                    <p className={`text-sm ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>No rewards validated yet.</p>
+                    <p className={`text-xs ${theme === 'light' ? 'text-[#94a3b8]/70' : 'text-white/20'} mt-1`}>Hit your goals and rewards appear here automatically.</p>
                   </div>
                 )}
               </div>
 
-              <div className="rounded-xl bg-black/20 border border-white/5 p-4">
-                <p className="text-xs font-bold uppercase tracking-widest text-white/30 mb-4">Badges</p>
+              <div className={`rounded-xl ${theme === 'light' ? 'bg-slate-50 border border-slate-100' : 'bg-black/20 border border-white/5'} p-4`}>
+                <p className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'} mb-4`}>Badges</p>
                 {healthBadges.length > 0 ? (
                   <div className="space-y-3">
                     {healthBadges.map(badge => {
                       const earned = unlockedBadges.includes(badge.id);
                       return (
                         <div key={badge.id}
-                          className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${earned ? 'bg-gradient-to-r from-[#10c7a1]/10 to-transparent border-[#10c7a1]/30' : 'bg-white/3 border-white/5 opacity-40 grayscale'}`}>
+                          className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${earned ? (theme === 'light' ? 'bg-gradient-to-r from-[#10c7a1]/10 to-transparent border-[#10c7a1]/40' : 'bg-gradient-to-r from-[#10c7a1]/10 to-transparent border-[#10c7a1]/30') : (theme === 'light' ? 'bg-slate-100 border-slate-200 opacity-40 grayscale' : 'bg-white/3 border-white/5 opacity-40 grayscale')}`}>
                           <span className="text-2xl">{badge.icon}</span>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-bold truncate ${earned ? 'text-[#10c7a1]' : 'text-white/45'}`}>{badge.title}</p>
-                            <p className="text-[10px] text-white/25 truncate">{badge.requirement}</p>
+                            <p className={`text-sm font-bold truncate ${earned ? 'text-[#10c7a1]' : (theme === 'light' ? 'text-[#64748b]' : 'text-white/45')}`}>{badge.title}</p>
+                            <p className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/25'} truncate`}>{badge.requirement}</p>
                           </div>
                           {earned && <span className="text-[10px] font-bold text-[#10c7a1] bg-[#10c7a1]/15 px-2 py-0.5 rounded-full shrink-0">Earned</span>}
                         </div>
@@ -857,14 +870,14 @@ export default function Health() {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <span className="text-4xl mb-3">🏅</span>
-                    <p className="text-sm text-white/30">Badges appear here once you start hitting your health targets.</p>
+                    <p className={`text-sm ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>Badges appear here once you start hitting your health targets.</p>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="mt-5 pt-5 border-t border-white/5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-3">
+            <div className={`mt-5 pt-5 border-t ${theme === 'light' ? 'border-slate-100' : 'border-white/5'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/25'} mb-3`}>
                 {name !== 'You' ? `${name}'s milestone targets` : 'Your milestone targets'}
               </p>
               <div className={`grid gap-3 ${isSmoker ? 'grid-cols-2 md:grid-cols-5' : 'grid-cols-2 md:grid-cols-4'}`}>
@@ -875,11 +888,11 @@ export default function Health() {
                   { icon:'⚡', label:'HRV above 60ms',                     pts:'75 XP', sub:'Deep recovery zone',   active: wearableReady && wearable.hrv > 60 },
                   ...(isSmoker ? [{ icon:'🚭', label:'Craving resisted', pts:'25 XP', sub:'Quit Companion win', active: Number(smokingProfile.cravingsResisted || 0) > 0 }] : []),
                 ].map(item => (
-                  <div key={item.icon} className={`rounded-xl border p-3 text-center transition-all ${item.active ? 'bg-[#10c7a1]/10 border-[#10c7a1]/30' : 'bg-white/4 border-white/5'}`}>
+                  <div key={item.icon} className={`rounded-xl border p-3 text-center transition-all ${item.active ? (theme === 'light' ? 'bg-[#10c7a1]/10 border-[#10c7a1]/40' : 'bg-[#10c7a1]/10 border-[#10c7a1]/30') : (theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-white/4 border-white/5')}`}>
                     <span className="text-2xl">{item.icon}</span>
-                    <p className={`mt-2 text-xs font-bold ${item.active ? 'text-[#10c7a1]' : 'text-white/65'}`}>{item.label}</p>
-                    <p className="text-[10px] text-white/28">{item.sub}</p>
-                    <p className={`mt-1.5 text-xs font-bold ${item.active ? 'text-[#10c7a1]' : 'text-white/40'}`}>{item.active ? '✓ Earned!' : item.pts}</p>
+                    <p className={`mt-2 text-xs font-bold ${item.active ? 'text-[#10c7a1]' : (theme === 'light' ? 'text-[#334155]' : 'text-white/65')}`}>{item.label}</p>
+                    <p className={`text-[10px] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/28'}`}>{item.sub}</p>
+                    <p className={`mt-1.5 text-xs font-bold ${item.active ? 'text-[#10c7a1]' : (theme === 'light' ? 'text-[#94a3b8]' : 'text-white/40')}`}>{item.active ? '✓ Earned!' : item.pts}</p>
                   </div>
                 ))}
               </div>
@@ -889,11 +902,11 @@ export default function Health() {
 
         {/* ── WEATHER ── */}
         <section>
-          <article className="rounded-[1.6rem] border border-[#ff7a00]/20 bg-gradient-to-br from-[#11131a] to-[#1a1110] p-6">
+          <article className={`rounded-[1.6rem] border ${theme === 'light' ? 'border-[#ff7a00]/30 bg-gradient-to-br from-white to-[#fffbeb]' : 'border-[#ff7a00]/20 bg-gradient-to-br from-[#11131a] to-[#1a1110]'} p-6`}>
             {weatherLoading && (
               <div className="flex items-center gap-3 py-4">
-                <div className="h-5 w-5 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
-                <span className="text-sm text-white/40">Fetching live weather…</span>
+                <div className={`h-5 w-5 rounded-full border-2 ${theme === 'light' ? 'border-slate-200 border-t-slate-500' : 'border-white/20 border-t-white/60'} animate-spin`} />
+                <span className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'}`}>Fetching live weather…</span>
               </div>
             )}
             {weatherError && (
@@ -904,15 +917,15 @@ export default function Health() {
             )}
             {weather && !weatherLoading && (
               <>
-                <div className="mb-5 flex flex-col gap-4 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className={`mb-5 flex flex-col gap-4 border-b ${theme === 'light' ? 'border-slate-100' : 'border-white/10'} pb-4 sm:flex-row sm:items-center sm:justify-between`}>
                   <div className="flex items-center gap-3">
                     <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-white ${weather.isHot ? 'bg-gradient-to-br from-[#ff7a00] to-[#ff4d7d]' : weather.isRainy ? 'bg-gradient-to-br from-[#2f83b7] to-[#0f8f84]' : 'bg-gradient-to-br from-[#416f82] to-[#0f8f84]'}`}>
                       {weather.isHot ? <SunIcon className="h-7 w-7" /> : <CloudIcon className="h-7 w-7" />}
                     </div>
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-widest text-white/45">Live · {weather.city}{weather.state ? `, ${weather.state}` : ''}</p>
-                      <p className="mt-0.5 text-3xl font-bold text-white">
-                        {weather.temp}°C <span className="text-sm font-medium text-white/45">— {weather.condition}</span>
+                      <p className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/45'}`}>Live · {weather.city}{weather.state ? `, ${weather.state}` : ''}</p>
+                      <p className={`mt-0.5 text-3xl font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>
+                        {weather.temp}°C <span className={`text-sm font-medium ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'}`}>— {weather.condition}</span>
                       </p>
                     </div>
                   </div>
@@ -942,13 +955,13 @@ export default function Health() {
         {/* ── BLOOM COMPANION + DAILY MATRIX ── */}
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           {showFemaleHealth && (
-            <article className="relative flex flex-col rounded-[1.6rem] border border-[#ffb3d1]/20 bg-gradient-to-br from-[#0b0f16]/95 via-[#12080e]/80 to-[#0b0f16]/95 p-6 xl:col-span-6 overflow-hidden min-h-[520px]">
+            <article className={`relative flex flex-col rounded-[1.6rem] border ${theme === 'light' ? 'border-[#ffb3d1]/40 bg-gradient-to-br from-[#fff1f6] via-[#fffbfd] to-[#fff1f6]' : 'border-[#ffb3d1]/20 bg-gradient-to-br from-[#0b0f16]/95 via-[#12080e]/80 to-[#0b0f16]/95'} p-6 xl:col-span-6 overflow-hidden min-h-[520px]`}>
               <FloralDeco className="pointer-events-none absolute -top-8 -right-8 h-40 w-40 text-[#ff6b9d] opacity-20" />
               <FloralDeco className="pointer-events-none absolute -bottom-12 -left-10 h-48 w-48 text-[#c084fc] opacity-10" />
               <SmallFlower className="pointer-events-none absolute top-1/2 right-4 h-16 w-16 text-[#ffd166] opacity-15" />
               <SmallFlower className="pointer-events-none absolute top-20 left-6 h-12 w-12 text-[#ff6b9d] opacity-10" />
               <button onClick={() => setBlurred(b => !b)}
-                className="absolute top-5 right-5 z-50 h-8 w-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                className={`absolute top-5 right-5 z-50 h-8 w-8 rounded-full ${theme === 'light' ? 'bg-slate-100 border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-200' : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10'} flex items-center justify-center transition-all`}
                 title={blurred ? 'Show' : 'Hide for privacy'}>
                 {blurred ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -963,9 +976,9 @@ export default function Health() {
           )}
 
           <article className={`${iCard} p-6 ${showFemaleHealth ? 'xl:col-span-6' : 'xl:col-span-12'} flex flex-col`}>
-            <div className="mb-5 border-b border-white/10 pb-4">
-              <h2 className="text-2xl font-bold tracking-tight text-white">Daily Optimization Matrix</h2>
-              <p className="mt-1 text-sm text-white/50">
+            <div className={`mb-5 border-b ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/10'} pb-4`}>
+              <h2 className={`text-2xl font-bold tracking-tight ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Daily Optimization Matrix</h2>
+              <p className={`mt-1 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/50'}`}>
                 {wearableReady
                   ? `${name !== 'You' ? name + "'s" : 'Your'} live signals · just synced from Fitbit`
                   : profileLoading ? 'Loading your profile…'
@@ -974,9 +987,9 @@ export default function Health() {
             </div>
             {wearableReady ? (
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 grow">
-                <div className="rounded-xl bg-[#fbf9f8] p-5 border border-[#e4e2e1] flex flex-col">
+                <div className={`rounded-xl ${theme === 'light' ? 'bg-[#fbf9f8] border-[#e4e2e1]' : 'bg-white/5 border-white/10'} p-5 border flex flex-col`}>
                   <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#ea580c]">
-                    <div className="p-1.5 rounded-md bg-[#ffdad2]"><MoonIcon className="h-4 w-4 text-[#ea580c]" /></div>
+                    <div className={`p-1.5 rounded-md ${theme === 'light' ? 'bg-[#ffdad2]' : 'bg-[#ea580c]/20'}`}><MoonIcon className="h-4 w-4 text-[#ea580c]" /></div>
                     What the data flags
                   </div>
                   <div className="space-y-3 text-sm leading-relaxed flex-1">
@@ -992,9 +1005,9 @@ export default function Health() {
                     )}
                   </div>
                 </div>
-                <div className="rounded-xl bg-[#eef6f8] p-5 border border-[#c8dbe2] flex flex-col">
+                <div className={`rounded-xl ${theme === 'light' ? 'bg-[#eef6f8] border-[#c8dbe2]' : 'bg-white/5 border-white/10'} p-5 border flex flex-col`}>
                   <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#16a34a]">
-                    <div className="p-1.5 rounded-md bg-[#e6f1f4]"><AutoIcon className="h-4 w-4 text-[#16a34a]" /></div>
+                    <div className={`p-1.5 rounded-md ${theme === 'light' ? 'bg-[#e6f1f4]' : 'bg-[#16a34a]/20'}`}><AutoIcon className="h-4 w-4 text-[#16a34a]" /></div>
                     Your plan for today
                   </div>
                   <div className="space-y-3 text-sm text-[#16a34a] leading-relaxed flex-1">
@@ -1014,9 +1027,9 @@ export default function Health() {
                   <p className="text-xs text-[#ff7a00]/80">No live wearable — showing goal-based plan from your profile.</p>
                 </div>
                 {!profileLoading && profile.sleepHours && (
-                  <div className="rounded-xl bg-[#eef6f8] p-5 border border-[#c8dbe2] flex-1">
+                  <div className={`rounded-xl ${theme === 'light' ? 'bg-[#eef6f8] border-[#c8dbe2]' : 'bg-white/5 border-white/10'} p-5 border flex-1`}>
                     <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#16a34a]">
-                      <div className="p-1.5 rounded-md bg-[#e6f1f4]"><AutoIcon className="h-4 w-4 text-[#16a34a]" /></div>
+                      <div className={`p-1.5 rounded-md ${theme === 'light' ? 'bg-[#e6f1f4]' : 'bg-[#16a34a]/20'}`}><AutoIcon className="h-4 w-4 text-[#16a34a]" /></div>
                       Goal-based plan
                     </div>
                     <div className="space-y-3 text-sm text-[#16a34a] leading-relaxed">
@@ -1041,23 +1054,23 @@ export default function Health() {
 
         {/* ── SMOKING TRACKER ── */}
         <section>
-            <article className={`${card} border-[#f59e0b]/20 bg-gradient-to-br from-[#1a1208]/95 to-[#0b0f16]/95 p-6`}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-white/5 pb-4">
+            <article className={`${card} ${theme === 'light' ? 'bg-gradient-to-br from-[#fffbeb] to-white border-[#f59e0b]/30' : 'border-[#f59e0b]/20 bg-gradient-to-br from-[#1a1208]/95 to-[#0b0f16]/95'} p-6`}>
+              <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/5'} pb-4`}>
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#f59e0b]/30 to-[#ea580c]/20 flex items-center justify-center">
                     <Cigarette className="h-5 w-5 text-[#f59e0b]" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-white">Quit Companion</h2>
-                    <p className="text-sm text-white/45">Your personal tracker for breaking the habit — one day at a time.</p>
+                    <h2 className={`text-xl font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Quit Companion</h2>
+                    <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'}`}>Your personal tracker for breaking the habit — one day at a time.</p>
                   </div>
                 </div>
                 {/* Smoking logging removed — tracking via Daily Update only */}
               </div>
               {!isSmoker ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5 text-white/60 flex flex-col items-start gap-3">
-                  <p className="text-sm font-bold text-white">Smoking Tracker</p>
-                  <p className="mt-2 text-sm">You currently do not smoke.</p>
+                <div className={`rounded-2xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50 text-slate-600' : 'border-white/10 bg-white/[0.045]'} p-5 flex flex-col items-start gap-3`}>
+                  <p className={`text-sm font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Smoking Tracker</p>
+                  <p className={`mt-2 text-sm ${theme === 'light' ? 'text-[#334155]' : 'text-white/60'}`}>You currently do not smoke.</p>
                   <div className="mt-3 w-full">
                     <button onClick={() => setStartSmokingOpen(true)}
                       className="rounded-xl border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-4 py-2 text-sm font-bold text-[#f59e0b] hover:bg-[#f59e0b]/20 transition-all">
@@ -1067,45 +1080,45 @@ export default function Health() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                  <div className="rounded-2xl border border-[#f59e0b]/20 bg-[#f59e0b]/8 p-5 flex flex-col items-center justify-center text-center">
+                  <div className={`rounded-2xl border ${theme === 'light' ? 'border-[#f59e0b]/40 bg-[#f59e0b]/5' : 'border-[#f59e0b]/20 bg-[#f59e0b]/8'} p-5 flex flex-col items-center justify-center text-center`}>
                     {smokingProfile.lastCigarette ? (
                       <>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#f59e0b]/60 mb-2">Smoke-free streak</p>
-                        <p className="text-5xl font-black text-white">{smokingStreak}</p>
-                        <p className="text-sm text-white/50 mt-1">{smokingStreak === 1 ? 'day' : 'days'}</p>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'light' ? 'text-[#f59e0b]' : 'text-[#f59e0b]/60'} mb-2`}>Smoke-free streak</p>
+                        <p className={`text-5xl font-black ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{smokingStreak}</p>
+                        <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/50'} mt-1`}>{smokingStreak === 1 ? 'day' : 'days'}</p>
                         {smokingStreak >= 7  && <p className="mt-3 text-xs text-[#f59e0b] font-bold">🔥 One week! Circulation is improving.</p>}
                         {smokingStreak >= 30 && <p className="mt-1 text-xs text-[#16a34a] font-bold">🌿 30 days! Lung function is recovering.</p>}
-                        <p className="mt-3 text-xs text-white/60">Total cigarettes smoked: <span className="font-bold text-white">{totalCigarettes}</span></p>
+                        <p className={`mt-3 text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/60'}`}>Total cigarettes smoked: <span className={`font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{totalCigarettes}</span></p>
                       </>
                     ) : (
-                      <><span className="text-4xl mb-2">🕐</span><p className="text-sm text-white/40">Log your first event to start your streak.</p></>
+                      <><span className="text-4xl mb-2">🕐</span><p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'}`}>Log your first event to start your streak.</p></>
                     )}
                   </div>
-                  <div className="rounded-2xl border border-[#f59e0b]/20 bg-[#f59e0b]/8 p-5 flex flex-col items-center justify-center text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#f59e0b]/60 mb-2">Total cigarettes</p>
-                    <p className="text-2xl font-black text-white">{totalCigarettes}</p>
-                    <p className="text-sm text-white/50 mt-1">cumulative</p>
+                  <div className={`rounded-2xl border ${theme === 'light' ? 'border-[#f59e0b]/40 bg-[#f59e0b]/5' : 'border-[#f59e0b]/20 bg-[#f59e0b]/8'} p-5 flex flex-col items-center justify-center text-center`}>
+                    <p className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'light' ? 'text-[#f59e0b]' : 'text-[#f59e0b]/60'} mb-2`}>Total cigarettes</p>
+                    <p className={`text-2xl font-black ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{totalCigarettes}</p>
+                    <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/50'} mt-1`}>cumulative</p>
                   </div>
-                  <div className="rounded-2xl border border-white/8 bg-white/4 p-5">
+                  <div className={`rounded-2xl border ${theme === 'light' ? 'border-slate-200 bg-white' : 'border-white/8 bg-white/4'} p-5`}>
                     <div className="flex items-center gap-2 mb-3">
                       <TrendingDown className="h-4 w-4 text-[#16a34a]" />
                       <p className="text-xs font-bold uppercase tracking-wider text-[#16a34a]">What's happening in your body</p>
                     </div>
                     <div className="space-y-2.5">
-                      {smokingStreak >= 1  && <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-[#16a34a] shrink-0 mt-0.5" /><p className="text-xs text-white/60">Oxygen levels in blood are returning to normal.</p></div>}
-                      {smokingStreak >= 3  && <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-[#16a34a] shrink-0 mt-0.5" /><p className="text-xs text-white/60">Carbon monoxide is clearing — energy levels rising.</p></div>}
-                      {smokingStreak >= 7  && <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-[#16a34a] shrink-0 mt-0.5" /><p className="text-xs text-white/60">Circulation improving — HRV should start to rise.</p></div>}
-                      {smokingStreak >= 14 && <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-[#16a34a] shrink-0 mt-0.5" /><p className="text-xs text-white/60">Lung capacity measurably better. Exercise gets easier.</p></div>}
-                      {smokingStreak < 1   && <p className="text-xs text-white/30 italic">Your recovery timeline will show here once you start logging.</p>}
+                      {smokingStreak >= 1  && <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-[#16a34a] shrink-0 mt-0.5" /><p className={`text-xs ${theme === 'light' ? 'text-[#334155]' : 'text-white/60'}`}>Oxygen levels in blood are returning to normal.</p></div>}
+                      {smokingStreak >= 3  && <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-[#16a34a] shrink-0 mt-0.5" /><p className={`text-xs ${theme === 'light' ? 'text-[#334155]' : 'text-white/60'}`}>Carbon monoxide is clearing — energy levels rising.</p></div>}
+                      {smokingStreak >= 7  && <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-[#16a34a] shrink-0 mt-0.5" /><p className={`text-xs ${theme === 'light' ? 'text-[#334155]' : 'text-white/60'}`}>Circulation improving — HRV should start to rise.</p></div>}
+                      {smokingStreak >= 14 && <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-[#16a34a] shrink-0 mt-0.5" /><p className={`text-xs ${theme === 'light' ? 'text-[#334155]' : 'text-white/60'}`}>Lung capacity measurably better. Exercise gets easier.</p></div>}
+                      {smokingStreak < 1   && <p className={`text-xs ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'} italic`}>Your recovery timeline will show here once you start logging.</p>}
                     </div>
                   </div>
-                  <div className="rounded-2xl border border-[#a78bfa]/20 bg-[#a78bfa]/8 p-5">
+                  <div className={`rounded-2xl border ${theme === 'light' ? 'border-[#a78bfa]/40 bg-[#a78bfa]/5' : 'border-[#a78bfa]/20 bg-[#a78bfa]/8'} p-5`}>
                     <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="h-4 w-4 text-[#a78bfa]" />
                       <p className="text-xs font-bold uppercase tracking-wider text-[#a78bfa]">Your data says</p>
                     </div>
                     {wearableReady ? (
-                      <p className="text-sm text-white/70 leading-relaxed">
+                      <p className={`text-sm ${theme === 'light' ? 'text-[#334155]' : 'text-white/70'} leading-relaxed`}>
                         {wearable.hrv != null && wearable.hrv < 55
                           ? `Your HRV is ${wearable.hrv}ms — smoking is actively suppressing your recovery. Each cigarette-free day pushes this number up.`
                           : wearable.avgHeartRate > 75
@@ -1115,7 +1128,7 @@ export default function Health() {
                           : `Wear your device during sleep to track recovery metrics like HRV.`}
                       </p>
                     ) : (
-                      <p className="text-sm text-white/55 leading-relaxed">
+                      <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'} leading-relaxed`}>
                         {smokingStreak >= 14 ? `${smokingStreak} days strong. Lung capacity is measurably recovering.`
                          : smokingStreak >= 7 ? `One week smoke-free. Circulation is actively improving.`
                          : smokingStreak >= 1 ? `${smokingStreak} day${smokingStreak > 1 ? 's' : ''} since your last cigarette. The cravings are loudest now — resisting them is where the real change happens.`
@@ -1160,10 +1173,10 @@ export default function Health() {
         )}
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           <article className={`${iCard} p-6 xl:col-span-5`}>
-            <div className="mb-5 flex items-center justify-between border-b border-[#d8e5ea] pb-4">
+            <div className={`mb-5 flex items-center justify-between border-b ${theme === 'light' ? 'border-[#e2e8f0]' : 'border-white/10'} pb-4`}>
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-white">Cross-Signal Insights</h2>
-                <p className="text-sm text-[#596467] mt-1">
+                <h2 className={`text-2xl font-bold tracking-tight ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Cross-Signal Insights</h2>
+                <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/50'} mt-1`}>
                   {wearableReady
                     ? `From live Fitbit data${(weather && weather.temp !== null && weather.temp !== undefined) ? ` · ${weather.temp}°C outside` : ''}`
                     : 'Your profile powers these — connect a device to make them precise.'}
@@ -1198,12 +1211,12 @@ export default function Health() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 text-center gap-3">
-                  <div className="h-14 w-14 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center">
+                  <div className={`h-14 w-14 rounded-full border-2 border-dashed ${theme === 'light' ? 'border-slate-200' : 'border-white/10'} flex items-center justify-center`}>
                     <span className="text-2xl">📡</span>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#596467]">Your signal data is waiting</p>
-                    <p className="text-xs text-white/30 mt-1 max-w-[200px] mx-auto leading-relaxed">A connected wearable lets your Digital Twin correlate sleep, movement, and stress in real time.</p>
+                    <p className={`text-sm font-semibold ${theme === 'light' ? 'text-[#334155]' : 'text-white/70'}`}>Your signal data is waiting</p>
+                    <p className={`text-xs ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'} mt-1 max-w-[200px] mx-auto leading-relaxed`}>A connected wearable lets your Digital Twin correlate sleep, movement, and stress in real time.</p>
                   </div>
                 </div>
               )}
@@ -1224,17 +1237,17 @@ export default function Health() {
 
           <article className={`${iCard} p-6 xl:col-span-7 flex flex-col`}>
             <div>
-              <h3 className="mb-1 text-xl font-bold tracking-tight">Recovery Trajectory</h3>
-              <p className="mb-5 text-sm text-white/45">
+              <h3 className={`mb-1 text-xl font-bold tracking-tight ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Recovery Trajectory</h3>
+              <p className={`mb-5 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'}`}>
                 {wearableReady
                   ? `Based on your HRV ${wearable.hrv != null ? `${wearable.hrv}ms` : 'unavailable'}, ${wearable.sleepHours}h sleep, and ${wearable.steps?.toLocaleString()} steps.`
                   : 'Showing the recommended path. Your personal curve appears once your device is synced.'}
               </p>
-              <div className="relative mb-5 h-52 overflow-hidden rounded-xl border border-[#d8e5ea] bg-[#f7fbfc]">
+              <div className={`relative mb-5 h-52 overflow-hidden rounded-xl border ${theme === 'light' ? 'border-[#d8e5ea] bg-[#f7fbfc]' : 'border-white/10 bg-white/5'}`}>
                 <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 640 220">
-                  <line x1="0" y1="55"  x2="640" y2="55"  stroke="#e4e2e1" strokeWidth="0.5" strokeDasharray="4" />
-                  <line x1="0" y1="110" x2="640" y2="110" stroke="#e4e2e1" strokeWidth="0.5" strokeDasharray="4" />
-                  <line x1="0" y1="165" x2="640" y2="165" stroke="#e4e2e1" strokeWidth="0.5" strokeDasharray="4" />
+                  <line x1="0" y1="55"  x2="640" y2="55"  stroke={theme === 'light' ? '#e4e2e1' : 'rgba(255,255,255,0.07)'} strokeWidth="0.5" strokeDasharray="4" />
+                  <line x1="0" y1="110" x2="640" y2="110" stroke={theme === 'light' ? '#e4e2e1' : 'rgba(255,255,255,0.07)'} strokeWidth="0.5" strokeDasharray="4" />
+                  <line x1="0" y1="165" x2="640" y2="165" stroke={theme === 'light' ? '#e4e2e1' : 'rgba(255,255,255,0.07)'} strokeWidth="0.5" strokeDasharray="4" />
                   {wearableReady ? (
                     <path d={wearable.hrv != null && wearable.hrv >= 55 ? "M0 130 Q110 110 210 90 T430 70 T640 50" : "M0 120 Q110 130 210 145 T430 165 T640 185"}
                       fill="none" opacity="0.7" stroke="#ea580c" strokeWidth="3"
@@ -1247,9 +1260,9 @@ export default function Health() {
                     strokeDasharray="1000" strokeDashoffset={mounted ? '0' : '1000'}
                     className="transition-all duration-[1800ms] ease-in-out delay-100" strokeWidth="4" />
                 </svg>
-                <div className="absolute right-4 top-4 bg-white/90 backdrop-blur border border-[#d8e5ea] p-2.5 rounded-lg shadow-sm space-y-2 text-xs font-semibold">
+                <div className={`absolute right-4 top-4 ${theme === 'light' ? 'bg-white/90 border-[#d8e5ea]' : 'bg-[#0b0f16]/90 border-white/10'} backdrop-blur border p-2.5 rounded-lg shadow-sm space-y-2 text-xs font-semibold`}>
                   <Legend color="#16a34a" label="Recommended path" />
-                  <Legend color={wearableReady ? '#ea580c' : '#e4e2e1'} label={wearableReady ? `Your trajectory (HRV ${wearable.hrv != null ? `${wearable.hrv}ms` : 'unavailable'})` : 'Awaiting device sync'} />
+                  <Legend color={wearableReady ? '#ea580c' : (theme === 'light' ? '#cbd5e1' : '#e4e2e1')} label={wearableReady ? `Your trajectory (HRV ${wearable.hrv != null ? `${wearable.hrv}ms` : 'unavailable'})` : 'Awaiting device sync'} />
                 </div>
               </div>
             </div>
@@ -1324,6 +1337,7 @@ export default function Health() {
 
 // ─── Women's Health Sub-screens ───────────────────────────────────────────────
 function PeriodSetup({ step, setStep, setup, setSetup, onComplete }) {
+  const { theme } = useTheme();
   return (
     <div className="flex flex-col h-full">
       <div className="mb-5 flex items-center gap-3">
@@ -1332,11 +1346,11 @@ function PeriodSetup({ step, setStep, setup, setSetup, onComplete }) {
         </div>
         <div>
           <h3 className="text-sm font-bold uppercase tracking-[0.14em] text-[#ff6b9d]">Bloom Health Companion</h3>
-          <p className="text-[11px] text-white/35">One-time setup · Stored locally only · Never shared</p>
+          <p className={`text-[11px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'}`}>One-time setup · Stored locally only · Never shared</p>
         </div>
       </div>
       <div className="flex gap-2 mb-6">
-        {[0,1,2].map(i => <div key={i} className={`h-1 rounded-full flex-1 transition-all duration-500 ${i <= step ? 'bg-gradient-to-r from-[#ff6b9d] to-[#c084fc]' : 'bg-white/10'}`} />)}
+        {[0,1,2].map(i => <div key={i} className={`h-1 rounded-full flex-1 transition-all duration-500 ${i <= step ? 'bg-gradient-to-r from-[#ff6b9d] to-[#c084fc]' : (theme === 'light' ? 'bg-slate-200' : 'bg-white/10')}`} />)}
       </div>
       {step === 0 && (
         <div className="flex flex-col items-center justify-center flex-1 text-center py-4">
@@ -1347,13 +1361,13 @@ function PeriodSetup({ step, setStep, setup, setSetup, onComplete }) {
             <SmallFlower className="absolute -top-2 -right-2 h-8 w-8 text-[#ffd166]" />
             <SmallFlower className="absolute -bottom-1 -left-1 h-6 w-6 text-[#ff6b9d]" />
           </div>
-          <h4 className="text-lg font-bold text-white mb-2">Set up your Bloom Companion</h4>
-          <p className="text-sm text-white/45 leading-relaxed max-w-xs mb-4">Select the start date of your last period to enable phase-aware guidance that fits your body.</p>
+          <h4 className={`text-lg font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'} mb-2`}>Set up your Bloom Companion</h4>
+          <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/45'} leading-relaxed max-w-xs mb-4`}>Select the start date of your last period to enable phase-aware guidance that fits your body.</p>
           
           <div className="w-full max-w-xs mb-6 text-left">
             <label className="block text-[10px] font-bold text-[#ff6b9d] mb-2 uppercase tracking-widest text-center">Last Period Start Date</label>
             <input type="date" max={new Date().toISOString().split('T')[0]}
-              className="w-full bg-black/40 border border-[#ff6b9d]/20 rounded-xl p-3.5 text-white text-sm focus:border-[#ff6b9d]/50 focus:outline-none transition-all text-center"
+              className={`w-full ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-[#0f172a]' : 'bg-black/40 border-[#ff6b9d]/20 text-white'} rounded-xl p-3.5 text-sm focus:border-[#ff6b9d]/50 focus:outline-none transition-all text-center`}
               value={setup.lastPeriod} onChange={e => setSetup(p => ({...p, lastPeriod:e.target.value}))} />
           </div>
 
@@ -1365,13 +1379,13 @@ function PeriodSetup({ step, setStep, setup, setSetup, onComplete }) {
       )}
       {step === 1 && (
         <div className="flex flex-col flex-1">
-          <p className="text-base font-bold text-white mb-1">When did your last period start?</p>
-          <p className="text-sm text-white/40 mb-5">Used only to calculate your current phase. Never sent to any server.</p>
+          <p className={`text-base font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'} mb-1`}>When did your last period start?</p>
+          <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'} mb-5`}>Used only to calculate your current phase. Never sent to any server.</p>
           <input type="date" max={new Date().toISOString().split('T')[0]}
-            className="w-full bg-black/40 border border-[#ff6b9d]/20 rounded-xl p-3.5 text-white text-sm focus:border-[#ff6b9d]/50 focus:outline-none transition-all"
+            className={`w-full ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-[#0f172a]' : 'bg-black/40 border-[#ff6b9d]/20 text-white'} rounded-xl p-3.5 text-sm focus:border-[#ff6b9d]/50 focus:outline-none transition-all`}
             value={setup.lastPeriod} onChange={e => setSetup(p => ({...p, lastPeriod:e.target.value}))} />
           <div className="flex gap-3 mt-auto pt-6">
-            <button onClick={() => setStep(0)} className="flex items-center gap-1 text-sm text-white/30 hover:text-white transition-all"><ChevronLeft className="h-4 w-4" /> Back</button>
+            <button onClick={() => setStep(0)} className={`flex items-center gap-1 text-sm ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-white/30 hover:text-white'} transition-all`}><ChevronLeft className="h-4 w-4" /> Back</button>
             <button onClick={() => setStep(2)} disabled={!setup.lastPeriod}
               className="ml-auto flex items-center gap-2 bg-gradient-to-r from-[#ff6b9d] to-[#c084fc] text-white font-bold px-6 py-2.5 rounded-xl hover:opacity-90 disabled:opacity-30 transition-all">
               Next <ChevronRight className="h-4 w-4" />
@@ -1381,8 +1395,8 @@ function PeriodSetup({ step, setStep, setup, setSetup, onComplete }) {
       )}
       {step === 2 && (
         <div className="flex flex-col flex-1">
-          <p className="text-base font-bold text-white mb-1">Any existing conditions?</p>
-          <p className="text-sm text-white/40 mb-5">Personalises phase predictions and pampering advice for your body.</p>
+          <p className={`text-base font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'} mb-1`}>Any existing conditions?</p>
+          <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'} mb-5`}>Personalises phase predictions and pampering advice for your body.</p>
           <div className="space-y-3">
             {[
               { v:'none', l:'No conditions',  d:'Standard ~28 day cycle',             e:'🌸' },
@@ -1390,15 +1404,18 @@ function PeriodSetup({ step, setStep, setup, setSetup, onComplete }) {
               { v:'endo', l:'Endometriosis',  d:'Painful periods, chronic inflammation',e:'💐' },
             ].map(opt => (
               <button key={opt.v} onClick={() => setSetup(p => ({...p, condition:opt.v}))}
-                className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${setup.condition===opt.v ? 'border-[#ff6b9d]/60 bg-[#ff6b9d]/10' : 'border-white/10 bg-white/3 hover:bg-white/6'}`}>
+                className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${setup.condition===opt.v ? 'border-[#ff6b9d]/60 bg-[#ff6b9d]/10' : (theme === 'light' ? 'border-slate-200 bg-slate-50 hover:bg-slate-100' : 'border-white/10 bg-white/3 hover:bg-white/6')}`}>
                 <span className="text-xl">{opt.e}</span>
-                <div><p className="text-sm font-bold text-white">{opt.l}</p><p className="text-[11px] text-white/35">{opt.d}</p></div>
+                <div>
+                  <p className={`text-sm font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{opt.l}</p>
+                  <p className={`text-[11px] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/35'}`}>{opt.d}</p>
+                </div>
                 {setup.condition===opt.v && <span className="ml-auto text-[#ff6b9d] font-bold text-lg">✓</span>}
               </button>
             ))}
           </div>
           <div className="flex gap-3 mt-auto pt-6">
-            <button onClick={() => setStep(0)} className="flex items-center gap-1 text-sm text-white/30 hover:text-white transition-all"><ChevronLeft className="h-4 w-4" /> Back</button>
+            <button onClick={() => setStep(0)} className={`flex items-center gap-1 text-sm ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-white/30 hover:text-white'} transition-all`}><ChevronLeft className="h-4 w-4" /> Back</button>
             <button onClick={onComplete}
               className="ml-auto bg-gradient-to-r from-[#ff6b9d] to-[#c084fc] text-white font-bold px-6 py-2.5 rounded-xl hover:opacity-90 transition-all hover:shadow-[0_0_20px_rgba(255,107,157,0.3)]">
               Activate Bloom 🌷
@@ -1411,6 +1428,7 @@ function PeriodSetup({ step, setStep, setup, setSetup, onComplete }) {
 }
 
 function PeriodTracker({ phase, setup, symptoms, toggleSym, onMissed, onPreg, onReset, wearable, onRestartCycle }) {
+  const { theme } = useTheme();
   const pct = Math.round((phase.day / phase.cycleLen) * 100);
   const [restartDate, setRestartDate] = useState(new Date().toISOString().split('T')[0]);
   return (
@@ -1420,28 +1438,28 @@ function PeriodTracker({ phase, setup, symptoms, toggleSym, onMissed, onPreg, on
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#ff6b9d]/30 to-[#c084fc]/30 flex items-center justify-center text-sm">{phase.emoji}</div>
           <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-[#ff6b9d]">Bloom Companion</h3>
         </div>
-        <button onClick={onReset} className="text-[10px] text-white/20 hover:text-white/45 transition-all underline">Reset</button>
+        <button onClick={onReset} className={`text-[10px] ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-white/20 hover:text-white/45'} transition-all underline`}>Reset</button>
       </div>
       <div className={`rounded-2xl bg-gradient-to-r ${phase.grad} border ${phase.border} p-4`}>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Day {phase.day} of {phase.cycleLen}</p>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'}`}>Day {phase.day} of {phase.cycleLen}</p>
             <h4 className="text-xl font-bold mt-0.5" style={{color:phase.color}}>{phase.name} {phase.emoji}</h4>
-            <p className="text-xs text-white/40 mt-0.5">{phase.mood}</p>
+            <p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'} mt-0.5`}>{phase.mood}</p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-white/30">Next: {phase.next}</p>
-            <p className="text-sm font-bold text-white/55">{phase.daysToNext}d away</p>
+            <p className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>Next: {phase.next}</p>
+            <p className={`text-sm font-bold ${theme === 'light' ? 'text-[#334155]' : 'text-white/55'}`}>{phase.daysToNext}d away</p>
           </div>
         </div>
-        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div className={`h-1.5 ${theme === 'light' ? 'bg-slate-200' : 'bg-white/10'} rounded-full overflow-hidden`}>
           <div className="h-full rounded-full transition-all duration-700" style={{width:`${pct}%`, background:`linear-gradient(90deg,${phase.color}70,${phase.color})`}} />
         </div>
       </div>
       {wearable && (wearable.avgHeartRate > 80 || (wearable.hrv != null && wearable.hrv < 55)) && (
         <div className="rounded-xl border border-[#ff6b9d]/20 bg-[#ff6b9d]/8 p-3 flex items-start gap-2.5">
           <Sparkles className="h-4 w-4 shrink-0 text-[#ff6b9d] mt-0.5" />
-          <p className="text-xs text-white/65 leading-relaxed">
+          <p className={`text-xs ${theme === 'light' ? 'text-[#334155]' : 'text-white/65'} leading-relaxed`}>
             <span className="font-bold text-[#ff6b9d]">Your Fitbit says: </span>
             {wearable.avgHeartRate > 80 ? `elevated HR (${wearable.avgHeartRate} bpm) ` : ''}
             {wearable.hrv != null && wearable.hrv < 55 ? `+ low HRV (${wearable.hrv}ms) ` : ''}
@@ -1450,17 +1468,17 @@ function PeriodTracker({ phase, setup, symptoms, toggleSym, onMissed, onPreg, on
         </div>
       )}
       <div>
-        <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Quick Symptom Log</p>
+        <p className={`text-[10px] font-bold ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/25'} uppercase tracking-widest mb-2`}>Quick Symptom Log</p>
         <div className="flex flex-wrap gap-2">
           {[{id:'cramps',icon:'🤕',l:'Cramps'},{id:'bloat',icon:'🌪️',l:'Bloating'},{id:'mood',icon:'🎢',l:'Mood'},{id:'fatigue',icon:'😴',l:'Fatigue'},{id:'headache',icon:'🤯',l:'Headache'}].map(s => (
             <button key={s.id} onClick={() => toggleSym(s.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${symptoms.includes(s.id) ? 'bg-[#ff6b9d]/20 border-[#ff6b9d]/60 text-[#ff6b9d]' : 'bg-white/4 border-white/10 text-white/35 hover:bg-white/8'}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${symptoms.includes(s.id) ? 'bg-[#ff6b9d]/20 border-[#ff6b9d]/60 text-[#ff6b9d]' : (theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700' : 'bg-white/4 border-white/10 text-white/35 hover:bg-white/8')}`}>
               {s.icon} {s.l}
             </button>
           ))}
         </div>
       </div>
-      <div className="rounded-xl border border-white/8 bg-white/4 p-4 flex-1">
+      <div className={`rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/8 bg-white/4'} p-4 flex-1`}>
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="h-4 w-4 shrink-0" style={{color:phase.color}} />
           <p className="text-xs font-bold uppercase tracking-wider" style={{color:phase.color}}>Phase Pampering Guide</p>
@@ -1469,17 +1487,17 @@ function PeriodTracker({ phase, setup, symptoms, toggleSym, onMissed, onPreg, on
           {phase.pamper.map((tip, i) => (
             <div key={i} className="flex items-start gap-2.5">
               <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{backgroundColor:phase.color}} />
-              <p className="text-xs text-white/55 leading-relaxed">{symptoms.includes('cramps') && i === 0 ? tip.replace('Skip intense workouts','🔥 Skip the gym entirely') : tip}</p>
+              <p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'} leading-relaxed`}>{symptoms.includes('cramps') && i === 0 ? tip.replace('Skip intense workouts','🔥 Skip the gym entirely') : tip}</p>
             </div>
           ))}
-          {setup.condition === 'pcod' && <div className="flex items-start gap-2.5 mt-2 pt-2 border-t border-white/8"><div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ffd166]" /><p className="text-xs text-[#ffd166]/70 leading-relaxed">PCOD: Avoid sugar spikes — low-GI carbs manage insulin & androgen levels.</p></div>}
-          {setup.condition === 'endo' && <div className="flex items-start gap-2.5 mt-2 pt-2 border-t border-white/8"><div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f87171]" /><p className="text-xs text-[#f87171]/70 leading-relaxed">Endo: Anti-inflammatory foods (turmeric, omega-3s, ginger) reduce prostaglandin pain.</p></div>}
+          {setup.condition === 'pcod' && <div className={`flex items-start gap-2.5 mt-2 pt-2 border-t ${theme === 'light' ? 'border-slate-200' : 'border-white/8'}`}><div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ffd166]" /><p className={`text-xs ${theme === 'light' ? 'text-[#b45309]' : 'text-[#ffd166]/70'} leading-relaxed`}>PCOD: Avoid sugar spikes — low-GI carbs manage insulin & androgen levels.</p></div>}
+          {setup.condition === 'endo' && <div className={`flex items-start gap-2.5 mt-2 pt-2 border-t ${theme === 'light' ? 'border-slate-200' : 'border-white/8'}`}><div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f87171]" /><p className={`text-xs ${theme === 'light' ? 'text-[#b91c1c]' : 'text-[#f87171]/70'} leading-relaxed`}>Endo: Anti-inflammatory foods (turmeric, omega-3s, ginger) reduce prostaglandin pain.</p></div>}
         </div>
       </div>
       <div className="rounded-xl border border-[#ff6b9d]/20 bg-[#ff6b9d]/5 p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-bold text-white/80">Got your period today?</p>
-          <span className="text-[10px] text-white/30 font-semibold">Restart Cycle</span>
+          <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white/80'}`}>Got your period today?</p>
+          <span className={`text-[10px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'} font-semibold`}>Restart Cycle</span>
         </div>
         <div className="flex gap-2">
           <input
@@ -1487,7 +1505,7 @@ function PeriodTracker({ phase, setup, symptoms, toggleSym, onMissed, onPreg, on
             max={new Date().toISOString().split('T')[0]}
             value={restartDate}
             onChange={(e) => setRestartDate(e.target.value)}
-            className="flex-1 bg-black/40 border border-[#ff6b9d]/25 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#ff6b9d]/50"
+            className={`flex-1 ${theme === 'light' ? 'bg-slate-100 border-slate-200 text-[#0f172a]' : 'bg-black/40 border-[#ff6b9d]/25 text-white'} rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#ff6b9d]/50`}
           />
           <button
             onClick={() => onRestartCycle(restartDate)}
@@ -1499,13 +1517,14 @@ function PeriodTracker({ phase, setup, symptoms, toggleSym, onMissed, onPreg, on
       </div>
       <div className="flex gap-2.5">
         <button onClick={onMissed} className="flex-1 py-2.5 rounded-xl border border-[#f59e0b]/30 bg-[#f59e0b]/8 text-[11px] font-bold text-[#f59e0b] hover:bg-[#f59e0b]/15 transition-all">🗓️ Missed a Period?</button>
-        <button onClick={onPreg}   className="flex-1 py-2.5 rounded-xl border border-[#06d6a0]/30 bg-[#06d6a0]/8 text-[11px] font-bold text-[#06d6a0] hover:bg-[#06d6a0]/15 transition-all">🌿 Positive Test?</button>
+        <button onClick={onPreg}   className={`flex-1 py-2.5 rounded-xl border ${theme === 'light' ? 'border-[#0d9488]/30 bg-[#0d9488]/8 text-[#0d9488]' : 'border-[#06d6a0]/30 bg-[#06d6a0]/8 text-[#06d6a0]'} hover:opacity-85 transition-all`}>🌿 Positive Test?</button>
       </div>
     </div>
   );
 }
 
 function TroubleshootPanel({ condition, wearable, onBack, onConfirm }) {
+  const { theme } = useTheme();
   const hasDevice = wearable && wearable.hrv !== undefined && wearable.hrv !== null;
   const hrvLow = hasDevice && wearable.hrv < 55;
   const hrHigh = hasDevice && wearable.avgHeartRate > 80;
@@ -1513,11 +1532,11 @@ function TroubleshootPanel({ condition, wearable, onBack, onConfirm }) {
     <div className="flex flex-col h-full gap-4">
       <div className="flex items-center gap-3">
         <AlertCircle className="h-6 w-6 text-[#f59e0b] shrink-0" />
-        <h3 className="text-base font-bold text-white">Delayed Cycle Analysis</h3>
+        <h3 className={`text-base font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>Delayed Cycle Analysis</h3>
       </div>
       <div className="rounded-xl bg-[#f59e0b]/8 border border-[#f59e0b]/20 p-4">
         <p className="text-xs font-bold text-[#f59e0b] uppercase tracking-wider mb-2">What your data suggests</p>
-        <p className="text-sm text-white/65 leading-relaxed">
+        <p className={`text-sm ${theme === 'light' ? 'text-[#334155]' : 'text-white/65'} leading-relaxed`}>
           {hasDevice && (hrvLow || hrHigh)
             ? `Your Fitbit shows ${hrvLow ? `HRV at ${wearable.hrv}ms` : ''}${hrvLow && hrHigh ? ' and ' : ''}${hrHigh ? `HR at ${wearable.avgHeartRate} bpm` : ''} — these are classic cortisol-stress markers that suppress ovulation.`
             : 'Cycles shift 3–10 days due to stress, travel, disrupted sleep, or hormonal fluctuations.'}
@@ -1525,21 +1544,22 @@ function TroubleshootPanel({ condition, wearable, onBack, onConfirm }) {
           {condition === 'endo' && ' Endometriosis can cause irregular bleeding distinct from a standard late period.'}
         </p>
       </div>
-      <div className="rounded-xl bg-white/4 border border-white/8 p-4 flex-1">
-        <p className="text-xs font-bold text-white/35 uppercase tracking-wider mb-3">Recommended now</p>
+      <div className={`rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/8 bg-white/4'} p-4 flex-1`}>
+        <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/35'} uppercase tracking-wider mb-3`}>Recommended now</p>
         <div className="space-y-2.5">
           {[{i:'🧘',t:'Reduce cortisol: gentle yoga, deep breathing, digital detox evenings.'},{i:'🥑',t:'Healthy fats (avocado, walnuts, olive oil) support progesterone and oestrogen.'},{i:'😴',t:'Protect 7–9h sleep — the ovulatory signal is closely tied to circadian rhythm.'},{i:'💊',t:condition!=='none'?'Consult your gynaecologist about cycle regulation options.':'If delayed >14 days, take a pregnancy test and speak to a doctor.'}].map((x,i) => (
-            <div key={i} className="flex items-start gap-3"><span className="text-base">{x.i}</span><p className="text-xs text-white/50 leading-relaxed">{x.t}</p></div>
+            <div key={i} className="flex items-start gap-3"><span className="text-base">{x.i}</span><p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/50'} leading-relaxed`}>{x.t}</p></div>
           ))}
         </div>
       </div>
-      <button onClick={onConfirm} className="w-full py-3 rounded-xl border border-[#06d6a0]/30 bg-[#06d6a0]/10 text-sm font-bold text-[#06d6a0] hover:bg-[#06d6a0]/20 transition-all">🌿 My test came back positive →</button>
-      <button onClick={onBack} className="text-xs text-white/25 hover:text-white text-center transition-all">← Back to Cycle Tracker</button>
+      <button onClick={onConfirm} className={`w-full py-3 rounded-xl border ${theme === 'light' ? 'border-[#0d9488]/30 bg-[#0d9488]/10 text-[#0d9488]' : 'border-[#06d6a0]/30 bg-[#06d6a0]/10 text-[#06d6a0]'} text-sm font-bold hover:opacity-85 transition-all`}>🌿 My test came back positive →</button>
+      <button onClick={onBack} className={`text-xs ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-white/25 hover:text-white'} text-center transition-all`}>← Back to Cycle Tracker</button>
     </div>
   );
 }
 
 function PregSetup({ weeks, setWeeks, due, setDue, onSave, onBack }) {
+  const { theme } = useTheme();
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-col items-center justify-center flex-1 text-center py-4">
@@ -1547,24 +1567,25 @@ function PregSetup({ weeks, setWeeks, due, setDue, onSave, onBack }) {
           <div className="h-20 w-20 rounded-full bg-gradient-to-br from-[#06d6a0]/20 to-[#b7ffe6]/10 border border-[#06d6a0]/20 flex items-center justify-center"><span className="text-4xl">🌿</span></div>
           <SmallFlower className="absolute -top-2 -right-1 h-8 w-8 text-[#ffd166]" />
         </div>
-        <h4 className="text-lg font-bold text-white mb-1">Pregnancy Journey Mode</h4>
-        <p className="text-sm text-white/40 max-w-xs mb-6">A few details to switch your Digital Twin to maternal health tracking.</p>
+        <h4 className={`text-lg font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'} mb-1`}>Pregnancy Journey Mode</h4>
+        <p className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/40'} max-w-xs mb-6`}>A few details to switch your Digital Twin to maternal health tracking.</p>
         <div className="w-full max-w-sm space-y-4 text-left">
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-[#06d6a0] mb-2">Weeks Pregnant</label>
             <input type="number" min="1" max="42" placeholder="e.g. 8"
-              className="w-full bg-black/40 border border-[#06d6a0]/20 rounded-xl p-3.5 text-white text-sm focus:border-[#06d6a0]/50 focus:outline-none transition-all"
+              className={`w-full ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-[#0f172a]' : 'bg-black/40 border-[#06d6a0]/20 text-white'} rounded-xl p-3.5 text-sm focus:border-[#06d6a0]/50 focus:outline-none transition-all`}
               value={weeks} onChange={e => setWeeks(e.target.value)} />
           </div>
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-[#06d6a0] mb-2">Expected Due Date (optional)</label>
-            <input type="date" className="w-full bg-black/40 border border-[#06d6a0]/20 rounded-xl p-3.5 text-white text-sm focus:border-[#06d6a0]/50 focus:outline-none transition-all"
+            <input type="date"
+              className={`w-full ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-[#0f172a]' : 'bg-black/40 border-[#06d6a0]/20 text-white'} rounded-xl p-3.5 text-sm focus:border-[#06d6a0]/50 focus:outline-none transition-all`}
               value={due} onChange={e => setDue(e.target.value)} />
           </div>
           <button onClick={onSave} disabled={!weeks} className="w-full bg-gradient-to-r from-[#06d6a0] to-[#0f8f84] text-black font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-30 transition-all hover:shadow-[0_0_20px_rgba(6,214,160,0.3)]">
             Activate Pregnancy Mode 🌿
           </button>
-          <button onClick={onBack} className="w-full text-xs text-white/25 hover:text-white text-center py-1 transition-all">← Back to Cycle Tracker</button>
+          <button onClick={onBack} className={`w-full text-xs ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-white/25 hover:text-white'} text-center py-1 transition-all`}>← Back to Cycle Tracker</button>
         </div>
       </div>
     </div>
@@ -1572,6 +1593,7 @@ function PregSetup({ weeks, setWeeks, due, setDue, onSave, onBack }) {
 }
 
 function PregDashboard({ weeks, due, weather, onReset, onBack }) {
+  const { theme } = useTheme();
   const tri = weeks > 27 ? 3 : weeks > 13 ? 2 : 1;
   const baby = (() => {
     if (weeks<=4)  return {icon:'🫘',l:'Poppy seed',s:'~1mm'};
@@ -1595,31 +1617,31 @@ function PregDashboard({ weeks, due, weather, onReset, onBack }) {
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#06d6a0]/30 to-transparent flex items-center justify-center text-base">🌿</div>
           <div>
             <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-[#06d6a0]">Pregnancy Companion</h3>
-            <p className="text-[11px] text-white/30">Trimester {tri}</p>
+            <p className={`text-[11px] ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>Trimester {tri}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={onBack}  className="text-[10px] text-white/25 hover:text-white/55 transition-all underline">← Periods</button>
-          <button onClick={onReset} className="text-[10px] text-white/20 hover:text-white/45 transition-all underline">Reset</button>
+          <button onClick={onBack}  className={`text-[10px] ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-white/25 hover:text-white/55'} transition-all underline`}>← Periods</button>
+          <button onClick={onReset} className={`text-[10px] ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-white/20 hover:text-white/45'} transition-all underline`}>Reset</button>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-white/8 bg-white/4 p-3 text-center"><p className="text-[9px] font-bold uppercase tracking-wider text-white/30">Week</p><p className="text-2xl font-bold text-[#06d6a0] mt-0.5">{weeks}</p></div>
-        <div className="rounded-xl border border-white/8 bg-white/4 p-3 text-center"><p className="text-[9px] font-bold uppercase tracking-wider text-white/30">Baby</p><p className="text-xl mt-0.5">{baby.icon}</p></div>
-        <div className="rounded-xl border border-white/8 bg-white/4 p-3 text-center"><p className="text-[9px] font-bold uppercase tracking-wider text-white/30">{daysLeft!=null?'Days Left':'Trimester'}</p><p className="text-xl font-bold text-white/70 mt-0.5">{daysLeft!=null?daysLeft:tri}</p></div>
+        <div className={`rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/8 bg-white/4'} p-3 text-center`}><p className={`text-[9px] font-bold uppercase tracking-wider ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>Week</p><p className={`text-2xl font-bold ${theme === 'light' ? 'text-[#0d9488]' : 'text-[#06d6a0]'} mt-0.5`}>{weeks}</p></div>
+        <div className={`rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/8 bg-white/4'} p-3 text-center`}><p className={`text-[9px] font-bold uppercase tracking-wider ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>Baby</p><p className="text-xl mt-0.5">{baby.icon}</p></div>
+        <div className={`rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/8 bg-white/4'} p-3 text-center`}><p className={`text-[9px] font-bold uppercase tracking-wider ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'}`}>{daysLeft!=null?'Days Left':'Trimester'}</p><p className={`text-xl font-bold ${theme === 'light' ? 'text-[#334155]' : 'text-white/70'} mt-0.5`}>{daysLeft!=null?daysLeft:tri}</p></div>
       </div>
-      <div className="rounded-xl border border-[#06d6a0]/15 bg-[#06d6a0]/6 p-3 flex items-center gap-3">
+      <div className={`rounded-xl border ${theme === 'light' ? 'border-[#0d9488]/30 bg-[#0d9488]/8' : 'border-[#06d6a0]/15 bg-[#06d6a0]/6'} p-3 flex items-center gap-3`}>
         <span className="text-3xl">{baby.icon}</span>
-        <div><p className="text-sm font-bold text-[#06d6a0]">About the size of a {baby.l}</p><p className="text-[11px] text-white/35">{baby.s} · Week {weeks}</p></div>
+        <div><p className={`text-sm font-bold ${theme === 'light' ? 'text-[#0d9488]' : 'text-[#06d6a0]'}`}>About the size of a {baby.l}</p><p className={`text-[11px] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/35'}`}>{baby.s} · Week {weeks}</p></div>
       </div>
-      <div className="rounded-xl border border-white/8 bg-white/4 p-4 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-white/30 mb-3">This Week's Focus</p>
+      <div className={`rounded-xl border ${theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/8 bg-white/4'} p-4 flex-1`}>
+        <p className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'light' ? 'text-[#94a3b8]' : 'text-white/30'} mb-3`}>This Week's Focus</p>
         <div className="space-y-2.5">
-          <div className="flex items-start gap-2.5"><span className="text-base">💧</span><p className="text-xs text-white/55 leading-relaxed">Blood volume expanding — aim for {weather?.hydrationL ? parseFloat((weather.hydrationL + 0.5).toFixed(1)) : 3}L+ daily to prevent dizziness and support amniotic fluid.</p></div>
-          {tri===1 && <div className="flex items-start gap-2.5"><span className="text-base">🍃</span><p className="text-xs text-white/55 leading-relaxed">Folic acid (400–800mcg/day) is critical now for neural tube development.</p></div>}
-          {tri===2 && <div className="flex items-start gap-2.5"><span className="text-base">🚶</span><p className="text-xs text-white/55 leading-relaxed">20–30 min gentle walks support circulation and reduce pregnancy oedema.</p></div>}
-          {tri===3 && <div className="flex items-start gap-2.5"><span className="text-base">🛌</span><p className="text-xs text-white/55 leading-relaxed">Left-side sleeping improves blood flow to baby and reduces vena cava pressure.</p></div>}
-          {weather && <div className="flex items-start gap-2.5"><span className="text-base">🌡️</span><p className="text-xs text-white/55 leading-relaxed">{weather.temp !== null && weather.temp !== undefined ? (weather.isHot ? `At ${weather.temp}°C, avoid hot baths, saunas, and midday sun — overheating is a risk.` : `At ${weather.temp}°C, temperature is comfortable today — light outdoor walks are safe.`) : 'Temperature is comfortable today — light outdoor walks are safe.'}</p></div>}
+          <div className="flex items-start gap-2.5"><span className="text-base">💧</span><p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'} leading-relaxed`}>Blood volume expanding — aim for {weather?.hydrationL ? parseFloat((weather.hydrationL + 0.5).toFixed(1)) : 3}L+ daily to prevent dizziness and support amniotic fluid.</p></div>
+          {tri===1 && <div className="flex items-start gap-2.5"><span className="text-base">🍃</span><p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'} leading-relaxed`}>Folic acid (400–800mcg/day) is critical now for neural tube development.</p></div>}
+          {tri===2 && <div className="flex items-start gap-2.5"><span className="text-base">🚶</span><p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'} leading-relaxed`}>20–30 min gentle walks support circulation and reduce pregnancy oedema.</p></div>}
+          {tri===3 && <div className="flex items-start gap-2.5"><span className="text-base">🛌</span><p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'} leading-relaxed`}>Left-side sleeping improves blood flow to baby and reduces vena cava pressure.</p></div>}
+          {weather && <div className="flex items-start gap-2.5"><span className="text-base">🌡️</span><p className={`text-xs ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'} leading-relaxed`}>{weather.temp !== null && weather.temp !== undefined ? (weather.isHot ? `At ${weather.temp}°C, avoid hot baths, saunas, and midday sun — overheating is a risk.` : `At ${weather.temp}°C, temperature is comfortable today — light outdoor walks are safe.`) : 'Temperature is comfortable today — light outdoor walks are safe.'}</p></div>}
         </div>
       </div>
     </div>
@@ -1628,30 +1650,42 @@ function PregDashboard({ weeks, due, weather, onReset, onBack }) {
 
 // ─── Shared small components ──────────────────────────────────────────────────
 function MetricCard({ metric, mounted }) {
-  const toneDark = {
+  const { theme } = useTheme();
+  const iCard = getICardClass(theme);
+  const tone = theme === 'light' ? {
+    primary: { bg: 'rgba(2,132,199,0.1)',  color: '#0284c7' },
+    warm:    { bg: 'rgba(234,88,12,0.1)',  color: '#ea580c' },
+    neutral: { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed' },
+    sky:     { bg: 'rgba(2,132,199,0.1)',  color: '#0284c7' },
+  }[metric.tone] : {
     primary: { bg:'rgba(65,111,130,0.18)', color:'#7dd3f0' },
     warm:    { bg:'rgba(234,88,12,0.15)',  color:'#fdba74' },
     neutral: { bg:'rgba(168,139,250,0.15)',color:'#c4b5fd' },
     sky:     { bg:'rgba(47,131,183,0.18)', color:'#7dd3f0' },
   }[metric.tone] || { bg:'rgba(65,111,130,0.18)', color:'#7dd3f0' };
+
   const Icon = metric.icon;
-  const valueColor = metric.good ? '#4ade80' : '#f87171';
+  const valueColor = theme === 'light'
+    ? (metric.good ? '#16a34a' : '#dc2626')
+    : (metric.good ? '#4ade80' : '#f87171');
+
   return (
     <article className={`${iCard} p-5 text-center`}>
-      <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white/5 ring-1 ring-white/8">
-        <ProgressRing value={metric.ring} color={metric.good ? '#4ade80' : '#f87171'} mounted={mounted} />
+      <div className={`mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full ${theme === 'light' ? 'bg-slate-50 ring-1 ring-slate-200' : 'bg-white/5 ring-1 ring-white/8'}`}>
+        <ProgressRing value={metric.ring} color={valueColor} mounted={mounted} />
       </div>
       <div className="mx-auto mb-2.5 grid h-9 w-9 place-items-center rounded-xl"
-           style={{ backgroundColor: toneDark.bg, color: toneDark.color }}>
+           style={{ backgroundColor: tone.bg, color: tone.color }}>
         <Icon className="h-5 w-5" />
       </div>
-      <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white/55 truncate">{metric.label}</h3>
+      <h3 className={`text-xs font-bold uppercase tracking-[0.12em] ${theme === 'light' ? 'text-[#64748b]' : 'text-white/55'} truncate`}>{metric.label}</h3>
       <p className="mt-1 text-sm font-bold truncate" style={{ color: valueColor }}>{metric.display}</p>
     </article>
   );
 }
 
 function ProgressRing({ value, color, mounted }) {
+  const { theme } = useTheme();
   const r = 28, circ = 2*Math.PI*r;
   const [cur, setCur] = useState(0);
   useEffect(() => {
@@ -1665,39 +1699,71 @@ function ProgressRing({ value, color, mounted }) {
   return (
     <div className="relative h-14 w-14">
       <svg className="h-full w-full -rotate-90" viewBox="0 0 72 72">
-        <circle cx="36" cy="36" fill="none" r={r} stroke="rgba(255,255,255,0.1)" strokeWidth="4.5" />
+        <circle cx="36" cy="36" fill="none" r={r} stroke={theme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)'} strokeWidth="4.5" />
         <circle cx="36" cy="36" fill="none" r={r} stroke={color} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" strokeWidth="4.5" />
       </svg>
-      <div className="absolute inset-0 grid place-items-center text-sm font-bold text-white/90">{cur}%</div>
+      <div className={`absolute inset-0 grid place-items-center text-sm font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white/90'}`}>{cur}%</div>
     </div>
   );
 }
 
 function Pill({ label, warn }) {
-  return <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${warn?'border-[#ffb38a]/30 bg-[#ffb38a]/10 text-[#ffb38a]':'border-white/10 bg-white/5 text-white/50'}`}>{label}</span>;
+  const { theme } = useTheme();
+  return (
+    <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+      warn
+        ? (theme === 'light' ? 'border-[#ea580c]/30 bg-[#ea580c]/10 text-[#ea580c]' : 'border-[#ffb38a]/30 bg-[#ffb38a]/10 text-[#ffb38a]')
+        : (theme === 'light' ? 'border-[#e2e8f0] bg-slate-100 text-[#64748b]' : 'border-white/10 bg-white/5 text-white/50')
+    }`}>
+      {label}
+    </span>
+  );
 }
 function WeatherCard({ accent, icon, title, value, desc }) {
+  const { theme } = useTheme();
+  const displayAccent = theme === 'light' ? {
+    '#ffb38a': '#ea580c',
+    '#7df3cc': '#0d9488',
+    '#c8a84b': '#b45309',
+  }[accent] || accent : accent;
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-      <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{color:accent}}>{icon} {title}</div>
-      <p className="mb-1.5 text-lg font-bold text-white">{value}</p>
-      <p className="text-sm leading-relaxed text-white/52">{desc}</p>
+    <div className={`rounded-2xl border ${theme === 'light' ? 'border-[#e2e8f0] bg-slate-50' : 'border-white/10 bg-white/5'} p-5`}>
+      <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{color:displayAccent}}>{icon} {title}</div>
+      <p className={`mb-1.5 text-lg font-bold ${theme === 'light' ? 'text-[#0f172a]' : 'text-white'}`}>{value}</p>
+      <p className={`text-sm leading-relaxed ${theme === 'light' ? 'text-[#64748b]' : 'text-white/52'}`}>{desc}</p>
     </div>
   );
 }
 function GapItem({ text }) { return <div className="flex items-start gap-2.5 text-[#ea580c]"><span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#ea580c]" /><p>{text}</p></div>; }
 function ActionItem({ text }) { return <div className="flex items-start gap-2.5"><span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#16a34a]" /><p>{text}</p></div>; }
-function Legend({ color, label }) { return <div className="flex items-center gap-2 text-sm text-[#596467]"><span className="h-2 w-2 rounded-full" style={{backgroundColor:color}} /><span>{label}</span></div>; }
+function Legend({ color, label }) {
+  const { theme } = useTheme();
+  return (
+    <div className={`flex items-center gap-2 text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/60'}`}>
+      <span className="h-2 w-2 rounded-full" style={{backgroundColor:color}} />
+      <span>{label}</span>
+    </div>
+  );
+}
 function PathCard({ tone, title, text }) {
-  const s = tone==='primary' ? 'border-[#c8dbe2] bg-[#eef6f8] text-[#16a34a]' : 'border-[#efcfc5] bg-[#fff1ed] text-[#ea580c]';
-  return <div className={`rounded-xl border p-5 ${s}`}><h4 className="mb-1.5 text-xs font-bold uppercase tracking-[0.14em]">{title}</h4><p className="text-sm leading-relaxed text-[#596467]">{text}</p></div>;
+  const { theme } = useTheme();
+  const s = theme === 'light'
+    ? (tone === 'primary' ? 'border-[#c8dbe2] bg-[#eef6f8] text-[#16a34a]' : 'border-[#efcfc5] bg-[#fff1ed] text-[#ea580c]')
+    : (tone === 'primary' ? 'border-[#16a34a]/30 bg-[#16a34a]/10 text-[#4ade80]' : 'border-[#ea580c]/30 bg-[#ea580c]/10 text-[#fdba74]');
+  return (
+    <div className={`rounded-xl border p-5 ${s}`}>
+      <h4 className="mb-1.5 text-xs font-bold uppercase tracking-[0.14em]">{title}</h4>
+      <p className={`text-sm leading-relaxed ${theme === 'light' ? 'text-[#596467]' : 'text-white/70'}`}>{text}</p>
+    </div>
+  );
 }
 function FeedItem({ color, title, text, isGood }) {
+  const { theme } = useTheme();
   return (
-    <div className="flex gap-4 items-start rounded-xl bg-[#fbf9f8] border border-[#e4e2e1] p-4 hover:bg-white transition-all">
+    <div className={`flex gap-4 items-start rounded-xl ${theme === 'light' ? 'bg-[#fbf9f8] border-[#e4e2e1]' : 'bg-white/5 border-white/10'} border p-4 hover:opacity-90 transition-all`}>
       <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full" style={{backgroundColor:color}} />
-      <div className="text-sm text-[#596467]">
-        <span className={`font-bold block mb-1 text-base ${isGood?'text-[#16a34a]':'text-[#ea580c]'}`}>{title}</span>
+      <div className={`text-sm ${theme === 'light' ? 'text-[#64748b]' : 'text-white/70'}`}>
+        <span className={`font-bold block mb-1 text-base ${isGood ? 'text-[#16a34a]' : 'text-[#ea580c]'}`}>{title}</span>
         {text}
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
   Zap, Briefcase, Palette,
 } from 'lucide-react';
 import { getSettings, updateSettings } from '../services/voiceAssistantService';
+import { useTheme } from '../context/ThemeContext';
 import { logoutUser } from '../features/auth/authThunks';
 import { loginSuccess } from '../features/auth/authSlice';
 import {
@@ -560,6 +561,9 @@ function Settings() {
             </div>
           </SettingsSection>
 
+          {/* ── Appearance ── */}
+          <AppearanceSection />
+
           <section className="mx-auto max-w-2xl rounded-[1.5rem] border border-[#ff007f]/25 bg-[#0b111a]/92 p-5 text-center shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-6">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#ff007f]/25 bg-[#ff007f]/10 text-[#ff8fbd]">
               <ShieldCheck className="h-6 w-6" />
@@ -1061,7 +1065,91 @@ function IntegrationCard({ def, state, onConnect, onDisconnect }) {
 }
 
 // ─── Shared sub-components (unchanged from original) ──────────────────────────
+
+// ── Appearance Section ──────────────────────────────────────────────────────
+function AppearanceSection() {
+  const { theme, setTheme } = useTheme();
+
+  const options = [
+    {
+      id: 'dark',
+      label: 'Dark Mode',
+      description: 'Default deep-dark interface. Easy on the eyes at night.',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+          <path fillRule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clipRule="evenodd" />
+        </svg>
+      ),
+    },
+    {
+      id: 'light',
+      label: 'Light Mode',
+      description: 'Clean, bright interface. Great for well-lit environments.',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+          <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <SettingsSection icon={Palette} eyebrow="Appearance" title="Theme">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {options.map((opt) => {
+          const isActive = theme === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setTheme(opt.id)}
+              aria-pressed={isActive}
+              className={`relative flex items-start gap-4 rounded-2xl border p-5 text-left transition-all duration-200 ${
+                isActive
+                  ? 'border-[#10c7a1]/50 bg-[#10c7a1]/10 shadow-[0_0_0_1px_rgba(16,199,161,0.25)]'
+                  : 'border-white/10 bg-white/[0.035] hover:border-white/20 hover:bg-white/[0.055]'
+              }`}
+            >
+              {/* Icon */}
+              <span
+                className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+                  isActive
+                    ? 'border-[#10c7a1]/30 bg-[#10c7a1]/15 text-[#7df3cc]'
+                    : 'border-white/10 bg-white/[0.055] text-white/50'
+                }`}
+              >
+                {opt.icon}
+              </span>
+
+              {/* Text */}
+              <div className="min-w-0 flex-1">
+                <p className={`text-base font-black transition-colors ${isActive ? 'text-white' : 'text-white/70'}`}>
+                  {opt.label}
+                </p>
+                <p className="mt-1 text-sm leading-5 text-white/45">{opt.description}</p>
+              </div>
+
+              {/* Active indicator */}
+              {isActive && (
+                <span className="absolute right-3.5 top-3.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#10c7a1] text-[#06110f]">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-xs text-white/35">
+        Your preference is saved locally and persists across sessions.
+      </p>
+    </SettingsSection>
+  );
+}
+
 function SettingsSection({ icon: Icon, eyebrow, title, children, className = '' }) {
+
   return (
     <section className={`rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92 p-5 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-6 ${className}`}>
       <div className="mb-5 flex items-center gap-3 border-b border-white/10 pb-5">

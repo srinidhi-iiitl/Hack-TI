@@ -1,3 +1,4 @@
+import { useTheme } from '../context/ThemeContext';
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,9 +8,9 @@ import useNotificationCount from '../hooks/useNotificationCount';
 
 // ✅ MODIFIED: Grouped Health, Finance, and Career under Dashboard's subItems
 const navItems = [
-  { 
-    label: 'Dashboard', 
-    href: '/dashboard', 
+  {
+    label: 'Dashboard',
+    href: '/dashboard',
     icon: HomeIcon,
     subItems: [
       { label: 'Health', href: '/health', icon: HeartIcon },
@@ -32,7 +33,7 @@ function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const dispatch = useDispatch();
   const unreadNotificationCount = useNotificationCount();
-
+  const { theme } = useTheme();
   useEffect(() => {
     dispatch(fetchTodayDailyUpdate());
     const refresh = () => dispatch(fetchTodayDailyUpdate());
@@ -42,67 +43,75 @@ function Sidebar() {
 
   return (
     <aside
-      className={`relative hidden h-screen shrink-0 overflow-hidden border-r border-white/10 bg-[#130b1c] px-4 py-6 text-white shadow-[24px_0_80px_-40px_rgba(0,0,0,0.65)] transition-[width] duration-300 lg:block ${
-        isCollapsed ? 'w-20' : 'w-68'
-      }`}
+      className={`relative hidden h-screen shrink-0 overflow-hidden px-4 py-6 transition-[width] duration-300 lg:block ${theme === 'light'
+          ? 'border-r border-slate-200 bg-white text-slate-900 shadow-[0_0_30px_rgba(0,0,0,0.06)]'
+          : 'border-r border-white/10 bg-[#130b1c] text-white shadow-[24px_0_80px_-40px_rgba(0,0,0,0.65)]'
+        } ${isCollapsed ? 'w-20' : 'w-68'}`}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,122,0,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,0,127,0.12),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_22%)]" />
       <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent" />
 
       <div className="flex h-full flex-col">
-      <div className={`relative flex items-center ${isCollapsed ? 'justify-center' : 'justify-between gap-3'}`}>
-        <NavLink to="/dashboard" className="flex min-w-0 items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-[#ff7a00] via-[#ff007f] to-[#7b61ff] p-[1px] shadow-[0_0_24px_rgba(255,0,127,0.18)]">
-            <div className="grid h-full w-full place-items-center rounded-[calc(1rem-1px)] bg-[#160d22]">
-              <DigitalTwinLogo className="h-8 w-8 rounded-full" />
+        <div className={`relative flex items-center ${isCollapsed ? 'justify-center' : 'justify-between gap-3'}`}>
+          <NavLink to="/dashboard" className="flex min-w-0 items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-[#ff7a00] via-[#ff007f] to-[#7b61ff] p-[1px] shadow-[0_0_24px_rgba(255,0,127,0.18)]">
+              <div
+                className={`grid h-full w-full place-items-center rounded-[calc(1rem-1px)] ${theme === 'light' ? 'bg-white' : 'bg-[#160d22]'
+                  }`}
+              >              <DigitalTwinLogo className="h-8 w-8 rounded-full" />
+              </div>
             </div>
-          </div>
-          {!isCollapsed && (
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold tracking-[0.18em] text-white/90">DigitalTwin</p>
-              {/* <p className="truncate text-[11px] uppercase tracking-[0.28em] text-white/45">Warm control deck</p> */}
-            </div>
-          )}
-        </NavLink>
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <p
+                  className={`truncate text-sm font-semibold tracking-[0.18em] ${theme === 'light' ? 'text-slate-900' : 'text-white/90'
+                    }`}
+                >DigitalTwin</p>
+                {/* <p className="truncate text-[11px] uppercase tracking-[0.28em] text-white/45">Warm control deck</p> */}
+              </div>
+            )}
+          </NavLink>
 
-        {!isCollapsed && (
+          {!isCollapsed && (
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(true)}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${theme === 'light'
+                  ? 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                }`} aria-label="Collapse sidebar"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {isCollapsed && (
           <button
             type="button"
-            onClick={() => setIsCollapsed(true)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white"
-            aria-label="Collapse sidebar"
+            onClick={() => setIsCollapsed(false)}
+            className="mx-auto mt-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white"
+            aria-label="Expand sidebar"
           >
-            <ChevronLeftIcon className="h-4 w-4" />
+            <ChevronRightIcon className="h-4 w-4" />
           </button>
         )}
-      </div>
 
-      {isCollapsed && (
-        <button
-          type="button"
-          onClick={() => setIsCollapsed(false)}
-          className="mx-auto mt-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white"
-          aria-label="Expand sidebar"
-        >
-          <ChevronRightIcon className="h-4 w-4" />
-        </button>
-      )}
+        <nav className="relative mt-9 space-y-1">
+          {navItems.map((item) => (
+            <SidebarNavItem
+              key={item.label}
+              item={item}
+              isCollapsed={isCollapsed}
+              setIsCollapsed={setIsCollapsed}
+              unreadNotificationCount={unreadNotificationCount}
+            />
+          ))}
+        </nav>
 
-      <nav className="relative mt-9 space-y-1">
-        {navItems.map((item) => (
-          <SidebarNavItem 
-            key={item.label} 
-            item={item} 
-            isCollapsed={isCollapsed} 
-            setIsCollapsed={setIsCollapsed}
-            unreadNotificationCount={unreadNotificationCount}
-          />
-        ))}
-      </nav>
-
-      <nav className="relative mt-auto border-t border-white/10 pt-4">
-        <SidebarNavItem item={settingsItem} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} unreadNotificationCount={unreadNotificationCount} />
-      </nav>
+        <nav className="relative mt-auto border-t border-white/10 pt-4">
+          <SidebarNavItem item={settingsItem} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} unreadNotificationCount={unreadNotificationCount} />
+        </nav>
       </div>
     </aside>
   );
@@ -114,12 +123,12 @@ function SidebarNavItem({ item, isCollapsed, setIsCollapsed, unreadNotificationC
   const Icon = item.icon;
   const hasSubItems = !!item.subItems;
   const dailyUpdateCompleted = useSelector((state) => state.dailyUpdate.completed);
-  
+
   // Check if any sub-item is the current active route
   const isSubItemActive = hasSubItems && item.subItems.some((sub) => location.pathname === sub.href);
   const pendingDailyUpdate = item.dailyUpdate && !dailyUpdateCompleted;
   const hasUnreadNotifications = item.href === '/notifications' && unreadNotificationCount > 0;
-  
+
   // State to manage dropdown visibility
   const [isOpen, setIsOpen] = useState(isSubItemActive);
 
@@ -148,12 +157,10 @@ function SidebarNavItem({ item, isCollapsed, setIsCollapsed, unreadNotificationC
         title={isCollapsed ? item.label : undefined}
         onClick={handleParentClick}
         className={({ isActive }) =>
-          `group flex items-center justify-between rounded-2xl py-2.5 text-sm font-semibold transition-all duration-200 ${
-            isCollapsed ? 'px-0 justify-center' : 'px-3'
-          } ${
-            isActive || isSubItemActive || pendingDailyUpdate
-              ? 'border border-white/10 bg-gradient-to-r from-[#ff7a00]/20 via-[#ff007f]/18 to-[#7b61ff]/18 text-white shadow-[0_14px_32px_-18px_rgba(255,122,0,0.8)]'
-              : 'border border-transparent text-white/62 hover:border-white/10 hover:bg-white/5 hover:text-white'
+          `group flex items-center justify-between rounded-2xl py-2.5 text-sm font-semibold transition-all duration-200 ${isCollapsed ? 'px-0 justify-center' : 'px-3'
+          } ${isActive || isSubItemActive || pendingDailyUpdate
+            ? 'border border-white/10 bg-gradient-to-r from-[#ff7a00]/20 via-[#ff007f]/18 to-[#7b61ff]/18 text-white shadow-[0_14px_32px_-18px_rgba(255,122,0,0.8)]'
+            : 'border border-transparent text-white/62 hover:border-white/10 hover:bg-white/5 hover:text-white'
           }`
         }
       >
@@ -174,7 +181,7 @@ function SidebarNavItem({ item, isCollapsed, setIsCollapsed, unreadNotificationC
           {pendingDailyUpdate && isCollapsed && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ffb020] shadow-[0_0_10px_rgba(255,176,32,0.8)]" />}
           {hasUnreadNotifications && isCollapsed && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border border-[#130b1c] bg-[#ef4444] shadow-[0_0_12px_rgba(239,68,68,0.9)]" />}
         </div>
-        
+
         {hasSubItems && !isCollapsed && (
           <button
             onClick={(e) => {
@@ -196,10 +203,9 @@ function SidebarNavItem({ item, isCollapsed, setIsCollapsed, unreadNotificationC
               key={sub.label}
               to={sub.href}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl py-2 px-3 text-xs font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'text-white bg-white/10 border border-white/10 shadow-sm'
-                    : 'text-white/40 hover:text-white/90 hover:bg-white/5 border border-transparent'
+                `flex items-center gap-3 rounded-xl py-2 px-3 text-xs font-medium transition-all duration-200 ${isActive
+                  ? 'text-white bg-white/10 border border-white/10 shadow-sm'
+                  : 'text-white/40 hover:text-white/90 hover:bg-white/5 border border-transparent'
                 }`
               }
             >

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @config "../tailwind.config.js";
 
 * {
@@ -369,3 +369,452 @@ body {
   touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ================================================================
+   LIFETWIN — PROFESSIONAL LIGHT THEME
+   Design references: Linear, Notion, Stripe Dashboard, GitHub
+   
+   Strategy:
+   - CSS custom properties as semantic design tokens
+   - [data-theme="light"] scope — dark mode untouched
+   - Scoped AWAY from charts, animations, badges, scanner, copilot
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   TOKEN DEFINITIONS — Light Theme
+   ---------------------------------------------------------------- */
+[data-theme="light"] {
+  /* Surface */
+  --lt-bg-page:            #f8fafc;
+  --lt-bg-page-secondary:  #f1f5f9;
+  --lt-bg-card:            #ffffff;
+  --lt-bg-input:           #ffffff;
+  --lt-bg-subtle:          #f1f5f9;
+  --lt-bg-muted:           #f8fafc;
+  --lt-bg-sidebar:         #ffffff;
+  --lt-bg-navbar:          #ffffff;
+
+  /* Border */
+  --lt-border-default:     #e2e8f0;
+  --lt-border-input:       #dbe3ee;
+  --lt-border-strong:      #cbd5e1;
+  --lt-border-sidebar:     #e2e8f0;
+
+  /* Text */
+  --lt-text-primary:       #0f172a;
+  --lt-text-secondary:     #334155;
+  --lt-text-muted:         #64748b;
+  --lt-text-faint:         #94a3b8;
+  --lt-text-disabled:      #cbd5e1;
+
+  /* Nav */
+  --lt-nav-default:        #475569;
+  --lt-nav-hover-bg:       #f1f5f9;
+  --lt-nav-active-bg:      #ede9fe;
+  --lt-nav-active-text:    #5b21b6;
+  --lt-nav-sub-active-bg:  #f5f3ff;
+  --lt-nav-sub-active-text:#6d28d9;
+
+  /* Smooth transitions on structural surfaces only */
+  --lt-transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* ----------------------------------------------------------------
+   PAGE CANVAS & MAIN LAYOUT
+   ---------------------------------------------------------------- */
+[data-theme="light"] main.h-screen {
+  background-color: var(--lt-bg-page) !important;
+  color: var(--lt-text-primary) !important;
+  transition: var(--lt-transition);
+}
+
+[data-theme="light"] section.h-screen.min-w-0 {
+  background-color: var(--lt-bg-page) !important;
+  transition: var(--lt-transition);
+}
+
+/* ----------------------------------------------------------------
+   SIDEBAR
+   ---------------------------------------------------------------- */
+[data-theme="light"] aside {
+  background-color: var(--lt-bg-sidebar) !important;
+  border-right-color: var(--lt-border-sidebar) !important;
+  color: var(--lt-text-primary) !important;
+  transition: var(--lt-transition);
+}
+
+/* Remove dark decorative radial blobs */
+[data-theme="light"] aside > .pointer-events-none.absolute.inset-0 {
+  background-image: none !important;
+  background: none !important;
+}
+
+/* Logo inner ring */
+[data-theme="light"] aside .bg-\[\#160d22\] {
+  background-color: #f8fafc !important;
+}
+
+/* Brand name */
+[data-theme="light"] aside .text-white\/90 {
+  color: var(--lt-text-primary) !important;
+}
+
+/* Section label e.g. "Settings" pinned at bottom */
+[data-theme="light"] aside .text-white\/35,
+[data-theme="light"] aside .text-white\/45 {
+  color: var(--lt-text-faint) !important;
+}
+
+/* Sidebar collapse / expand button */
+[data-theme="light"] aside > div > .border-white\/10,
+[data-theme="light"] aside .border-white\/10:not(nav *) {
+  border-color: var(--lt-border-default) !important;
+}
+
+[data-theme="light"] aside button.border-white\/10,
+[data-theme="light"] aside button.bg-white\/5 {
+  background-color: var(--lt-bg-subtle) !important;
+  border-color: var(--lt-border-default) !important;
+  color: var(--lt-text-muted) !important;
+  transition: var(--lt-transition);
+}
+
+[data-theme="light"] aside button.border-white\/10:hover,
+[data-theme="light"] aside button.bg-white\/5:hover {
+  background-color: var(--lt-border-default) !important;
+  color: var(--lt-text-primary) !important;
+}
+
+/* Right-edge vertical gradient line */
+[data-theme="light"] aside > div.pointer-events-none.absolute.inset-y-0 {
+  background: linear-gradient(to bottom, transparent, #e2e8f0, transparent) !important;
+}
+
+/* ---- Sidebar Nav Items ---- */
+
+/* All nav links — inactive */
+[data-theme="light"] aside nav a {
+  color: var(--lt-nav-default) !important;
+  border-color: transparent !important;
+  transition: var(--lt-transition);
+}
+
+/* Inactive hover */
+[data-theme="light"] aside nav a:hover {
+  background-color: var(--lt-nav-hover-bg) !important;
+  color: var(--lt-text-primary) !important;
+  border-color: var(--lt-border-default) !important;
+}
+
+/* Active nav item — replaces orange/pink gradient with soft purple */
+[data-theme="light"] aside nav a.border.bg-gradient-to-r,
+[data-theme="light"] aside nav a[class*="from-"][class*="ff7a00"],
+[data-theme="light"] aside nav a[class*="shadow-"] {
+  background: var(--lt-nav-active-bg) !important;
+  background-image: none !important;
+  color: var(--lt-nav-active-text) !important;
+  border-color: #c4b5fd !important;
+  box-shadow: none !important;
+}
+
+/* Sub-items container */
+[data-theme="light"] aside nav .pl-9 a {
+  color: var(--lt-text-faint) !important;
+  border-color: transparent !important;
+}
+
+[data-theme="light"] aside nav .pl-9 a:hover {
+  background-color: var(--lt-nav-hover-bg) !important;
+  color: var(--lt-text-secondary) !important;
+}
+
+/* Active sub-item */
+[data-theme="light"] aside nav .pl-9 a.bg-white\/10 {
+  background-color: var(--lt-nav-sub-active-bg) !important;
+  color: var(--lt-nav-sub-active-text) !important;
+  border-color: #ddd6fe !important;
+}
+
+/* Nav toggle chevron */
+[data-theme="light"] aside nav button.text-white\/40 {
+  color: var(--lt-text-faint) !important;
+}
+
+[data-theme="light"] aside nav button.text-white\/40:hover {
+  color: var(--lt-text-muted) !important;
+}
+
+/* ----------------------------------------------------------------
+   NAVBAR
+   ---------------------------------------------------------------- */
+[data-theme="light"] header.border-b {
+  background-color: var(--lt-bg-navbar) !important;
+  border-bottom-color: var(--lt-border-default) !important;
+  color: var(--lt-text-primary) !important;
+  transition: var(--lt-transition);
+  /* Remove backdrop blur dark bg */
+  backdrop-filter: none !important;
+}
+
+/* Workspace status pill */
+[data-theme="light"] header .bg-white\/5 {
+  background-color: var(--lt-bg-subtle) !important;
+  border-color: var(--lt-border-default) !important;
+}
+
+[data-theme="light"] header .text-white\/55 {
+  color: var(--lt-text-muted) !important;
+}
+
+/* Greeting text */
+[data-theme="light"] header .text-white\/60 {
+  color: var(--lt-text-muted) !important;
+}
+
+/* Page title — replace gradient with solid ink */
+[data-theme="light"] header h1 span.bg-clip-text {
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  -webkit-text-fill-color: var(--lt-text-primary) !important;
+  color: var(--lt-text-primary) !important;
+}
+
+/* Navbar notification + profile buttons */
+[data-theme="light"] header button.bg-white\/5 {
+  background-color: var(--lt-bg-subtle) !important;
+  border-color: var(--lt-border-default) !important;
+  color: var(--lt-text-secondary) !important;
+  transition: var(--lt-transition);
+}
+
+[data-theme="light"] header button.bg-white\/5:hover {
+  background-color: var(--lt-border-default) !important;
+  color: var(--lt-text-primary) !important;
+}
+
+/* ----------------------------------------------------------------
+   CARD & PANEL SURFACES
+   Primary dark surfaces used across ALL pages
+   ---------------------------------------------------------------- */
+
+/* Primary dark card: bg-[#0b111a] and bg-[#0b111a]/92 */
+[data-theme="light"] .bg-\[\#0b111a\]\/92,
+[data-theme="light"] .bg-\[\#0b111a\] {
+  background-color: var(--lt-bg-card) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Deeper dark: bg-[#080d15] */
+[data-theme="light"] .bg-\[\#080d15\] {
+  background-color: var(--lt-bg-muted) !important;
+}
+
+/* Very dark overlay: bg-[#02040a], bg-[#05070d] */
+[data-theme="light"] .bg-\[\#02040a\]\/72 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+}
+
+[data-theme="light"] .bg-\[\#05070d\] {
+  background-color: var(--lt-bg-muted) !important;
+}
+
+/* Glass surfaces */
+[data-theme="light"] .bg-white\/\[0\.045\] {
+  background-color: var(--lt-bg-page-secondary) !important;
+}
+
+[data-theme="light"] .bg-white\/\[0\.055\] {
+  background-color: var(--lt-bg-page-secondary) !important;
+}
+
+[data-theme="light"] .bg-white\/\[0\.035\] {
+  background-color: var(--lt-bg-muted) !important;
+}
+
+[data-theme="light"] .bg-white\/10 {
+  background-color: var(--lt-border-default) !important;
+}
+
+[data-theme="light"] .bg-white\/5 {
+  background-color: var(--lt-bg-page-secondary) !important;
+}
+
+/* Dashboard outer bg (MainLayout) */
+[data-theme="light"] .bg-\[\#edf4f7\] {
+  background-color: var(--lt-bg-page) !important;
+}
+
+/* ----------------------------------------------------------------
+   BORDERS
+   ---------------------------------------------------------------- */
+[data-theme="light"] .border-white\/10 {
+  border-color: var(--lt-border-default) !important;
+}
+
+[data-theme="light"] .border-white\/12 {
+  border-color: var(--lt-border-default) !important;
+}
+
+/* ----------------------------------------------------------------
+   TEXT COLORS
+   Applied broadly but will NOT match chart/SVG text since those
+   elements don't use these Tailwind utility classes
+   ---------------------------------------------------------------- */
+[data-theme="light"] .text-white {
+  color: var(--lt-text-primary) !important;
+}
+
+[data-theme="light"] .text-white\/90 {
+  color: var(--lt-text-primary) !important;
+}
+
+[data-theme="light"] .text-white\/70,
+[data-theme="light"] .text-white\/62 {
+  color: var(--lt-text-secondary) !important;
+}
+
+[data-theme="light"] .text-white\/60,
+[data-theme="light"] .text-white\/56,
+[data-theme="light"] .text-white\/52,
+[data-theme="light"] .text-white\/50 {
+  color: var(--lt-text-muted) !important;
+}
+
+[data-theme="light"] .text-white\/45,
+[data-theme="light"] .text-white\/38,
+[data-theme="light"] .text-white\/35,
+[data-theme="light"] .text-white\/30 {
+  color: var(--lt-text-faint) !important;
+}
+
+[data-theme="light"] .text-white\/25 {
+  color: var(--lt-text-disabled) !important;
+}
+
+/* zinc-950 used in MainLayout (already dark, correct in light) */
+[data-theme="light"] .text-zinc-950 {
+  color: var(--lt-text-primary) !important;
+}
+
+/* ----------------------------------------------------------------
+   INPUTS & FORM CONTROLS
+   Scoped to inputs only — does not touch SVG or chart elements
+   ---------------------------------------------------------------- */
+[data-theme="light"] input:not([type="range"]),
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  background-color: var(--lt-bg-input) !important;
+  color: var(--lt-text-primary) !important;
+  border-color: var(--lt-border-input) !important;
+  transition: var(--lt-transition);
+}
+
+[data-theme="light"] input:not([type="range"]):focus,
+[data-theme="light"] textarea:focus,
+[data-theme="light"] select:focus {
+  border-color: #10c7a1 !important;
+  box-shadow: 0 0 0 3px rgba(16, 199, 161, 0.12) !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: var(--lt-text-faint) !important;
+}
+
+/* Read-only / disabled inputs */
+[data-theme="light"] input[readonly] {
+  background-color: var(--lt-bg-subtle) !important;
+  color: var(--lt-text-muted) !important;
+}
+
+/* ----------------------------------------------------------------
+   BUTTONS (ghost / outline style only)
+   Accent buttons (teal, gradient) are UNCHANGED
+   ---------------------------------------------------------------- */
+
+/* Generic ghost buttons using white/10 pattern */
+[data-theme="light"] button.bg-white\/\[0\.055\],
+[data-theme="light"] button.bg-white\/5,
+[data-theme="light"] button.bg-white\/10 {
+  background-color: var(--lt-bg-subtle) !important;
+  border-color: var(--lt-border-default) !important;
+  color: var(--lt-text-secondary) !important;
+  transition: var(--lt-transition);
+}
+
+[data-theme="light"] button.bg-white\/\[0\.055\]:hover,
+[data-theme="light"] button.bg-white\/5:hover,
+[data-theme="light"] button.bg-white\/10:hover {
+  background-color: var(--lt-border-default) !important;
+  color: var(--lt-text-primary) !important;
+}
+
+/* Disabled ghost buttons */
+[data-theme="light"] button.disabled\:bg-white\/10:disabled {
+  background-color: #e2e8f0 !important;
+  color: var(--lt-text-faint) !important;
+}
+
+/* ----------------------------------------------------------------
+   TOGGLE SWITCHES (Settings, voice assistant, etc.)
+   Active state (teal) is unchanged. Only the OFF track changes.
+   ---------------------------------------------------------------- */
+[data-theme="light"] button[role="switch"].bg-white\/10 {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Thumb (always white, unchanged) */
+[data-theme="light"] button[role="switch"] span.bg-white {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15) !important;
+}
+
+/* ----------------------------------------------------------------
+   SETTINGS PAGE SECTIONS
+   SettingsSection uses rounded-[1.5rem] border border-white/10 bg-[#0b111a]/92
+   Already handled above by card surface rules.
+   Below adds the SettingsSection header divider fix.
+   ---------------------------------------------------------------- */
+[data-theme="light"] section.rounded-\[1\.5rem\] > div.border-b {
+  border-bottom-color: var(--lt-border-default) !important;
+}
+
+/* Settings: Logout section — keep pink accent, only fix bg */
+[data-theme="light"] section.rounded-\[1\.5rem\].border-\[\#ff007f\]\/25 {
+  background-color: #fff8fb !important;
+}
+
+/* ----------------------------------------------------------------
+   MODAL BACKDROP & SURFACE
+   ---------------------------------------------------------------- */
+[data-theme="light"] .fixed.inset-0.bg-\[\#02040a\]\/72 {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+}
+
+[data-theme="light"] .fixed.inset-0 > div.bg-\[\#0b111a\] {
+  background-color: var(--lt-bg-card) !important;
+  border-color: var(--lt-border-default) !important;
+  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.18) !important;
+}
+
+/* ----------------------------------------------------------------
+   SAFE GUARDS — Do NOT apply light theme to these components.
+   Charts, animations, biometric scanner, and badges are exempt.
+   The selectors below use :not() and scope exclusions.
+   ---------------------------------------------------------------- */
+
+/* Chart animation classes are untouched (no [data-theme] scope on them) */
+/* .dashboard-finance-*, .dashboard-health-ring, .dashboard-radar-* */
+/* .signup-* — all untouched */
+
+/* Status / notification badge colors — explicitly preserved */
+/* bg-[#ef4444], bg-[#ffb020], bg-[#10c7a1], text-[#7df3cc] */
+/* These classes are NOT in the overrides above intentionally */
+
+/* Accent pill & teal active toggle — preserved */
+/* border-[#10c7a1]/45 bg-[#10c7a1] — preserved */
+
+/* Gradient CTAs — preserved */
+/* bg-gradient-to-r from-[#ff7a00] via-[#ff007f] to-[#7b61ff] — preserved */
