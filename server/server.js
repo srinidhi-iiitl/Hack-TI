@@ -26,6 +26,7 @@ import integrationRoutes from './routes/integrationRoutes.js';
 import intelligenceRoutes from './routes/intelligenceRoutes.js';
 import googleFitRoutes from './routes/googleFitRoutes.js';
 import mealPlanRoutes from './routes/mealPlanRoutes.js';
+import reportAnalysisRoutes from './routes/reportAnalysisRoutes.js';
 
 import { startCaretakerJobs } from './cron/caretaker.js';
 import { initializeSocketServer } from './services/socketService.js';
@@ -93,6 +94,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/daily-update', dailyUpdateRoutes);
 app.use('/api/streak', streakRouter);
 app.use('/api/meal-plans', mealPlanRoutes);
+app.use('/api/report-analysis', reportAnalysisRoutes);
 
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/intelligence', intelligenceRoutes);

@@ -19,6 +19,7 @@ const mealPlanSchema = new mongoose.Schema({
   endDate: { type: Date, required: true },
   mealPlan: {
     breakfast: [{ type: String }],
+
     morningSnack: [{ type: String }],
     lunch: [{ type: String }],
     eveningSnack: [{ type: String }],
@@ -34,7 +35,19 @@ const mealPlanSchema = new mongoose.Schema({
       keyFocus: [{ type: String }]
     }
   },
+  budget: {
+    amount: { type: Number },
+    category: { type: String },
+  },
+  reportAnalysis: {
+
+    reportFileName: { type: String },
+    detectedConditions: [{ type: String, default: undefined }],
+    extractedMetrics: { type: Object },
+    analyzedAt: { type: Date }
+  },
   status: { type: String, enum: ['active', 'completed', 'expired'], default: 'active' }
 }, { timestamps: true });
+
 
 export default mongoose.model('MealPlan', mealPlanSchema);

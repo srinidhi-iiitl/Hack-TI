@@ -155,11 +155,14 @@ export const createMealPlan = async (req, res) => {
       activityLevel,
       dietaryPreference,
       allergies,
-      duration
+      duration,
+      reportAnalysis,
+      budget
     } = req.body;
 
     // Validate inputs
     if (!category || !conditionOrGoal || !age || !gender || !heightCm || !weight || !activityLevel || !dietaryPreference || !duration) {
+
       return res.status(400).json({ success: false, message: 'Please provide all required profile fields.' });
     }
 
@@ -186,11 +189,21 @@ export const createMealPlan = async (req, res) => {
     const { bmi, bmiCategory } = calculateBmiDetails(weight, heightCm);
 
     // Setup dates
+
     const startDate = new Date(todayStr);
     const endDate = new Date(todayStr);
     endDate.setDate(endDate.getDate() + Number(duration) - 1);
 
+    // Optional report analysis findings (structured, not raw report)
+    const reportFindings = reportAnalysis || null;
+
+    // Optional budget planning
+    const budgetObj = budget || null;
+    const budgetAmount = budgetObj?.amount ?? null;
+    const budgetCategory = budgetObj?.category ?? null;
+
     // Prompt Gemini
+
     let mealPlanData;
     try {
       const model = genAI.getGenerativeModel({
@@ -198,7 +211,7 @@ export const createMealPlan = async (req, res) => {
         generationConfig: { responseMimeType: 'application/json' }
       });
 
-      const prompt = `You are a health and wellness AI nutrition expert.
+    const prompt = `You are a health and wellness AI nutrition expert.
 Generate a structured Indian meal plan based on the following user parameters:
 Category: ${category}
 Goal/Conditions: ${conditionOrGoal.join(', ')}
@@ -212,11 +225,39 @@ Activity Level: ${activityLevel}
 Dietary Preference: ${dietaryPreference}
 Allergies: ${allergies || 'None'}
 
+Meal Budget (INR/day):
+- Amount: ${budgetAmount ?? 'Not provided'}
+- Category: ${budgetCategory ?? 'Not provided'}
+
+
+Optional Medical Report Insights (nutrition-only, AI-generated):
+${reportFindings ? JSON.stringify(reportFindings) : 'null'}
+
 Safety Rules (CRITICAL):
 - Never recommend starvation diets, extreme calorie deficits, or unverified supplements.
 - Never recommend medical treatments or medication changes.
 - Ensure all meal recommendations are realistic, practical Indian dishes.
 - Align daily calories and protein target to user BMI and goals.
+
+Optional Medical Report Insights (nutrition-only, AI-generated):
+${reportFindings ? `- Detected Conditions: ${reportFindings.conditions?.join(', ') || 'None'}
+- HbA1c: ${reportFindings.hba1c ?? null}
+- Fasting Sugar: ${reportFindings.fastingSugar ?? null}
+- Cholesterol: ${JSON.stringify(reportFindings.cholesterol || {})}
+- Blood Pressure: ${JSON.stringify(reportFindings.bloodPressure || {})}
+- Vitamin D: ${reportFindings.vitaminD ?? null}
+- Hemoglobin: ${reportFindings.hemoglobin ?? null}
+- BMI Indicators: ${Array.isArray(reportFindings.bmiIndicators) ? reportFindings.bmiIndicators.join(', ') : '[]'}` : '- No report insights provided.'}
+
+Nutrition Personalization Rules:
+- Use the provided medical report metrics only to adjust food choices (e.g., low GI for glucose markers) and portioning.
+- Use Meal Budget to choose ingredient quality and meal affordability:
+  - Low budget: prioritize affordable staples (lentils, rice, chapati, seasonal vegetables), minimize expensive proteins, avoid costly specialty items.
+  - Medium budget: balanced ingredients with some variety.
+  - High budget: allow richer ingredients and more variety while still keeping portions reasonable.
+- If health condition indicates specific diet needs (e.g., Diabetes, PCOS, Pregnancy), prioritize those nutrition rules in addition to budget.
+- Do NOT diagnose or prescribe; only general diet guidance.
+
 
 Return ONLY a valid JSON object matching this schema:
 {
@@ -253,6 +294,7 @@ Return ONLY a valid JSON object matching this schema:
     const newPlan = await MealPlan.create({
       userId,
       category,
+
       conditionOrGoal,
       trimester,
       age,
@@ -268,8 +310,10 @@ Return ONLY a valid JSON object matching this schema:
       startDate,
       endDate,
       mealPlan: mealPlanData,
+      budget: { amount: budgetAmount, category: budgetCategory },
       status: 'active'
     });
+
 
     res.status(201).json({ success: true, data: newPlan });
   } catch (error) {
